@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>FieldKey — Access Request Builder</title>
+<meta name="description" content="Turn a CSV of inspection sites into copy-ready access requests." />
+<meta name="theme-color" content="#0E1116" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="FieldKey" />
+<style>
+  :root{
+    --bg:#0E1116; --bg2:#14181F; --bg3:#1B212B; --raise:#212935;
+    --line:#2A323E; --line2:#3A434F;
+    --ink:#E9EDF2; --muted:#8B95A4; --faint:#5E6775;
+    --amber:#FFB000; --amber-press:#E29D00;
+    --green:#41D88B; --red:#FF6B6B;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+    --r:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--ui);
+    font-size:16px; line-height:1.45;
+    -webkit-text-size-adjust:100%;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+    overscroll-behavior-y:none;
+  }
+  .label{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .mono{font-family:var(--mono)}
+
+  /* ---- header / status readout (the signature instrument strip) ---- */
+  header{
+    position:sticky;top:0;z-index:30;
+    background:linear-gradient(180deg,#11151C 0%,#0E1116 100%);
+    border-bottom:1px solid var(--line);
+    padding:calc(env(safe-area-inset-top) + 10px) 16px 0;
+    margin:calc(-1 * env(safe-area-inset-top)) 0 0;
+  }
+  .bar{display:flex;align-items:center;gap:10px;padding-bottom:10px}
+  .glyph{width:26px;height:26px;flex:0 0 auto}
+  .title{font-weight:700;font-size:18px;letter-spacing:.02em}
+  .title b{color:var(--amber);font-weight:800}
+  .spacer{flex:1}
+  .iconbtn{
+    appearance:none;border:1px solid var(--line2);background:var(--bg3);color:var(--ink);
+    width:40px;height:40px;border-radius:11px;font-size:18px;display:grid;place-items:center;
+  }
+  .iconbtn:active{background:var(--raise)}
+  .readout{
+    display:flex;gap:0;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:11px;letter-spacing:.04em;
+  }
+  .readout .cell{flex:1;padding:7px 4px 8px;text-align:center;border-right:1px solid var(--line);color:var(--muted)}
+  .readout .cell:last-child{border-right:0}
+  .readout .v{display:block;color:var(--ink);font-size:15px;letter-spacing:0;margin-top:1px}
+  .readout .v.on{color:var(--amber)}
+  .scan{height:2px;background:var(--line);overflow:hidden}
+  .scan i{display:block;height:100%;width:0;background:var(--amber);transition:width .2s ease}
+
+  main{padding:16px;max-width:760px;margin:0 auto;padding-bottom:140px}
+  .step{margin-bottom:22px}
+  .step > .label{display:block;margin-bottom:9px}
+  .step > .label .n{color:var(--amber);margin-right:8px}
+
+  /* ---- upload zone ---- */
+  .drop{
+    border:1.5px dashed var(--line2);border-radius:var(--r);background:var(--bg2);
+    padding:30px 18px;text-align:center;transition:border-color .15s,background .15s;
+  }
+  .drop.hot{border-color:var(--amber);background:#181a16}
+  .drop .big{font-size:16px;font-weight:600;margin:10px 0 3px}
+  .drop .sub{color:var(--muted);font-size:13px}
+  .pin{width:34px;height:46px;display:inline-block}
+  .filechip{
+    display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--line);
+    border-left:3px solid var(--amber);border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:13px;
+  }
+  .filechip .x{margin-left:auto;color:var(--muted);font-size:20px;padding:0 6px}
+
+  /* ---- mapping selects ---- */
+  .grid3{display:grid;grid-template-columns:1fr;gap:10px}
+  @media(min-width:520px){.grid3{grid-template-columns:repeat(3,1fr)}}
+  .field label{display:block;margin-bottom:6px}
+  select,input[type=text],input[type=tel],input[type=number]{
+    width:100%;appearance:none;background:var(--bg3);color:var(--ink);
+    border:1px solid var(--line2);border-radius:11px;padding:13px 12px;font-size:16px;font-family:var(--ui);
+  }
+  select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%238B95A4' stroke-width='1.6'/></svg>");
+    background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+  select:focus,input:focus{outline:2px solid var(--amber);outline-offset:1px;border-color:var(--amber)}
+  .ok-dot{color:var(--green)} .warn-dot{color:var(--amber)}
+
+  /* ---- buttons ---- */
+  .btn{
+    appearance:none;border:0;border-radius:12px;padding:15px 16px;font-size:16px;font-weight:700;
+    width:100%;font-family:var(--ui);display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn.primary{background:var(--amber);color:#1a1300}
+  .btn.primary:active{background:var(--amber-press)}
+  .btn.primary[disabled]{background:var(--bg3);color:var(--faint)}
+  .btn.ghost{background:var(--bg3);color:var(--ink);border:1px solid var(--line2)}
+  .btn.ghost:active{background:var(--raise)}
+  .btn.danger{background:var(--bg3);color:var(--red);border:1px solid var(--line2)}
+  .row{display:flex;gap:10px}
+  .row .btn{width:auto;flex:1}
+
+  /* ---- tickets ---- */
+  .tickets{display:flex;flex-direction:column;gap:12px}
+  .ticket{
+    background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--amber);
+    border-radius:12px;overflow:hidden;
+  }
+  .ticket.resolving{border-left-color:var(--line2)}
+  .ticket.failed{border-left-color:var(--red)}
+  .thead{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .thead .id{font-family:var(--mono);font-size:14px;color:var(--amber);font-weight:600}
+  .thead .st{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .thead .st.done{color:var(--green)} .thead .st.fail{color:var(--red)}
+  .tbody{padding:12px;font-family:var(--mono);font-size:12.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:var(--ink)}
+  .tbody .k{color:var(--muted)}
+  .tbody .addr{color:var(--amber)}
+  .tbody .pending{color:var(--faint)}
+  .tcopy{appearance:none;border:0;border-top:1px solid var(--line);background:transparent;color:var(--ink);
+    width:100%;padding:11px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+  .tcopy:active{background:var(--bg3)}
+
+  /* ---- sticky action bar ---- */
+  .dock{
+    position:fixed;left:0;right:0;bottom:0;z-index:40;
+    background:linear-gradient(180deg,rgba(14,17,22,0) 0%,#0E1116 22%);
+    padding:14px 16px calc(env(safe-area-inset-bottom) + 14px);
+  }
+  .dock .inner{max-width:760px;margin:0 auto}
+
+  /* ---- settings sheet ---- */
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+  .scrim.show{opacity:1;pointer-events:auto}
+  .sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--bg2);
+    border-top-left-radius:20px;border-top-right-radius:20px;border-top:1px solid var(--line2);
+    transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1);
+    max-height:90vh;overflow:auto;padding:8px 16px calc(env(safe-area-inset-bottom) + 20px);
+  }
+  .sheet.show{transform:translateY(0)}
+  .grab{width:38px;height:4px;border-radius:3px;background:var(--line2);margin:8px auto 14px}
+  .sheet h2{font-size:17px;margin:0 0 4px}
+  .sheet .hint{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .sgroup{margin-bottom:15px}
+  .sgroup .label{display:block;margin-bottom:6px}
+  .seg{display:flex;border:1px solid var(--line2);border-radius:11px;overflow:hidden}
+  .seg button{flex:1;appearance:none;border:0;background:var(--bg3);color:var(--muted);padding:12px;font-size:14px;font-weight:600;font-family:var(--ui)}
+  .seg button.sel{background:var(--amber);color:#1a1300}
+
+  .empty{color:var(--faint);font-family:var(--mono);font-size:12.5px;text-align:center;padding:26px 10px;border:1px dashed var(--line);border-radius:12px}
+  .note{color:var(--muted);font-size:12px;margin-top:8px;line-height:1.5}
+  .hidden{display:none!important}
+
+  .toast{
+    position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 96px);transform:translateX(-50%) translateY(20px);
+    background:var(--raise);border:1px solid var(--line2);color:var(--ink);padding:11px 16px;border-radius:11px;
+    font-size:14px;z-index:80;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;white-space:nowrap;
+    box-shadow:0 8px 30px rgba(0,0,0,.4)
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <svg class="glyph" viewBox="0 0 48 60" aria-hidden="true"><path d="M24 4a17 17 0 0 1 17 17c0 11-17 33-17 33S7 32 7 21A17 17 0 0 1 24 4z" fill="#FFB000"/><circle cx="24" cy="20" r="9" fill="#0E1116"/><rect x="22" y="20" width="4" height="9" rx="2" fill="#0E1116"/></svg>
+    <span class="title">Field<b>Key</b></span>
+    <span class="spacer"></span>
+    <button class="iconbtn" id="settingsBtn" aria-label="Settings">⚙</button>
+  </div>
+  <div class="readout">
+    <span class="cell">Rows<span class="v" id="rRows">—</span></span>
+    <span class="cell">SAP&nbsp;col<span class="v" id="rSap">—</span></span>
+    <span class="cell">Resolved<span class="v" id="rGeo">—</span></span>
+    <span class="cell">Status<span class="v" id="rStatus">IDLE</span></span>
+  </div>
+  <div class="scan"><i id="scanBar"></i></div>
+</header>
+
+<main>
+  <!-- STEP 1 : load -->
+  <section class="step" id="stepLoad">
+    <span class="label"><span class="n">01</span>Load site list</span>
+    <div class="drop" id="drop">
+      <svg class="pin" viewBox="0 0 48 60" aria-hidden="true"><path d="M24 4a17 17 0 0 1 17 17c0 11-17 33-17 33S7 32 7 21A17 17 0 0 1 24 4z" fill="#FFB000"/><circle cx="24" cy="20" r="9" fill="#0E1116"/><rect x="22" y="20" width="4" height="9" rx="2" fill="#0E1116"/></svg>
+      <div class="big">Choose a CSV file</div>
+      <div class="sub">Needs latitude, longitude, and a 9-digit SAP ID column</div>
+      <input type="file" id="file" accept=".csv,text/csv,text/plain" class="hidden" />
+    </div>
+    <p class="note">Your file never leaves your phone — parsing happens on-device. Only the coordinates are sent to the map service to look up addresses.</p>
+  </section>
+
+  <!-- STEP 2 : map columns -->
+  <section class="step hidden" id="stepMap">
+    <span class="label"><span class="n">02</span>Confirm columns</span>
+    <div class="grid3">
+      <div class="field"><label class="label" id="lblSap">SAP ID</label><select id="selSap"></select></div>
+      <div class="field"><label class="label" id="lblLat">Latitude</label><select id="selLat"></select></div>
+      <div class="field"><label class="label" id="lblLng">Longitude</label><select id="selLng"></select></div>
+    </div>
+    <p class="note" id="mapNote"></p>
+  </section>
+
+  <!-- STEP 3 : build -->
+  <section class="step hidden" id="stepBuild">
+    <span class="label"><span class="n">03</span>Build requests</span>
+    <button class="btn primary" id="buildBtn">Resolve addresses &amp; build</button>
+    <div class="row" id="stopRow" style="margin-top:10px" hidden>
+      <button class="btn danger" id="stopBtn">Stop</button>
+    </div>
+  </section>
+
+  <!-- results -->
+  <section class="step hidden" id="stepResults">
+    <span class="label"><span class="n">04</span>Requests <span id="resCount" class="mono" style="color:var(--muted)"></span></span>
+    <div class="tickets" id="tickets"></div>
+  </section>
+</main>
+
+<!-- sticky export dock -->
+<div class="dock hidden" id="dock">
+  <div class="inner">
+    <div class="row" style="margin-bottom:10px">
+      <button class="btn ghost" id="copyAllBtn">Copy all</button>
+      <button class="btn ghost" id="shareBtn">Share</button>
+    </div>
+    <div class="row">
+      <button class="btn ghost" id="txtBtn">Export .txt</button>
+      <button class="btn ghost" id="csvBtn">Export .csv</button>
+    </div>
+  </div>
+</div>
+
+<!-- settings -->
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-label="Settings">
+  <div class="grab"></div>
+  <h2>Request details</h2>
+  <p class="hint">These fill every request. Saved on this device.</p>
+  <div class="sgroup"><label class="label">Requestor name</label><input type="text" id="sName" /></div>
+  <div class="sgroup"><label class="label">Requestor LanID</label><input type="text" id="sLan" /></div>
+  <div class="sgroup"><label class="label">Requestor phone</label><input type="tel" id="sPhone" /></div>
+  <div class="sgroup"><label class="label">Description of access issue</label><input type="text" id="sIssue" /></div>
+  <div class="sgroup"><label class="label">Description of work</label><input type="text" id="sWork" /></div>
+
+  <h2 style="margin-top:8px">Address lookup</h2>
+  <p class="hint">OpenStreetMap is free and needs no key. Google is more precise but needs your own API key.</p>
+  <div class="sgroup">
+    <span class="label">Provider</span>
+    <div class="seg" id="segProvider">
+      <button data-v="osm" class="sel">OpenStreetMap</button>
+      <button data-v="google">Google</button>
+    </div>
+  </div>
+  <div class="sgroup" id="osmOpts">
+    <label class="label">Contact email (optional, polite for OSM)</label>
+    <input type="text" id="sEmail" placeholder="you@example.com" />
+  </div>
+  <div class="sgroup hidden" id="googleOpts">
+    <label class="label">Google Maps API key</label>
+    <input type="text" id="sGkey" placeholder="AIza…" />
+  </div>
+  <div class="sgroup">
+    <label class="label">Delay between lookups (ms)</label>
+    <input type="number" id="sDelay" min="0" step="100" />
+    <p class="note">OpenStreetMap asks for ~1 lookup per second. Keep this at 1100 or higher for OSM.</p>
+  </div>
+  <button class="btn primary" id="saveSettings">Save</button>
+  <p class="note" style="text-align:center;margin-top:14px">FieldKey · v1 · runs offline once added to your Home Screen</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+(function(){
+  /* ---------------- storage (degrades if sandboxed) ---------------- */
+  const store = {
+    get(k,d){ try{const v=localStorage.getItem(k);return v===null?d:v;}catch(e){return d;} },
+    set(k,v){ try{localStorage.setItem(k,v);}catch(e){} }
+  };
+  const DEF = {
+    name:"Obii weeks", lan:"OXWC", phone:"3052196892",
+    issue:"need code/contact info", work:"Drone inspection",
+    provider:"osm", email:"", gkey:"", delay:"1100"
+  };
+  const cfg = {};
+  for(const k in DEF) cfg[k]=store.get("fk_"+k, DEF[k]);
+
+  /* ---------------- el helpers ---------------- */
+  const $=s=>document.querySelector(s);
+  const els={
+    file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
+    stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
+    selSap:$("#selSap"), selLat:$("#selLat"), selLng:$("#selLng"),
+    lblSap:$("#lblSap"), lblLat:$("#lblLat"), lblLng:$("#lblLng"), mapNote:$("#mapNote"),
+    buildBtn:$("#buildBtn"), stopBtn:$("#stopBtn"), stopRow:$("#stopRow"),
+    tickets:$("#tickets"), resCount:$("#resCount"), dock:$("#dock"),
+    rRows:$("#rRows"), rSap:$("#rSap"), rGeo:$("#rGeo"), rStatus:$("#rStatus"),
+    scanBar:$("#scanBar"), toast:$("#toast"),
+    settingsBtn:$("#settingsBtn"), scrim:$("#scrim"), sheet:$("#sheet")
+  };
+
+  /* ---------------- state ---------------- */
+  let headers=[], rows=[], detect={}, results=[], building=false, cancel=false;
+  const geoCache=new Map();
+
+  /* ---------------- toast ---------------- */
+  let toastT;
+  function toast(msg){ els.toast.textContent=msg; els.toast.classList.add("show");
+    clearTimeout(toastT); toastT=setTimeout(()=>els.toast.classList.remove("show"),1800); }
+
+  /* ---------------- CSV parser (quotes, commas, CR/LF, BOM) ---------------- */
+  function parseCSV(text){
+    if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+    const out=[]; let row=[], val="", q=false, i=0, n=text.length;
+    while(i<n){
+      const c=text[i];
+      if(q){
+        if(c==='"'){ if(text[i+1]==='"'){val+='"';i++;} else q=false; }
+        else val+=c;
+      } else {
+        if(c==='"') q=true;
+        else if(c===','){ row.push(val); val=""; }
+        else if(c==='\n'){ row.push(val); out.push(row); row=[]; val=""; }
+        else if(c==='\r'){ /* skip, handle at \n */ }
+        else val+=c;
+      }
+      i++;
+    }
+    if(val.length||row.length){ row.push(val); out.push(row); }
+    // drop trailing fully-empty rows
+    while(out.length && out[out.length-1].every(x=>x.trim()==="")) out.pop();
+    return out;
+  }
+
+  /* ---------------- column detection ---------------- */
+  const isNine = v => /^\d{9}$/.test(String(v).trim());
+  function colValues(idx){ return rows.map(r=>r[idx]).filter(v=>v!=null && String(v).trim()!==""); }
+  function allNine(idx){ const v=colValues(idx); return v.length>0 && v.every(isNine); }
+  function looksCoord(idx){ const v=colValues(idx); if(!v.length) return false;
+    return v.every(x=>{const f=parseFloat(x); return !isNaN(f) && f>=-180 && f<=180 && /^-?\d+(\.\d+)?$/.test(String(x).trim());}); }
+
+  function detectColumns(){
+    const lower=headers.map(h=>String(h).trim().toLowerCase());
+    const find=names=>{ for(const n of names){const i=lower.indexOf(n); if(i>=0)return i;} return -1; };
+    let lat=find(["latitude","lat"]);
+    let lng=find(["longitude","long","lng","lon"]);
+    const sapCands=headers.map((_,i)=>i).filter(allNine);
+    let sap = sapCands.length===1 ? sapCands[0] : (sapCands.length?sapCands[0]:-1);
+    // coord fallback by value shape
+    if(lat<0||lng<0){
+      const coordCols=headers.map((_,i)=>i).filter(looksCoord);
+      if(lat<0 && coordCols.length) lat=coordCols[0];
+      if(lng<0 && coordCols.length>1) lng=coordCols[1];
+    }
+    return {sap,lat,lng,sapCands};
+  }
+
+  /* ---------------- file handling ---------------- */
+  function fillSelect(sel,chosen){
+    sel.innerHTML="";
+    headers.forEach((h,i)=>{
+      const o=document.createElement("option");
+      o.value=i; o.textContent=h||("Column "+(i+1));
+      if(i===chosen) o.selected=true;
+      sel.appendChild(o);
+    });
+  }
+
+  function handleFile(f){
+    const reader=new FileReader();
+    reader.onerror=()=>toast("Couldn't read that file. Try again.");
+    reader.onload=()=>{
+      let grid;
+      try{ grid=parseCSV(String(reader.result)); }
+      catch(e){ toast("That file isn't valid CSV."); return; }
+      if(grid.length<2){ toast("CSV needs a header row and at least one site."); return; }
+      headers=grid[0].map(h=>String(h).trim());
+      rows=grid.slice(1);
+      detect=detectColumns();
+      if(detect.sap<0){ toast("No 9-digit SAP ID column found — pick it below."); }
+
+      // file chip
+      els.drop.outerHTML =
+        '<div class="filechip" id="chip"><span>📄</span><span>'+escapeHtml(f.name)+
+        '</span><span class="mono" style="color:var(--muted)">'+rows.length+' rows</span>'+
+        '<span class="x" id="clearFile" role="button">×</span></div>';
+      $("#clearFile").addEventListener("click",reset);
+
+      fillSelect(els.selSap, detect.sap);
+      fillSelect(els.selLat, detect.lat);
+      fillSelect(els.selLng, detect.lng);
+      markSelects();
+
+      els.stepMap.classList.remove("hidden");
+      els.stepBuild.classList.remove("hidden");
+      els.mapNote.textContent = detect.sapCands.length>1
+        ? "Several 9-digit columns were found — confirm which one is the SAP ID."
+        : "Auto-detected from your headers. Change any if they look wrong.";
+      els.rRows.textContent=rows.length;
+      setStatus("READY");
+      updateSapReadout();
+      els.stepMap.scrollIntoView({behavior:"smooth",block:"start"});
+    };
+    reader.readAsText(f);
+  }
+
+  function markSelects(){
+    const m=(sel,lbl,good)=>{ const ok = good(parseInt(sel.value,10));
+      lbl.innerHTML = lbl.textContent.replace(/ ●$/,"") + ' <span class="'+(ok?"ok-dot":"warn-dot")+'">●</span>'; };
+    m(els.selSap, els.lblSap, allNine);
+    m(els.selLat, els.lblLat, looksCoord);
+    m(els.selLng, els.lblLng, looksCoord);
+  }
+  function updateSapReadout(){ const h=headers[parseInt(els.selSap.value,10)]; els.rSap.textContent = h? truncate(h,7):"—"; }
+
+  [els.selSap,els.selLat,els.selLng].forEach(s=>s.addEventListener("change",()=>{markSelects();updateSapReadout();}));
+
+  /* ---------------- geocoding ---------------- */
+  async function geocodeOSM(lat,lng){
+    const key=lat+","+lng;
+    if(geoCache.has(key)) return geoCache.get(key);
+    let url="https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=0&lat="+
+      encodeURIComponent(lat)+"&lon="+encodeURIComponent(lng);
+    if(cfg.email) url+="&email="+encodeURIComponent(cfg.email);
+    const r=await fetch(url,{headers:{"Accept":"application/json"}});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const j=await r.json();
+    const addr=j.display_name||"";
+    geoCache.set(key,addr); return addr;
+  }
+  let gReady=null;
+  function loadGoogle(){
+    if(gReady) return gReady;
+    gReady=new Promise((res,rej)=>{
+      if(!cfg.gkey){ rej(new Error("no key")); return; }
+      const s=document.createElement("script");
+      s.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(cfg.gkey);
+      s.onload=()=>res(window.google); s.onerror=()=>rej(new Error("load failed"));
+      document.head.appendChild(s);
+    });
+    return gReady;
+  }
+  async function geocodeGoogle(lat,lng){
+    const key=lat+","+lng;
+    if(geoCache.has(key)) return geoCache.get(key);
+    const g=await loadGoogle();
+    const gc=new g.maps.Geocoder();
+    const addr=await new Promise((res)=>{
+      gc.geocode({location:{lat:parseFloat(lat),lng:parseFloat(lng)}},(r,st)=>{
+        res(st==="OK"&&r&&r[0]?r[0].formatted_address:"");
+      });
+    });
+    geoCache.set(key,addr); return addr;
+  }
+
+  /* ---------------- build ---------------- */
+  function template(d){
+    return "Requestor Name: "+cfg.name+"\n"+
+           "Requestor LanID: "+cfg.lan+"\n"+
+           "Requestor Phone number: "+cfg.phone+"\n"+
+           "Description of Access Issue: "+cfg.issue+"\n"+
+           "SAP Equipment ID: "+d.sap+"\n"+
+           "Address Attempted: "+(d.addr||"")+"\n"+
+           "Description of work: "+cfg.work;
+  }
+
+  function ticketHTML(d,i){
+    const resolving = d.status==="resolving";
+    const failed = d.status==="failed";
+    const cls="ticket"+(resolving?" resolving":"")+(failed?" failed":"");
+    const st = resolving?'<span class="st">resolving…</span>':
+               failed?'<span class="st fail">no address</span>':
+               '<span class="st done">ready</span>';
+    const addrLine = resolving ? '<span class="pending">resolving…</span>'
+      : '<span class="addr">'+escapeHtml(d.addr||"(none found)")+'</span>';
+    return '<div class="'+cls+'" data-i="'+i+'">'+
+      '<div class="thead"><span class="id">'+escapeHtml(d.sap)+'</span>'+st+'</div>'+
+      '<div class="tbody">'+
+        '<span class="k">Requestor Name:</span> '+escapeHtml(cfg.name)+'\n'+
+        '<span class="k">Requestor LanID:</span> '+escapeHtml(cfg.lan)+'\n'+
+        '<span class="k">Requestor Phone number:</span> '+escapeHtml(cfg.phone)+'\n'+
+        '<span class="k">Description of Access Issue:</span> '+escapeHtml(cfg.issue)+'\n'+
+        '<span class="k">SAP Equipment ID:</span> '+escapeHtml(d.sap)+'\n'+
+        '<span class="k">Address Attempted:</span> '+addrLine+'\n'+
+        '<span class="k">Description of work:</span> '+escapeHtml(cfg.work)+
+      '</div>'+
+      (resolving?'':'<button class="tcopy" data-copy="'+i+'">Copy this request</button>')+
+    '</div>';
+  }
+
+  function renderTickets(){
+    els.tickets.innerHTML = results.map((d,i)=>ticketHTML(d,i)).join("");
+    els.tickets.querySelectorAll("[data-copy]").forEach(b=>{
+      b.addEventListener("click",()=>{ copyText(template(results[+b.dataset.copy])); toast("Request copied"); });
+    });
+  }
+
+  async function build(){
+    const si=+els.selSap.value, li=+els.selLat.value, gi=+els.selLng.value;
+    if(!allNine(si)){ toast("SAP ID column has non-9-digit values."); return; }
+    building=true; cancel=false;
+    els.buildBtn.disabled=true; els.stopRow.hidden=false;
+    els.stepResults.classList.remove("hidden");
+    setStatus("BUILDING");
+    results = rows.map(r=>({
+      sap:String(r[si]).trim(),
+      lat:String(r[li]).trim(), lng:String(r[gi]).trim(),
+      addr:"", status:"resolving"
+    }));
+    renderTickets();
+    els.dock.classList.remove("hidden");
+    els.resCount.textContent="(0/"+results.length+")";
+
+    const provider = cfg.provider==="google" && cfg.gkey ? geocodeGoogle : geocodeOSM;
+    const delay = Math.max(0, parseInt(cfg.delay,10)||0);
+    let done=0, ok=0;
+    for(let i=0;i<results.length;i++){
+      if(cancel) break;
+      const d=results[i];
+      try{
+        if(d.lat===""||d.lng===""||isNaN(parseFloat(d.lat))||isNaN(parseFloat(d.lng))){
+          d.addr=""; d.status="failed";
+        } else {
+          d.addr = await provider(d.lat,d.lng);
+          d.status = d.addr ? "done" : "failed";
+          if(d.addr) ok++;
+        }
+      }catch(e){ d.addr=""; d.status="failed"; }
+      done++;
+      updateTicket(i);
+      els.resCount.textContent="("+done+"/"+results.length+")";
+      els.rGeo.textContent=ok+"/"+results.length; els.rGeo.classList.add("on");
+      els.scanBar.style.width=Math.round(done/results.length*100)+"%";
+      if(i<results.length-1 && !cancel && delay) await sleep(delay);
+    }
+    building=false; els.buildBtn.disabled=false; els.stopRow.hidden=true;
+    els.buildBtn.textContent="Rebuild";
+    setStatus(cancel?"STOPPED":"DONE");
+    if(!cancel) toast(ok+" of "+results.length+" addresses resolved");
+  }
+
+  function updateTicket(i){
+    const node=els.tickets.querySelector('[data-i="'+i+'"]');
+    if(!node) return;
+    const tmp=document.createElement("div"); tmp.innerHTML=ticketHTML(results[i],i);
+    const fresh=tmp.firstChild; node.replaceWith(fresh);
+    const cb=fresh.querySelector("[data-copy]");
+    if(cb) cb.addEventListener("click",()=>{ copyText(template(results[+cb.dataset.copy])); toast("Request copied"); });
+  }
+
+  /* ---------------- export ---------------- */
+  function allText(){ return results.map(template).join("\n\n----------------------------------------\n\n"); }
+  function copyText(t){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).catch(()=>fallbackCopy(t));
+    } else fallbackCopy(t);
+  }
+  function fallbackCopy(t){
+    const ta=document.createElement("textarea"); ta.value=t;
+    ta.style.position="fixed"; ta.style.top="-1000px"; document.body.appendChild(ta);
+    ta.focus(); ta.setSelectionRange(0,t.length);
+    try{ document.execCommand("copy"); }catch(e){}
+    document.body.removeChild(ta);
+  }
+  function download(name,text,type){
+    const blob=new Blob([text],{type:type||"text/plain"});
+    const url=URL.createObjectURL(blob); const a=document.createElement("a");
+    a.href=url; a.download=name; document.body.appendChild(a); a.click();
+    document.body.removeChild(a); setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }
+  function csvOut(){
+    const esc=v=>{ v=String(v==null?"":v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+    const head="SapID,Address,latitude,longitude\n";
+    return head+results.map(d=>[esc(d.sap),esc(d.addr),esc(d.lat),esc(d.lng)].join(",")).join("\n");
+  }
+
+  /* ---------------- misc helpers ---------------- */
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+  function truncate(s,n){ s=String(s); return s.length>n?s.slice(0,n-1)+"…":s; }
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  function setStatus(s){ els.rStatus.textContent=s; els.rStatus.classList.toggle("on", s==="BUILDING"||s==="DONE"); }
+
+  function reset(){
+    headers=[]; rows=[]; results=[]; geoCache.clear(); cancel=false;
+    location.reload();
+  }
+
+  /* ---------------- settings sheet ---------------- */
+  function openSheet(){
+    $("#sName").value=cfg.name; $("#sLan").value=cfg.lan; $("#sPhone").value=cfg.phone;
+    $("#sIssue").value=cfg.issue; $("#sWork").value=cfg.work;
+    $("#sEmail").value=cfg.email; $("#sGkey").value=cfg.gkey; $("#sDelay").value=cfg.delay;
+    setProviderUI(cfg.provider);
+    els.scrim.classList.add("show"); els.sheet.classList.add("show");
+  }
+  function closeSheet(){ els.scrim.classList.remove("show"); els.sheet.classList.remove("show"); }
+  function setProviderUI(p){
+    document.querySelectorAll("#segProvider button").forEach(b=>b.classList.toggle("sel",b.dataset.v===p));
+    $("#osmOpts").classList.toggle("hidden",p!=="osm");
+    $("#googleOpts").classList.toggle("hidden",p!=="google");
+    cfg._pendProvider=p;
+  }
+  document.querySelectorAll("#segProvider button").forEach(b=>b.addEventListener("click",()=>setProviderUI(b.dataset.v)));
+  $("#saveSettings").addEventListener("click",()=>{
+    cfg.name=$("#sName").value.trim(); cfg.lan=$("#sLan").value.trim(); cfg.phone=$("#sPhone").value.trim();
+    cfg.issue=$("#sIssue").value.trim(); cfg.work=$("#sWork").value.trim();
+    cfg.email=$("#sEmail").value.trim(); cfg.gkey=$("#sGkey").value.trim();
+    cfg.delay=String(parseInt($("#sDelay").value,10)||0);
+    cfg.provider=cfg._pendProvider||cfg.provider;
+    for(const k of ["name","lan","phone","issue","work","email","gkey","delay","provider"]) store.set("fk_"+k,cfg[k]);
+    if(results.length) renderTickets();
+    closeSheet(); toast("Settings saved");
+  });
+  els.settingsBtn.addEventListener("click",openSheet);
+  els.scrim.addEventListener("click",closeSheet);
+
+  /* ---------------- wiring ---------------- */
+  els.drop.addEventListener("click",()=>els.file.click());
+  els.file.addEventListener("change",e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); });
+  ["dragenter","dragover"].forEach(ev=>els.drop.addEventListener(ev,e=>{e.preventDefault();els.drop.classList.add("hot");}));
+  ["dragleave","drop"].forEach(ev=>els.drop.addEventListener(ev,e=>{e.preventDefault();els.drop.classList.remove("hot");}));
+  els.drop.addEventListener("drop",e=>{ const f=e.dataTransfer.files[0]; if(f) handleFile(f); });
+  els.buildBtn.addEventListener("click",()=>{ if(!building) build(); });
+  els.stopBtn.addEventListener("click",()=>{ cancel=true; toast("Stopping…"); });
+  $("#copyAllBtn").addEventListener("click",()=>{ copyText(allText()); toast("All requests copied"); });
+  $("#txtBtn").addEventListener("click",()=>download("access-requests.txt",allText()));
+  $("#csvBtn").addEventListener("click",()=>download("addresses.csv",csvOut(),"text/csv"));
+  $("#shareBtn").addEventListener("click",async()=>{
+    if(navigator.share){ try{ await navigator.share({title:"Access requests",text:allText()}); }catch(e){} }
+    else { copyText(allText()); toast("Copied — paste to share"); }
+  });
+
+  /* ---------------- service worker (offline) ---------------- */
+  if("serviceWorker" in navigator){
+    window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+  }
+})();
+</script>
+</body>
+</html>
