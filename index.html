@@ -12,6 +12,10 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="FieldKey" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style>
   :root{
     --bg:#0E1116; --bg2:#14181F; --bg3:#1B212B; --raise:#212935;
@@ -84,6 +88,18 @@
   }
   .filechip .x{margin-left:auto;color:var(--muted);font-size:20px;padding:0 6px}
 
+  /* ---- map ---- */
+  .mapbox{height:260px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg2);z-index:1}
+  .leaflet-container{background:var(--bg2)!important;font-family:var(--ui)}
+  .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--raise);color:var(--ink);box-shadow:0 6px 24px rgba(0,0,0,.5)}
+  .leaflet-popup-content{font-family:var(--mono);font-size:12px;margin:9px 12px;line-height:1.5}
+  .leaflet-popup-content b{color:var(--amber)}
+  .leaflet-container a.leaflet-popup-close-button{color:var(--muted)}
+  .leaflet-bar a{background:var(--bg3);color:var(--ink);border-bottom-color:var(--line2)}
+  .leaflet-bar a:hover{background:var(--raise)}
+  .leaflet-control-attribution{background:rgba(14,17,22,.7)!important;color:var(--faint)!important}
+  .leaflet-control-attribution a{color:var(--muted)!important}
+
   /* ---- mapping selects ---- */
   .grid3{display:grid;grid-template-columns:1fr;gap:10px}
   @media(min-width:520px){.grid3{grid-template-columns:repeat(3,1fr)}}
@@ -140,10 +156,10 @@
   .dock .inner{max-width:760px;margin:0 auto}
 
   /* ---- settings sheet ---- */
-  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:80;opacity:0;pointer-events:none;transition:opacity .2s}
   .scrim.show{opacity:1;pointer-events:auto}
   .sheet{
-    position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--bg2);
+    position:fixed;left:0;right:0;bottom:0;z-index:90;background:var(--bg2);
     border-top-left-radius:20px;border-top-right-radius:20px;border-top:1px solid var(--line2);
     transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1);
     max-height:90vh;overflow:auto;padding:8px 16px calc(env(safe-area-inset-bottom) + 20px);
@@ -171,6 +187,65 @@
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
   @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+  /* ---- tabs ---- */
+  :root{--tabh:54px}
+  .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:70;display:flex;background:#0E1116;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+  .tabbar>button{flex:1;appearance:none;border:0;background:transparent;color:var(--muted);padding:8px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;font-family:var(--ui);font-size:11px;font-weight:600}
+  .tabbar>button.sel{color:var(--amber)}
+  .tabbar svg{width:23px;height:23px;display:block}
+  .badge{position:absolute;top:0;left:0;transform:translate(13px,-5px);background:var(--amber);color:#1a1300;font-size:10px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:grid;place-items:center;padding:0 4px;line-height:1}
+  .view.hidden{display:none}
+  .force-hide{display:none!important}
+  .dock{bottom:calc(var(--tabh) + env(safe-area-inset-bottom))!important}
+  #viewRequests main{padding-bottom:268px}
+
+  /* ---- customers ---- */
+  #viewCustomers main{padding-bottom:90px}
+  .cust-actions{margin-bottom:12px}
+  .searchrow input{margin-bottom:10px}
+  .filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;-webkit-overflow-scrolling:touch}
+  .filters::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto;appearance:none;border:1px solid var(--line2);background:var(--bg3);color:var(--muted);border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600;font-family:var(--ui)}
+  .chip.sel{background:var(--amber);color:#1a1300;border-color:var(--amber)}
+  .bulkrow{display:flex;gap:10px;margin-bottom:14px}
+  .bulkrow .btn{flex:1}
+  .custlist{display:flex;flex-direction:column;gap:10px}
+  .crow{display:flex;gap:0;background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--line2);border-radius:12px;overflow:hidden}
+  .crow.texted{border-left-color:var(--amber)} .crow.replied{border-left-color:#5AA9FF} .crow.scheduled{border-left-color:var(--green)} .crow.done{border-left-color:var(--faint)}
+  .cmain{flex:1;padding:12px;min-width:0;cursor:pointer}
+  .cname{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .cstat{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border-radius:5px;background:var(--bg3);color:var(--muted)}
+  .cstat.texted{background:#3a2e0c;color:var(--amber)} .cstat.replied{background:#10233d;color:#7CC0FF} .cstat.scheduled{background:#0f2c1e;color:var(--green)}
+  .cmeta{color:var(--muted);font-size:12px;margin-top:3px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .caxs{color:var(--amber);font-size:12px;margin-top:4px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cright{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 12px;border-left:1px solid var(--line)}
+  .textbtn{appearance:none;border:0;background:var(--amber);color:#1a1300;font-weight:800;border-radius:10px;padding:10px 14px;font-size:13px;font-family:var(--ui)}
+  .textbtn:active{background:var(--amber-press)}
+  .textbtn.nophone{background:var(--bg3);color:var(--faint)}
+  .ccount{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+  /* detail sheet bits */
+  .dphone{display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--line2);border-radius:11px;padding:11px 13px;margin-bottom:8px;font-family:var(--mono);font-size:14px}
+  .dphone a{color:var(--amber);text-decoration:none;font-weight:700;font-size:12px;border:1px solid var(--line2);border-radius:8px;padding:6px 10px}
+  .dphone a+a{margin-left:6px}
+  .dphone .pn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .codebox{background:#1c1605;border:1px solid #4a3a0a;color:var(--amber);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:13px;margin-top:6px;white-space:pre-wrap;line-height:1.5}
+  .axsval{font-family:var(--mono);font-size:14px;color:var(--ink)}
+  .statseg{display:flex;flex-wrap:wrap;gap:6px}
+  .statseg button{appearance:none;border:1px solid var(--line2);background:var(--bg3);color:var(--muted);border-radius:9px;padding:9px 11px;font-size:13px;font-weight:600;font-family:var(--ui)}
+  .statseg button.sel{background:var(--amber);color:#1a1300;border-color:var(--amber)}
+  .counter{display:flex;align-items:center;gap:14px}
+  .counter button{width:42px;height:42px;border-radius:10px;border:1px solid var(--line2);background:var(--bg3);color:var(--ink);font-size:22px}
+  .counter .cv{font-family:var(--mono);font-size:18px;min-width:24px;text-align:center}
+  textarea{width:100%;background:var(--bg3);color:var(--ink);border:1px solid var(--line2);border-radius:11px;padding:12px;font-size:15px;font-family:var(--mono);min-height:160px;resize:vertical;box-sizing:border-box}
+  textarea:focus{outline:2px solid var(--amber);border-color:var(--amber)}
+
+  /* guided send bar */
+  .guidebar{position:fixed;left:0;right:0;bottom:calc(var(--tabh) + env(safe-area-inset-bottom));z-index:65;background:var(--raise);border-top:1px solid var(--amber);padding:12px 16px;transform:translateY(160%);transition:transform .25s;box-shadow:0 -8px 30px rgba(0,0,0,.4)}
+  .guidebar.show{transform:translateY(0)}
+  .guidebar .gtop{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--muted)}
+  .guidebar .gtop .gx{margin-left:auto;color:var(--muted);font-size:22px}
 </style>
 </head>
 <body>
@@ -190,22 +265,30 @@
   <div class="scan"><i id="scanBar"></i></div>
 </header>
 
+<div id="viewRequests" class="view">
 <main>
   <!-- STEP 1 : load -->
   <section class="step" id="stepLoad">
     <span class="label"><span class="n">01</span>Load site list</span>
     <div class="drop" id="drop">
       <svg class="pin" viewBox="0 0 48 60" aria-hidden="true"><path d="M24 4a17 17 0 0 1 17 17c0 11-17 33-17 33S7 32 7 21A17 17 0 0 1 24 4z" fill="#FFB000"/><circle cx="24" cy="20" r="9" fill="#0E1116"/><rect x="22" y="20" width="4" height="9" rx="2" fill="#0E1116"/></svg>
-      <div class="big">Choose a CSV file</div>
+      <div class="big">Choose a CSV or KML file</div>
       <div class="sub">Needs latitude, longitude, and a 9-digit SAP ID column</div>
-      <input type="file" id="file" accept=".csv,text/csv,text/plain" class="hidden" />
+      <input type="file" id="file" accept=".csv,.kml,text/csv,text/plain,application/vnd.google-earth.kml+xml" class="hidden" />
     </div>
     <p class="note">Your file never leaves your phone — parsing happens on-device. Only the coordinates are sent to the map service to look up addresses.</p>
   </section>
 
-  <!-- STEP 2 : map columns -->
+  <!-- STEP 2 : site map -->
+  <section class="step hidden" id="stepGeo">
+    <span class="label"><span class="n">02</span>Site map <span id="geoCount" class="mono" style="color:var(--muted)"></span></span>
+    <div id="map" class="mapbox"></div>
+    <p class="note" id="geoNote">Pins show every point in your file. They turn green as addresses resolve, red if none is found.</p>
+  </section>
+
+  <!-- STEP 3 : confirm columns -->
   <section class="step hidden" id="stepMap">
-    <span class="label"><span class="n">02</span>Confirm columns</span>
+    <span class="label"><span class="n">03</span>Confirm columns</span>
     <div class="grid3">
       <div class="field"><label class="label" id="lblSap">SAP ID</label><select id="selSap"></select></div>
       <div class="field"><label class="label" id="lblLat">Latitude</label><select id="selLat"></select></div>
@@ -214,9 +297,9 @@
     <p class="note" id="mapNote"></p>
   </section>
 
-  <!-- STEP 3 : build -->
+  <!-- STEP 4 : build -->
   <section class="step hidden" id="stepBuild">
-    <span class="label"><span class="n">03</span>Build requests</span>
+    <span class="label"><span class="n">04</span>Build requests</span>
     <button class="btn primary" id="buildBtn">Resolve addresses &amp; build</button>
     <div class="row" id="stopRow" style="margin-top:10px" hidden>
       <button class="btn danger" id="stopBtn">Stop</button>
@@ -225,7 +308,7 @@
 
   <!-- results -->
   <section class="step hidden" id="stepResults">
-    <span class="label"><span class="n">04</span>Requests <span id="resCount" class="mono" style="color:var(--muted)"></span></span>
+    <span class="label"><span class="n">05</span>Requests <span id="resCount" class="mono" style="color:var(--muted)"></span></span>
     <div class="tickets" id="tickets"></div>
   </section>
 </main>
@@ -233,6 +316,9 @@
 <!-- sticky export dock -->
 <div class="dock hidden" id="dock">
   <div class="inner">
+    <div class="row" style="margin-bottom:10px">
+      <button class="btn primary" id="saveCustBtn">Save these to Customers</button>
+    </div>
     <div class="row" style="margin-bottom:10px">
       <button class="btn ghost" id="copyAllBtn">Copy all</button>
       <button class="btn ghost" id="shareBtn">Share</button>
@@ -242,6 +328,97 @@
       <button class="btn ghost" id="csvBtn">Export .csv</button>
     </div>
   </div>
+</div>
+
+</div><!-- /viewRequests -->
+
+<!-- ================= CUSTOMERS VIEW ================= -->
+<div id="viewCustomers" class="view hidden">
+  <main>
+    <div class="cust-actions">
+      <button class="btn primary" id="pasteEmailBtn">Import return email</button>
+    </div>
+    <div class="searchrow"><input type="text" id="custSearch" placeholder="Search name, address, or SAP…" /></div>
+    <div class="filters" id="custFilters">
+      <button class="chip sel" data-f="all">All</button>
+      <button class="chip" data-f="has">Has contact</button>
+      <button class="chip" data-f="nottexted">Not texted</button>
+      <button class="chip" data-f="texted">Texted</button>
+      <button class="chip" data-f="replied">Replied</button>
+      <button class="chip" data-f="scheduled">Scheduled</button>
+    </div>
+    <div class="bulkrow">
+      <button class="btn ghost" id="textAllBtn">Text all (guided)</button>
+      <button class="btn ghost" id="exportCustBtn">Export</button>
+    </div>
+    <div id="custList" class="custlist"></div>
+    <div id="custEmpty" class="empty">No customers yet.<br>Tap "Import return email" and paste the reply you got back.</div>
+  </main>
+</div>
+
+<!-- guided send bar -->
+<div class="guidebar" id="guideBar">
+  <div class="gtop"><span id="guideLabel" class="mono"></span><span class="gx" id="guideClose" role="button">×</span></div>
+  <button class="btn primary" id="guideOpen">Open text</button>
+</div>
+
+<!-- tab bar -->
+<nav class="tabbar" id="tabbar">
+  <button data-tab="requests" class="sel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h6"/></svg>
+    Requests
+  </button>
+  <button data-tab="customers">
+    <span style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3 3 0 0 1 0 5.6M18 20a5 5 0 0 0-3-4.6"/></svg><span class="badge hidden" id="custBadge">0</span></span>
+    Customers
+  </button>
+</nav>
+
+<!-- detail sheet -->
+<div class="scrim" id="dScrim"></div>
+<div class="sheet" id="dSheet" role="dialog" aria-label="Customer">
+  <div class="grab"></div>
+  <h2 id="dName">—</h2>
+  <p class="hint" id="dMeta"></p>
+  <div class="sgroup"><span class="label">Phones</span><div id="dPhones"></div></div>
+  <div class="sgroup"><span class="label">Access</span><div id="dAccess"></div></div>
+  <div class="sgroup"><span class="label">Status</span><div class="statseg" id="dStatus">
+    <button data-s="enriched">New</button><button data-s="texted">Texted</button>
+    <button data-s="replied">Replied</button><button data-s="scheduled">Scheduled</button>
+    <button data-s="done">Done</button>
+  </div></div>
+  <div class="sgroup"><span class="label">Texts sent</span><div class="counter" id="dCounter">
+    <button id="dMinus">−</button><span class="cv" id="dCount">0</span><button id="dPlus">+</button>
+  </div></div>
+  <div class="sgroup"><label class="label">Notes</label><input type="text" id="dNotes" placeholder="Your own notes…" /></div>
+  <div class="row">
+    <button class="btn primary" id="dTextBtn">Text customer</button>
+    <button class="btn danger" id="dDelete">Delete</button>
+  </div>
+</div>
+
+<!-- email import sheet -->
+<div class="scrim" id="eScrim"></div>
+<div class="sheet" id="eSheet" role="dialog" aria-label="Import email">
+  <div class="grab"></div>
+  <h2>Import return email</h2>
+  <p class="hint">Open the reply, copy everything, and paste it here. I'll match each record to your sites by SAP ID, then name, then address.</p>
+  <textarea id="eText" placeholder="Paste the full email here…"></textarea>
+  <p class="note" id="eStat"></p>
+  <button class="btn primary" id="eParse" style="margin-top:12px">Parse &amp; merge</button>
+</div>
+
+<!-- export sheet -->
+<div class="scrim" id="xScrim"></div>
+<div class="sheet" id="xSheet" role="dialog" aria-label="Export">
+  <div class="grab"></div>
+  <h2>Export customers</h2>
+  <p class="hint">CSV opens in Excel or Numbers. vCard imports into your Contacts.</p>
+  <div class="sgroup"><button class="btn ghost" id="xCsv">Export .csv</button></div>
+  <div class="sgroup"><button class="btn ghost" id="xXlsxCsv">Export for Excel (.csv)</button></div>
+  <div class="sgroup"><button class="btn ghost" id="xJson">Export .json</button></div>
+  <div class="sgroup"><button class="btn ghost" id="xVcf">Export contacts (.vcf)</button></div>
+  <div class="sgroup" style="margin-top:18px"><button class="btn danger" id="xClear">Clear all customers</button></div>
 </div>
 
 <!-- settings -->
@@ -278,6 +455,10 @@
     <input type="number" id="sDelay" min="0" step="100" />
     <p class="note">OpenStreetMap asks for ~1 lookup per second. Keep this at 1100 or higher for OSM.</p>
   </div>
+  <h2 style="margin-top:8px">Text message</h2>
+  <p class="hint">Sent to customers. Use [Customer name] and [customer address] — they fill in automatically.</p>
+  <div class="sgroup"><textarea id="sSms" style="min-height:120px"></textarea></div>
+
   <button class="btn primary" id="saveSettings">Save</button>
   <p class="note" style="text-align:center;margin-top:14px">FieldKey · v1 · runs offline once added to your Home Screen</p>
 </div>
@@ -295,7 +476,8 @@
   const DEF = {
     name:"Obii weeks", lan:"OXWC", phone:"3052196892",
     issue:"need code/contact info", work:"Drone inspection",
-    provider:"osm", email:"", gkey:"", delay:"1100"
+    provider:"osm", email:"", gkey:"", delay:"1100",
+    smsTemplate:"Hey [Customer name] this is Cyberhawk with PGE, I need to complete an aerial inspection at [customer address]. Let me know what time during business hours works for you."
   };
   const cfg = {};
   for(const k in DEF) cfg[k]=store.get("fk_"+k, DEF[k]);
@@ -305,6 +487,7 @@
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
+    stepGeo:$("#stepGeo"),
     selSap:$("#selSap"), selLat:$("#selLat"), selLng:$("#selLng"),
     lblSap:$("#lblSap"), lblLat:$("#lblLat"), lblLng:$("#lblLng"), mapNote:$("#mapNote"),
     buildBtn:$("#buildBtn"), stopBtn:$("#stopBtn"), stopRow:$("#stopRow"),
@@ -347,6 +530,37 @@
     return out;
   }
 
+  /* ---------------- KML parser (Point placemarks -> rows) ---------------- */
+  function parseKML(text){
+    const doc=new DOMParser().parseFromString(text,"application/xml");
+    if(doc.getElementsByTagName("parsererror").length) throw new Error("bad xml");
+    const txt=el=>(el&&el.textContent?el.textContent.trim():"");
+    const child=(node,tag)=>{ const l=node.getElementsByTagName(tag); return l&&l.length?l[0]:null; };
+    const placemarks=Array.prototype.slice.call(doc.getElementsByTagName("Placemark"));
+    const extKeys=[], recs=[];
+    placemarks.forEach(pm=>{
+      const pt=child(pm,"Point"); if(!pt) return;            // only plot points
+      const ce=child(pt,"coordinates"); if(!ce) return;
+      const parts=txt(ce).split(/\s+/)[0].split(",");
+      if(parts.length<2) return;
+      const rec={Name:txt(child(pm,"name")),Longitude:parts[0].trim(),Latitude:parts[1].trim(),
+                 Description:txt(child(pm,"description")),_ext:{}};
+      Array.prototype.slice.call(pm.getElementsByTagName("Data")).forEach(d=>{
+        const k=d.getAttribute("name"); if(!k)return; rec._ext[k]=txt(child(d,"value"));
+        if(extKeys.indexOf(k)<0)extKeys.push(k); });
+      Array.prototype.slice.call(pm.getElementsByTagName("SimpleData")).forEach(d=>{
+        const k=d.getAttribute("name"); if(!k)return; rec._ext[k]=txt(d);
+        if(extKeys.indexOf(k)<0)extKeys.push(k); });
+      recs.push(rec);
+    });
+    const hasDesc=recs.some(r=>r.Description);
+    const headers=["Name","Longitude","Latitude"].concat(hasDesc?["Description"]:[]).concat(extKeys);
+    const rows=recs.map(r=>headers.map(h=>(
+      h==="Name"?r.Name:h==="Longitude"?r.Longitude:h==="Latitude"?r.Latitude:
+      h==="Description"?r.Description:(r._ext[h]||""))));
+    return {headers,rows};
+  }
+
   /* ---------------- column detection ---------------- */
   const isNine = v => /^\d{9}$/.test(String(v).trim());
   function colValues(idx){ return rows.map(r=>r[idx]).filter(v=>v!=null && String(v).trim()!==""); }
@@ -385,12 +599,19 @@
     const reader=new FileReader();
     reader.onerror=()=>toast("Couldn't read that file. Try again.");
     reader.onload=()=>{
-      let grid;
-      try{ grid=parseCSV(String(reader.result)); }
-      catch(e){ toast("That file isn't valid CSV."); return; }
-      if(grid.length<2){ toast("CSV needs a header row and at least one site."); return; }
-      headers=grid[0].map(h=>String(h).trim());
-      rows=grid.slice(1);
+      const head=String(reader.result).slice(0,300);
+      const isKml=/\.kml$/i.test(f.name) || /^\s*<\?xml|<kml[\s>]/i.test(head);
+      try{
+        if(isKml){
+          const p=parseKML(String(reader.result));
+          if(!p.rows.length){ toast("No map points found in that KML."); return; }
+          headers=p.headers; rows=p.rows;
+        } else {
+          const grid=parseCSV(String(reader.result));
+          if(grid.length<2){ toast("CSV needs a header row and at least one site."); return; }
+          headers=grid[0].map(h=>String(h).trim()); rows=grid.slice(1);
+        }
+      }catch(e){ toast(isKml?"That file isn't valid KML.":"That file isn't valid CSV."); return; }
       detect=detectColumns();
       if(detect.sap<0){ toast("No 9-digit SAP ID column found — pick it below."); }
 
@@ -414,7 +635,8 @@
       els.rRows.textContent=rows.length;
       setStatus("READY");
       updateSapReadout();
-      els.stepMap.scrollIntoView({behavior:"smooth",block:"start"});
+      showGeo();
+      els.stepGeo.scrollIntoView({behavior:"smooth",block:"start"});
     };
     reader.readAsText(f);
   }
@@ -428,7 +650,40 @@
   }
   function updateSapReadout(){ const h=headers[parseInt(els.selSap.value,10)]; els.rSap.textContent = h? truncate(h,7):"—"; }
 
-  [els.selSap,els.selLat,els.selLng].forEach(s=>s.addEventListener("change",()=>{markSelects();updateSapReadout();}));
+  [els.selSap,els.selLat,els.selLng].forEach(s=>s.addEventListener("change",()=>{markSelects();updateSapReadout();plotPoints(true);}));
+
+  /* ---------------- map ---------------- */
+  let lmap=null, mLayer=null;
+  function ensureMap(){
+    if(lmap || !window.L) return lmap;
+    lmap=L.map("map",{zoomControl:true});
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {maxZoom:19,attribution:"\u00A9 OpenStreetMap contributors"}).addTo(lmap);
+    mLayer=L.layerGroup().addTo(lmap);
+    return lmap;
+  }
+  function plotPoints(fit){
+    const note=document.getElementById("geoNote"), cnt=document.getElementById("geoCount");
+    if(!window.L){ if(note) note.textContent="The map needs an internet connection \u2014 pins will appear once you're online."; return; }
+    ensureMap(); mLayer.clearLayers();
+    const latI=parseInt(els.selLat.value,10), lngI=parseInt(els.selLng.value,10), sapI=parseInt(els.selSap.value,10);
+    const pts=[];
+    rows.forEach((r,i)=>{
+      const lat=parseFloat(r[latI]), lng=parseFloat(r[lngI]);
+      if(isNaN(lat)||isNaN(lng)||lat<-90||lat>90||lng<-180||lng>180) return;
+      const res=results[i];
+      const color = res&&res.status==="done" ? "#41D88B" : res&&res.status==="failed" ? "#FF6B6B" : "#FFB000";
+      const mk=L.circleMarker([lat,lng],{radius:7,weight:2,color:"#0E1116",fillColor:color,fillOpacity:1});
+      const sap=escapeHtml(String(r[sapI]==null?"":r[sapI]));
+      const addr = res&&res.addr ? "<br>"+escapeHtml(res.addr) : "";
+      mk.bindPopup("<b>"+(sap||("point "+(i+1)))+"</b>"+addr);
+      mk.addTo(mLayer); pts.push([lat,lng]);
+    });
+    if(cnt) cnt.textContent = pts.length ? "("+pts.length+")" : "(no mappable points)";
+    if(fit && pts.length) lmap.fitBounds(pts,{padding:[28,28],maxZoom:16});
+    setTimeout(()=>lmap.invalidateSize(),80);
+  }
+  function showGeo(){ els.stepGeo.classList.remove("hidden"); plotPoints(true); }
 
   /* ---------------- geocoding ---------------- */
   async function geocodeOSM(lat,lng){
@@ -543,6 +798,7 @@
       }catch(e){ d.addr=""; d.status="failed"; }
       done++;
       updateTicket(i);
+      plotPoints(false);
       els.resCount.textContent="("+done+"/"+results.length+")";
       els.rGeo.textContent=ok+"/"+results.length; els.rGeo.classList.add("on");
       els.scanBar.style.width=Math.round(done/results.length*100)+"%";
@@ -644,6 +900,319 @@
     if(navigator.share){ try{ await navigator.share({title:"Access requests",text:allText()}); }catch(e){} }
     else { copyText(allText()); toast("Copied — paste to share"); }
   });
+
+  /* ================= CUSTOMERS / DATABASE / OUTREACH ================= */
+
+  /* ---- text helpers ---- */
+  function titleCase(s){ return String(s||"").toLowerCase().replace(/\b([a-z])/g,(m,c)=>c.toUpperCase()); }
+  function firstName(name){
+    if(!name) return "there";
+    let fn = name.includes(",") ? (name.split(",")[1]||name.split(",")[0]) : name.split(/\s+/)[0];
+    fn = (fn||"").replace(/\b(jr|sr|ii|iii|iv)\b/ig,"").trim().split(/\s+/)[0] || name;
+    return titleCase(fn);
+  }
+  const PHONE_LINE=/^\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}$/;
+  function phoneDigits(s){ const d=s.replace(/\D/g,""); return d.length===10?"+1"+d:(d.length===11&&d[0]==="1"?"+"+d:"+"+d); }
+  function csvEsc(v){ v=String(v==null?"":v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+  function stripUSA(a){ return String(a||"").replace(/,?\s*USA\s*$/i,""); }
+  function smsHref(tel,body){ return "sms:"+tel+"&body="+encodeURIComponent(body); }
+  function buildMsg(tmpl,name,address){
+    return (tmpl||"").replace(/\[Customer name\]/gi,firstName(name)).replace(/\[customer address\]|\[address\]/gi,stripUSA(address));
+  }
+
+  /* ---- email parser ---- */
+  function parseReturnEmail(text){
+    text=text.replace(/\r\n?/g,"\n");
+    const chunks=text.split(/(?=SAP Equipment ID:)/i).filter(c=>/SAP Equipment ID:/i.test(c));
+    return chunks.map(chunk=>{
+      const lines=chunk.split("\n").map(l=>l.trim());
+      const rec={sapId:"",address:"",name:"",phones:[],access:"",accessNotes:""};
+      const used=new Set(); const notes=[];
+      lines.forEach((ln,i)=>{
+        if(!ln){used.add(i);return;} let m;
+        if((m=ln.match(/^SAP Equipment ID:\s*(.*)$/i))){rec.sapId=m[1].trim();used.add(i);}
+        else if((m=ln.match(/^Address Attempted:\s*(.*)$/i))){rec.address=m[1].trim();used.add(i);}
+        else if(/^\*/.test(ln)){rec.name=ln.replace(/^\*\s*/,"").trim();used.add(i);}
+        else if(PHONE_LINE.test(ln)){rec.phones.push({display:ln,tel:phoneDigits(ln)});used.add(i);}
+        else if((m=ln.match(/^AXS:\s*(.*)$/i))){rec.access=m[1].trim();used.add(i);}
+      });
+      lines.forEach((ln,i)=>{ if(ln&&!used.has(i)) notes.push(ln); });
+      rec.accessNotes=notes.join(" | ");
+      return rec;
+    });
+  }
+
+  /* ---- matching ---- */
+  function normName(s){ return String(s||"").split(/[^a-z0-9]+/i).filter(Boolean).map(x=>x.toUpperCase()).sort().join(""); }
+  function normAddr(s){ return stripUSA(s).toLowerCase().replace(/[^a-z0-9]+/g," ").trim(); }
+  function findExisting(p){
+    if(p.sapId){ const id=String(p.sapId).trim(); const e=customers.find(c=>String(c.sapId||"").trim()===id && id!==""); if(e)return e; }
+    if(p.name){ const n=normName(p.name); if(n){ const e=customers.find(c=>normName(c.name)===n); if(e)return e; } }
+    if(p.address){ const a=normAddr(p.address); if(a){ const e=customers.find(c=>normAddr(c.address)===a); if(e)return e; } }
+    return null;
+  }
+
+  /* ---- IndexedDB ---- */
+  const DB_NAME="fieldkey", STORE="customers";
+  let _db=null, dbOk=true;
+  function dbOpen(){ return new Promise((res,rej)=>{ if(_db)return res(_db);
+    if(!("indexedDB" in window)){ dbOk=false; return rej(new Error("no idb")); }
+    const rq=indexedDB.open(DB_NAME,1);
+    rq.onupgradeneeded=e=>{ const db=e.target.result; if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:"id"}); };
+    rq.onsuccess=e=>{_db=e.target.result;res(_db);}; rq.onerror=e=>{dbOk=false;rej(e.target.error);}; }); }
+  function _store(mode){ return _db.transaction(STORE,mode).objectStore(STORE); }
+  function dbAll(){ return new Promise((res,rej)=>{ try{const r=_store("readonly").getAll(); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
+  function dbBulk(recs){ return new Promise((res,rej)=>{ try{const s=_store("readwrite"); recs.forEach(r=>s.put(r)); s.transaction.oncomplete=()=>res(); s.transaction.onerror=()=>rej(s.transaction.error);}catch(e){rej(e);} }); }
+  function dbDel(id){ return new Promise((res,rej)=>{ try{const r=_store("readwrite").delete(id); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
+  function dbClear(){ return new Promise((res,rej)=>{ try{const r=_store("readwrite").clear(); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
+
+  let customers=[];
+  function persist(){ if(!dbOk) return Promise.resolve(); return dbBulk(customers).catch(()=>{}); }
+  function findById(id){ return customers.find(c=>c.id===id); }
+  function newId(sapId){ return (sapId&&String(sapId).trim()) ? "sap_"+String(sapId).trim() : "gen_"+Date.now()+"_"+Math.random().toString(36).slice(2,7); }
+
+  /* ---- seed DB from the imported file (Requests tab) ---- */
+  async function seedFromImport(){
+    if(!rows.length){ toast("Load a file first."); return; }
+    const sapI=parseInt(els.selSap.value,10), latI=parseInt(els.selLat.value,10), lngI=parseInt(els.selLng.value,10);
+    const extraIdx=headers.map((h,i)=>i).filter(i=>i!==sapI&&i!==latI&&i!==lngI);
+    let added=0, updated=0;
+    rows.forEach((r,ri)=>{
+      const sapId=String(r[sapI]==null?"":r[sapI]).trim();
+      const lat=String(r[latI]==null?"":r[latI]).trim(), lng=String(r[lngI]==null?"":r[lngI]).trim();
+      const addr=(results[ri]&&results[ri].addr)?results[ri].addr:"";
+      let e=findExisting({sapId,address:addr,name:""});
+      if(e){ updated++; if(!e.lat)e.lat=lat; if(!e.lng)e.lng=lng; if(addr&&!e.address)e.address=addr; }
+      else {
+        e={id:newId(sapId),sapId,name:"",address:addr,lat,lng,phones:[],access:"",accessNotes:"",extra:{},status:"new",textCount:0,lastTexted:"",notes:""};
+        extraIdx.forEach(i=>{ const v=String(r[i]==null?"":r[i]).trim(); if(v) e.extra[headers[i]||("col"+i)]=v; });
+        customers.push(e); added++;
+      }
+    });
+    await persist(); renderCustomers(); updateBadge();
+    toast(added+" added · "+updated+" updated");
+    switchTab("customers");
+  }
+
+  /* ---- export ---- */
+  function custCSV(){
+    const cols=["sapId","name","address","phones","access","accessNotes","lat","lng","status","textCount","lastTexted","notes"];
+    const head=["SAP ID","Customer","Address","Phones","Access","Access Notes","Latitude","Longitude","Status","Texts Sent","Last Texted","Notes"];
+    const extraKeys=[]; customers.forEach(c=>Object.keys(c.extra||{}).forEach(k=>{if(extraKeys.indexOf(k)<0)extraKeys.push(k);}));
+    const lines=[head.concat(extraKeys).map(csvEsc).join(",")];
+    customers.forEach(c=>{
+      const base=cols.map(k=>csvEsc(k==="phones"?(c.phones||[]).map(p=>p.display).join("; "):(c[k]==null?"":c[k])));
+      const ex=extraKeys.map(k=>csvEsc((c.extra&&c.extra[k])||""));
+      lines.push(base.concat(ex).join(","));
+    });
+    return lines.join("\n");
+  }
+  function custVCard(){
+    return customers.filter(c=>c.phones&&c.phones.length).map(c=>{
+      const tels=c.phones.map(p=>"TEL;TYPE=CELL:"+p.display).join("\n");
+      const note=[c.access?("AXS: "+c.access):"",c.accessNotes].filter(Boolean).join(" | ");
+      const adr=stripUSA(c.address).split(",").map(s=>s.trim());
+      return ["BEGIN:VCARD","VERSION:3.0","FN:"+(c.name||(c.sapId||"")),tels,"ADR;TYPE=HOME:;;"+adr.join(";"),note?("NOTE:"+note):"","END:VCARD"].filter(Boolean).join("\n");
+    }).join("\n");
+  }
+
+  /* ---- render list ---- */
+  let custFilter="all", custQuery="";
+  function displayName(c){ return c.name || (c.sapId?("SAP "+c.sapId):"(no name)"); }
+  function visibleCustomers(){
+    const q=custQuery.trim().toLowerCase();
+    return customers.filter(c=>{
+      const hasP=c.phones&&c.phones.length;
+      if(custFilter==="has"&&!hasP) return false;
+      if(custFilter==="nottexted"&&!(hasP&&!(c.textCount>0))) return false;
+      if(custFilter==="texted"&&!((c.textCount>0)||c.status==="texted")) return false;
+      if(custFilter==="replied"&&c.status!=="replied") return false;
+      if(custFilter==="scheduled"&&c.status!=="scheduled") return false;
+      if(q){ const hay=((c.name||"")+" "+(c.address||"")+" "+(c.sapId||"")).toLowerCase(); if(hay.indexOf(q)<0) return false; }
+      return true;
+    });
+  }
+  function customerRow(c){
+    const st=c.status||"new";
+    const stShow=(st==="enriched"||st==="new")?"":'<span class="cstat '+st+'">'+st+'</span>';
+    const hasP=c.phones&&c.phones.length;
+    const axs=[c.access,c.accessNotes].filter(Boolean).join(" · ");
+    const meta=[stripUSA(c.address),c.sapId?("SAP "+c.sapId):""].filter(Boolean).join("  ·  ");
+    return '<div class="crow '+st+'" data-id="'+c.id+'">'+
+      '<div class="cmain" data-open="'+c.id+'">'+
+        '<div class="cname">'+escapeHtml(displayName(c))+stShow+'</div>'+
+        (meta?'<div class="cmeta">'+escapeHtml(meta)+'</div>':'')+
+        (axs?'<div class="caxs">'+escapeHtml(axs)+'</div>':'')+
+      '</div>'+
+      '<div class="cright">'+
+        '<button class="textbtn '+(hasP?"":"nophone")+'" data-text="'+c.id+'"'+(hasP?"":" disabled")+'>Text</button>'+
+        ((c.textCount||0)>0?'<span class="ccount">\u00D7'+c.textCount+'</span>':'')+
+      '</div>'+
+    '</div>';
+  }
+  function renderCustomers(){
+    const list=$("#custList"), empty=$("#custEmpty");
+    if(!customers.length){ list.innerHTML=""; empty.classList.remove("hidden");
+      empty.innerHTML='No customers yet.<br>Tap "Import return email" and paste the reply you got back.'; return; }
+    const vis=visibleCustomers();
+    if(!vis.length){ list.innerHTML=""; empty.classList.remove("hidden"); empty.textContent="No customers match this filter."; return; }
+    empty.classList.add("hidden");
+    list.innerHTML=vis.map(customerRow).join("");
+    list.querySelectorAll("[data-open]").forEach(el=>el.addEventListener("click",()=>openDetail(el.dataset.open)));
+    list.querySelectorAll("[data-text]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();textCustomer(b.dataset.text);}));
+  }
+  function updateBadge(){
+    const n=customers.filter(c=>c.phones&&c.phones.length&&!(c.textCount>0)).length;
+    const b=$("#custBadge");
+    if(n>0){ b.textContent=n>99?"99+":String(n); b.classList.remove("hidden"); } else b.classList.add("hidden");
+  }
+
+  /* ---- texting ---- */
+  function openSms(tel,name,address){
+    const a=document.createElement("a"); a.href=smsHref(tel,buildMsg(cfg.smsTemplate,name,address));
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  function markTexted(id){
+    const c=findById(id); if(!c)return;
+    c.textCount=(c.textCount||0)+1; c.lastTexted=new Date().toISOString();
+    if(["replied","scheduled","done"].indexOf(c.status)<0) c.status="texted";
+    persist(); renderCustomers(); updateBadge();
+    if(curId===id) openDetail(id);
+  }
+  function textCustomer(id){
+    const c=findById(id); if(!c||!(c.phones&&c.phones.length)){ toast("No phone number for this customer."); return; }
+    openSms(c.phones[0].tel,c.name,c.address); markTexted(id);
+  }
+
+  /* ---- guided bulk send ---- */
+  let guideList=[], guideIdx=0;
+  function startGuide(){
+    guideList=visibleCustomers().filter(c=>c.phones&&c.phones.length&&!(c.textCount>0));
+    if(!guideList.length){ toast("No un-texted customers with a phone here."); return; }
+    guideIdx=0; showGuide();
+  }
+  function showGuide(){
+    if(guideIdx>=guideList.length){ closeGuide(); toast("Guided send complete"); return; }
+    const c=guideList[guideIdx];
+    $("#guideLabel").textContent=(guideIdx+1)+" of "+guideList.length+"  \u00B7  "+displayName(c);
+    $("#guideOpen").textContent="Open text to "+firstName(c.name);
+    $("#guideBar").classList.add("show");
+  }
+  function guideOpenCurrent(){
+    const c=guideList[guideIdx]; if(!c){ closeGuide(); return; }
+    openSms(c.phones[0].tel,c.name,c.address); markTexted(c.id);
+    guideIdx++; showGuide();
+  }
+  function closeGuide(){ $("#guideBar").classList.remove("show"); }
+
+  /* ---- detail sheet ---- */
+  let curId=null;
+  function openDetail(id){
+    const c=findById(id); if(!c)return; curId=id;
+    $("#dName").textContent=displayName(c);
+    $("#dMeta").textContent=[stripUSA(c.address),c.sapId?("SAP "+c.sapId):""].filter(Boolean).join("  \u00B7  ");
+    $("#dPhones").innerHTML=(c.phones&&c.phones.length)
+      ? c.phones.map(p=>'<div class="dphone"><span class="pn">'+escapeHtml(p.display)+'</span>'+
+          '<a href="tel:'+p.tel+'">Call</a>'+
+          '<a href="'+smsHref(p.tel,buildMsg(cfg.smsTemplate,c.name,c.address))+'" data-sms="'+c.id+'">Text</a></div>').join("")
+      : '<p class="note">No phone number on file.</p>';
+    let ax=c.access?'<div class="axsval">'+escapeHtml(c.access)+'</div>':'<div class="note">None given</div>';
+    if(c.accessNotes) ax+='<div class="codebox">'+escapeHtml(c.accessNotes.replace(/ \| /g,"\n"))+'</div>';
+    $("#dAccess").innerHTML=ax;
+    const cur=(c.status==="new")?"enriched":c.status;
+    $("#dStatus").querySelectorAll("button").forEach(b=>b.classList.toggle("sel",b.dataset.s===cur));
+    $("#dCount").textContent=c.textCount||0;
+    $("#dNotes").value=c.notes||"";
+    $("#dTextBtn").classList.toggle("force-hide",!(c.phones&&c.phones.length));
+    $("#dPhones").querySelectorAll("[data-sms]").forEach(a=>a.addEventListener("click",()=>markTexted(a.dataset.sms)));
+    $("#dScrim").classList.add("show"); $("#dSheet").classList.add("show");
+  }
+  function closeDetail(){ $("#dScrim").classList.remove("show"); $("#dSheet").classList.remove("show"); curId=null; }
+
+  /* ---- email + export sheets ---- */
+  function openEmail(){ $("#eText").value=""; $("#eStat").textContent=""; $("#eScrim").classList.add("show"); $("#eSheet").classList.add("show"); }
+  function closeEmail(){ $("#eScrim").classList.remove("show"); $("#eSheet").classList.remove("show"); }
+  async function parseAndMerge(){
+    const text=$("#eText").value;
+    if(!text.trim()){ $("#eStat").textContent="Paste the email text first."; return; }
+    let parsed; try{ parsed=parseReturnEmail(text); }catch(e){ $("#eStat").textContent="Couldn't parse that text."; return; }
+    if(!parsed.length){ $("#eStat").textContent="No 'SAP Equipment ID' records found in that text."; return; }
+    let matched=0, added=0;
+    parsed.forEach(p=>{
+      let e=findExisting(p);
+      if(e){ matched++; }
+      else { e={id:newId(p.sapId),sapId:p.sapId,name:"",address:"",lat:"",lng:"",phones:[],access:"",accessNotes:"",extra:{},status:"new",textCount:0,lastTexted:"",notes:""}; customers.push(e); added++; }
+      e.name=p.name||e.name; if(p.address)e.address=p.address; e.phones=p.phones; e.access=p.access; e.accessNotes=p.accessNotes;
+      if(e.status==="new"||!e.status) e.status="enriched";
+      if(e.textCount==null)e.textCount=0;
+    });
+    await persist(); renderCustomers(); updateBadge();
+    $("#eStat").textContent="Matched "+matched+" \u00B7 added "+added+" new \u00B7 "+customers.length+" total";
+    toast("Merged "+(matched+added)+" records");
+    setTimeout(closeEmail,1000);
+  }
+  function openExport(){ $("#xScrim").classList.add("show"); $("#xSheet").classList.add("show"); }
+  function closeExport(){ $("#xScrim").classList.remove("show"); $("#xSheet").classList.remove("show"); }
+
+  /* ---- tabs ---- */
+  function switchTab(name){
+    const req=name==="requests";
+    $("#viewRequests").classList.toggle("hidden",!req);
+    $("#viewCustomers").classList.toggle("hidden",req);
+    $("#tabbar").querySelectorAll("button").forEach(b=>b.classList.toggle("sel",b.dataset.tab===name));
+    els.dock.classList.toggle("force-hide",!req);
+    if(!req){ renderCustomers(); updateBadge(); }
+    window.scrollTo(0,0);
+  }
+
+  /* ---- wiring (customers) ---- */
+  $("#tabbar").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>switchTab(b.dataset.tab)));
+  $("#saveCustBtn").addEventListener("click",seedFromImport);
+  $("#pasteEmailBtn").addEventListener("click",openEmail);
+  $("#eParse").addEventListener("click",parseAndMerge);
+  $("#eScrim").addEventListener("click",closeEmail);
+  $("#exportCustBtn").addEventListener("click",openExport);
+  $("#xScrim").addEventListener("click",closeExport);
+  $("#xCsv").addEventListener("click",()=>{download("customers.csv",custCSV(),"text/csv");closeExport();});
+  $("#xXlsxCsv").addEventListener("click",()=>{download("customers-excel.csv",custCSV(),"text/csv");closeExport();});
+  $("#xJson").addEventListener("click",()=>{download("customers.json",JSON.stringify(customers,null,2),"application/json");closeExport();});
+  $("#xVcf").addEventListener("click",()=>{download("customers.vcf",custVCard(),"text/vcard");closeExport();});
+  $("#xClear").addEventListener("click",async()=>{
+    if(!customers.length){ toast("Nothing to clear."); return; }
+    if(confirm("Delete all "+customers.length+" customers? This cannot be undone.")){
+      customers=[]; if(dbOk) await dbClear(); renderCustomers(); updateBadge(); closeExport(); toast("Customers cleared");
+    }
+  });
+  $("#textAllBtn").addEventListener("click",startGuide);
+  $("#guideOpen").addEventListener("click",guideOpenCurrent);
+  $("#guideClose").addEventListener("click",closeGuide);
+  $("#custSearch").addEventListener("input",e=>{ custQuery=e.target.value; renderCustomers(); });
+  $("#custFilters").querySelectorAll(".chip").forEach(ch=>ch.addEventListener("click",()=>{
+    custFilter=ch.dataset.f; $("#custFilters").querySelectorAll(".chip").forEach(x=>x.classList.toggle("sel",x===ch)); renderCustomers();
+  }));
+
+  /* detail controls */
+  $("#dScrim").addEventListener("click",closeDetail);
+  $("#dStatus").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    const c=findById(curId); if(!c)return; c.status=b.dataset.s;
+    $("#dStatus").querySelectorAll("button").forEach(x=>x.classList.toggle("sel",x===b));
+    persist(); renderCustomers(); updateBadge();
+  }));
+  $("#dPlus").addEventListener("click",()=>{ const c=findById(curId); if(!c)return; c.textCount=(c.textCount||0)+1; $("#dCount").textContent=c.textCount; persist(); renderCustomers(); updateBadge(); });
+  $("#dMinus").addEventListener("click",()=>{ const c=findById(curId); if(!c)return; c.textCount=Math.max(0,(c.textCount||0)-1); $("#dCount").textContent=c.textCount; persist(); renderCustomers(); updateBadge(); });
+  $("#dNotes").addEventListener("input",e=>{ const c=findById(curId); if(c){ c.notes=e.target.value; persist(); } });
+  $("#dTextBtn").addEventListener("click",()=>{ if(curId) textCustomer(curId); });
+  $("#dDelete").addEventListener("click",async()=>{
+    const c=findById(curId); if(!c)return;
+    if(confirm("Delete "+displayName(c)+"?")){ customers=customers.filter(x=>x.id!==curId); if(dbOk) await dbDel(c.id); closeDetail(); renderCustomers(); updateBadge(); toast("Deleted"); }
+  });
+
+  /* settings: SMS template load + save */
+  els.settingsBtn.addEventListener("click",()=>{ $("#sSms").value=cfg.smsTemplate; });
+  $("#saveSettings").addEventListener("click",()=>{ cfg.smsTemplate=$("#sSms").value; store.set("fk_smsTemplate",cfg.smsTemplate); });
+
+  /* init DB */
+  (async function(){ try{ await dbOpen(); customers=await dbAll(); }catch(e){ customers=[]; } renderCustomers(); updateBadge(); })();
 
   /* ---------------- service worker (offline) ---------------- */
   if("serviceWorker" in navigator){
