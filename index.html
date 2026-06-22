@@ -210,6 +210,9 @@
   .chip.sel{background:var(--amber);color:#1a1300;border-color:var(--amber)}
   .bulkrow{display:flex;gap:10px;margin-bottom:14px}
   .bulkrow .btn{flex:1}
+  .dbbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 2px}
+  .dbbar #dbCount{color:var(--muted);font-size:12px}
+  .linkbtn{appearance:none;border:0;background:transparent;color:var(--red);font-size:13px;font-weight:600;font-family:var(--ui);padding:4px 2px}
   .custlist{display:flex;flex-direction:column;gap:10px}
   .crow{display:flex;gap:0;background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--line2);border-radius:12px;overflow:hidden}
   .crow.texted{border-left-color:var(--amber)} .crow.replied{border-left-color:#5AA9FF} .crow.scheduled{border-left-color:var(--green)} .crow.done{border-left-color:var(--faint)}
@@ -232,6 +235,10 @@
   .dphone .pn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .codebox{background:#1c1605;border:1px solid #4a3a0a;color:var(--amber);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:13px;margin-top:6px;white-space:pre-wrap;line-height:1.5}
   .axsval{font-family:var(--mono);font-size:14px;color:var(--ink)}
+  .dinfo{display:flex;flex-direction:column;gap:1px;border:1px solid var(--line);border-radius:11px;overflow:hidden}
+  .irow{display:flex;gap:10px;padding:9px 12px;background:var(--bg3);font-size:13px}
+  .irow .ik{color:var(--muted);flex:0 0 38%;font-family:var(--ui)}
+  .irow .iv{color:var(--ink);flex:1;font-family:var(--mono);word-break:break-word}
   .statseg{display:flex;flex-wrap:wrap;gap:6px}
   .statseg button{appearance:none;border:1px solid var(--line2);background:var(--bg3);color:var(--muted);border-radius:9px;padding:9px 11px;font-size:13px;font-weight:600;font-family:var(--ui)}
   .statseg button.sel{background:var(--amber);color:#1a1300;border-color:var(--amber)}
@@ -339,11 +346,7 @@
 <div id="viewCustomers" class="view hidden">
   <main>
     <div class="cust-actions">
-      <div class="row" style="margin-bottom:10px">
-        <button class="btn primary" id="pasteEmailBtn">Import email</button>
-        <button class="btn primary" id="importKmlBtn">Import KML</button>
-      </div>
-      <input type="file" id="kmlFile" accept=".kml,application/vnd.google-earth.kml+xml" class="hidden" />
+      <button class="btn primary" id="pasteEmailBtn">Import email return</button>
     </div>
     <div class="searchrow"><input type="text" id="custSearch" placeholder="Search name, address, or SAP…" /></div>
     <div class="filters" id="custFilters">
@@ -360,8 +363,9 @@
       <button class="btn ghost" id="mapBtn">Map</button>
       <button class="btn ghost" id="exportCustBtn">Export</button>
     </div>
+    <div class="dbbar"><span id="dbCount" class="mono">0 in database</span><button id="dbClear" class="linkbtn">Clear database</button></div>
     <div id="custList" class="custlist"></div>
-    <div id="custEmpty" class="empty">No customers yet.<br>Tap "Import return email" and paste the reply you got back.</div>
+    <div id="custEmpty" class="empty">Nothing here yet.<br>Load a job in <b>Requests</b>, build it, then tap <b>Save to Customers</b> — or paste an email return above.</div>
   </main>
 </div>
 
@@ -391,6 +395,7 @@
   <p class="hint" id="dMeta"></p>
   <div class="sgroup"><span class="label">Phones</span><div id="dPhones"></div></div>
   <div class="sgroup"><span class="label">Access</span><div id="dAccess"></div></div>
+  <div class="sgroup"><span class="label">Record</span><div id="dInfo" class="dinfo"></div></div>
   <div class="sgroup"><span class="label">Status</span><div class="statseg" id="dStatus">
     <button data-s="enriched">New</button><button data-s="texted">Texted</button>
     <button data-s="replied">Replied</button><button data-s="scheduled">Scheduled</button>
@@ -410,14 +415,14 @@
 <div class="scrim" id="kScrim"></div>
 <div class="sheet" id="kSheet" role="dialog" aria-label="Import KML">
   <div class="grab"></div>
-  <h2>Import KML</h2>
-  <p class="hint" id="kInfo">Confirm which field is which, then merge. Phone numbers are pulled out of the <b>description</b> automatically when that's where they live. Matched points keep the phone &amp; access you've already collected and just refresh today's location; brand-new points are added.</p>
+  <h2>Save to Customers</h2>
+  <p class="hint" id="kInfo">These points (with the addresses just looked up) will be merged into your customer database. Confirm which columns hold the customer name, phone, and access info — phone numbers are pulled out of the <b>description</b> automatically when that's where they live. Matched points keep what you've already collected and just refresh today's location &amp; address; brand-new points are added.</p>
   <div class="field"><label class="label">SAP ID</label><select id="kSap"></select></div>
   <div class="field"><label class="label">Customer name</label><select id="kName"></select></div>
   <div class="field"><label class="label">Phone</label><select id="kPhone"></select></div>
   <div class="field"><label class="label">Access info</label><select id="kAccess"></select></div>
   <p class="note" id="kStat"></p>
-  <button class="btn primary" id="kMerge" style="margin-top:12px">Merge into customers</button>
+  <button class="btn primary" id="kMerge" style="margin-top:12px">Save to customers</button>
 </div>
 
 <!-- map + KML export sheet -->
@@ -571,8 +576,18 @@
   }
 
   /* ---------------- KML parser (Point placemarks -> rows) ---------------- */
+  function xmlSafe(text){
+    return String(text)
+      .replace(/&([a-zA-Z][a-zA-Z0-9]*);/g,(m,name)=>{
+        const k=name.toLowerCase();
+        if(k==="amp"||k==="lt"||k==="gt"||k==="quot"||k==="apos") return m;
+        const map={nbsp:" ",mdash:"-",ndash:"-",hellip:"...",rsquo:"'",lsquo:"'",ldquo:'"',rdquo:'"',copy:"(c)",reg:"(r)",trade:"(tm)",deg:" deg",times:"x",middot:"-"};
+        return (k in map)?map[k]:" ";
+      })
+      .replace(/&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g,"&amp;");
+  }
   function parseKML(text){
-    const doc=new DOMParser().parseFromString(text,"application/xml");
+    const doc=new DOMParser().parseFromString(xmlSafe(text),"application/xml");
     if(doc.getElementsByTagName("parsererror").length) throw new Error("bad xml");
     const txt=el=>(el&&el.textContent?el.textContent.trim():"");
     const child=(node,tag)=>{ const l=node.getElementsByTagName(tag); return l&&l.length?l[0]:null; };
@@ -635,7 +650,9 @@
     });
   }
 
+  let loadedName="";
   function handleFile(f){
+    loadedName=f.name||"";
     const reader=new FileReader();
     reader.onerror=()=>toast("Couldn't read that file. Try again.");
     reader.onload=()=>{
@@ -986,7 +1003,16 @@
   function normName(s){ return String(s||"").split(/[^a-z0-9]+/i).filter(Boolean).map(x=>x.toUpperCase()).sort().join(""); }
   function normAddr(s){ return stripUSA(s).toLowerCase().replace(/[^a-z0-9]+/g," ").trim(); }
   function findExisting(p){
-    if(p.sapId){ const id=String(p.sapId).trim(); const e=customers.find(c=>String(c.sapId||"").trim()===id && id!==""); if(e)return e; }
+    const pSap=p.sapId?String(p.sapId).trim():"";
+    if(pSap){
+      // with a SAP, match the same SAP only — never collapse into a different-SAP asset
+      const e=customers.find(c=>String(c.sapId||"").trim()===pSap); if(e)return e;
+      // but a record that has no SAP yet can be enriched by name/address
+      if(p.name){ const n=normName(p.name); if(n){ const e2=customers.find(c=>!String(c.sapId||"").trim()&&normName(c.name)===n); if(e2)return e2; } }
+      if(p.address){ const a=normAddr(p.address); if(a){ const e3=customers.find(c=>!String(c.sapId||"").trim()&&normAddr(c.address)===a); if(e3)return e3; } }
+      return null;
+    }
+    // no SAP on the incoming record: fall back to name, then address
     if(p.name){ const n=normName(p.name); if(n){ const e=customers.find(c=>normName(c.name)===n); if(e)return e; } }
     if(p.address){ const a=normAddr(p.address); if(a){ const e=customers.find(c=>normAddr(c.address)===a); if(e)return e; } }
     return null;
@@ -1011,27 +1037,53 @@
   function findById(id){ return customers.find(c=>c.id===id); }
   function newId(sapId){ return (sapId&&String(sapId).trim()) ? "sap_"+String(sapId).trim() : "gen_"+Date.now()+"_"+Math.random().toString(36).slice(2,7); }
 
-  /* ---- seed DB from the imported file (Requests tab) ---- */
-  async function seedFromImport(){
-    if(!rows.length){ toast("Load a file first."); return; }
-    const sapI=parseInt(els.selSap.value,10), latI=parseInt(els.selLat.value,10), lngI=parseInt(els.selLng.value,10);
-    const extraIdx=headers.map((h,i)=>i).filter(i=>i!==sapI&&i!==latI&&i!==lngI);
-    let added=0, updated=0;
-    rows.forEach((r,ri)=>{
-      const sapId=String(r[sapI]==null?"":r[sapI]).trim();
-      const lat=String(r[latI]==null?"":r[latI]).trim(), lng=String(r[lngI]==null?"":r[lngI]).trim();
-      const addr=(results[ri]&&results[ri].addr)?results[ri].addr:"";
-      let e=findExisting({sapId,address:addr,name:""});
-      if(e){ updated++; if(!e.lat)e.lat=lat; if(!e.lng)e.lng=lng; if(addr&&!e.address)e.address=addr; }
-      else {
-        e={id:newId(sapId),sapId,name:"",address:addr,lat,lng,phones:[],access:"",accessNotes:"",extra:{},status:"new",textCount:0,lastTexted:"",notes:""};
-        extraIdx.forEach(i=>{ const v=String(r[i]==null?"":r[i]).trim(); if(v) e.extra[headers[i]||("col"+i)]=v; });
-        customers.push(e); added++;
-      }
+  /* ---- text sanitizing: strip HTML/markup so exports stay readable ---- */
+  function cleanText(s){
+    if(s==null) return "";
+    let t=String(s);
+    if(t.indexOf("<")<0 && t.indexOf("&")<0 && t.indexOf("\n")<0) return t.trim();
+    t=t.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1");
+    t=t.replace(/<\s*br\s*\/?>/gi," ").replace(/<\/(p|div|tr|li|td|h[1-6])\s*>/gi," ");
+    t=t.replace(/<[^>]*>/g," ");
+    t=t.replace(/&nbsp;/gi," ").replace(/&amp;/gi,"&").replace(/&lt;/gi,"<").replace(/&gt;/gi,">")
+       .replace(/&quot;/gi,'"').replace(/&#0*39;|&apos;/gi,"'")
+       .replace(/&#0*(\d{2,5});/g,(m,n)=>{ try{ return String.fromCharCode(parseInt(n,10)); }catch(e){ return " "; } });
+    return t.replace(/\s+/g," ").trim();
+  }
+  function sanitizeRecord(c){
+    c.name=cleanText(c.name); c.address=cleanText(c.address);
+    c.access=cleanText(c.access); c.accessNotes=cleanText(c.accessNotes);
+    if(c.notes) c.notes=cleanText(c.notes);
+    if(c.phones) c.phones=c.phones.map(p=>({display:cleanText(p.display),tel:p.tel}));
+    if(c.extra){ Object.keys(c.extra).forEach(k=>{ const v=cleanText(c.extra[k]); if(v) c.extra[k]=v; else delete c.extra[k]; }); }
+    return c;
+  }
+
+  /* ---- Save to Customers (from Requests): map extra fields, then merge ---- */
+  function batchLabel(){ const n=(loadedName||"").replace(/\.[a-z0-9]+$/i,"").trim(); if(n) return n; const d=new Date(); return "KML "+d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  function recordsFromRequests(map){
+    const latI=parseInt(els.selLat.value,10), lngI=parseInt(els.selLng.value,10);
+    return rows.map((r,ri)=>{
+      const get=i=>(i>=0&&i<headers.length)?cleanText(String(r[i]==null?"":r[i])):"";
+      const rec={sapId:get(map.sap),name:get(map.name),lat:get(latI),lng:get(lngI),
+                 address:(results[ri]&&results[ri].addr)?cleanText(results[ri].addr):"",
+                 phones:[],access:get(map.access),accessNotes:"",extra:{}};
+      const ph=get(map.phone); if(ph) extractPhones(ph).forEach(p=>rec.phones.push(p));
+      headers.forEach((h,i)=>{ if([map.sap,map.name,map.phone,map.access,latI,lngI].indexOf(i)>=0)return; const v=get(i); if(v)rec.extra[h]=v; });
+      return rec;
     });
-    await persist(); renderCustomers(); updateBadge();
-    toast(added+" added · "+updated+" updated");
-    switchTab("customers");
+  }
+  function openSaveSheet(){
+    if(!rows.length){ toast("Load a file in Requests first."); return; }
+    const fields=detectKmlFields(headers,rows);
+    const sapSel=parseInt(els.selSap.value,10);
+    fillKmlSelect($("#kSap"),headers, isNaN(sapSel)?fields.sap:sapSel);
+    fillKmlSelect($("#kName"),headers,fields.name);
+    fillKmlSelect($("#kPhone"),headers,fields.phone);
+    fillKmlSelect($("#kAccess"),headers,fields.access);
+    const withAddr=results.filter(x=>x&&x.addr).length;
+    $("#kStat").textContent=rows.length+" points · "+withAddr+" with an address so far";
+    $("#kScrim").classList.add("show"); $("#kSheet").classList.add("show");
   }
 
   /* ---- export ---- */
@@ -1041,18 +1093,18 @@
     const extraKeys=[]; customers.forEach(c=>Object.keys(c.extra||{}).forEach(k=>{if(extraKeys.indexOf(k)<0)extraKeys.push(k);}));
     const lines=[head.concat(extraKeys).map(csvEsc).join(",")];
     customers.forEach(c=>{
-      const base=cols.map(k=>csvEsc(k==="phones"?(c.phones||[]).map(p=>p.display).join("; "):(c[k]==null?"":c[k])));
-      const ex=extraKeys.map(k=>csvEsc((c.extra&&c.extra[k])||""));
+      const base=cols.map(k=>csvEsc(cleanText(k==="phones"?(c.phones||[]).map(p=>p.display).join("; "):(c[k]==null?"":c[k]))));
+      const ex=extraKeys.map(k=>csvEsc(cleanText((c.extra&&c.extra[k])||"")));
       lines.push(base.concat(ex).join(","));
     });
     return lines.join("\n");
   }
   function custVCard(){
     return customers.filter(c=>c.phones&&c.phones.length).map(c=>{
-      const tels=c.phones.map(p=>"TEL;TYPE=CELL:"+p.display).join("\n");
-      const note=[c.access?("AXS: "+c.access):"",c.accessNotes].filter(Boolean).join(" | ");
-      const adr=stripUSA(c.address).split(",").map(s=>s.trim());
-      return ["BEGIN:VCARD","VERSION:3.0","FN:"+(c.name||(c.sapId||"")),tels,"ADR;TYPE=HOME:;;"+adr.join(";"),note?("NOTE:"+note):"","END:VCARD"].filter(Boolean).join("\n");
+      const tels=c.phones.map(p=>"TEL;TYPE=CELL:"+cleanText(p.display)).join("\n");
+      const note=[c.access?("AXS: "+cleanText(c.access)):"",cleanText(c.accessNotes)].filter(Boolean).join(" | ");
+      const adr=stripUSA(cleanText(c.address)).split(",").map(s=>s.trim());
+      return ["BEGIN:VCARD","VERSION:3.0","FN:"+cleanText(c.name||(c.sapId||"")),tels,"ADR;TYPE=HOME:;;"+adr.join(";"),note?("NOTE:"+note):"","END:VCARD"].filter(Boolean).join("\n");
     }).join("\n");
   }
 
@@ -1092,9 +1144,10 @@
     '</div>';
   }
   function renderCustomers(){
-    const list=$("#custList"), empty=$("#custEmpty");
+    const list=$("#custList"), empty=$("#custEmpty"), dbc=$("#dbCount");
+    if(dbc) dbc.textContent=customers.length+(customers.length===1?" in database":" in database");
     if(!customers.length){ list.innerHTML=""; empty.classList.remove("hidden");
-      empty.innerHTML='No customers yet.<br>Tap "Import return email" and paste the reply you got back.'; return; }
+      empty.innerHTML='Nothing here yet.<br>Load a job in <b>Requests</b>, build it, then tap <b>Save to Customers</b> — or paste an email return above.'; return; }
     const vis=visibleCustomers();
     if(!vis.length){ list.innerHTML=""; empty.classList.remove("hidden"); empty.textContent="No customers match this filter."; return; }
     empty.classList.add("hidden");
@@ -1160,6 +1213,14 @@
     let ax=c.access?'<div class="axsval">'+escapeHtml(c.access)+'</div>':'<div class="note">None given</div>';
     if(c.accessNotes) ax+='<div class="codebox">'+escapeHtml(c.accessNotes.replace(/ \| /g,"\n"))+'</div>';
     $("#dAccess").innerHTML=ax;
+    const info=[];
+    if(c.address) info.push(["Address",stripUSA(c.address)]);
+    if(c.sapId) info.push(["SAP ID",c.sapId]);
+    if(c.lat&&c.lng) info.push(["Coordinates",(+c.lat).toFixed(5)+", "+(+c.lng).toFixed(5)]);
+    if(c.assignment) info.push(["From",c.assignment]);
+    if(c.lastTexted) info.push(["Last texted",new Date(c.lastTexted).toLocaleString()]);
+    Object.keys(c.extra||{}).forEach(k=>info.push([k,c.extra[k]]));
+    $("#dInfo").innerHTML=info.length?info.map(kv=>'<div class="irow"><span class="ik">'+escapeHtml(kv[0])+'</span><span class="iv">'+escapeHtml(kv[1])+'</span></div>').join(""):'<div class="note">No extra details.</div>';
     const cur=(c.status==="new")?"enriched":c.status;
     $("#dStatus").querySelectorAll("button").forEach(b=>b.classList.toggle("sel",b.dataset.s===cur));
     $("#dCount").textContent=c.textCount||0;
@@ -1208,7 +1269,7 @@
 
   /* ---- wiring (customers) ---- */
   $("#tabbar").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>switchTab(b.dataset.tab)));
-  $("#saveCustBtn").addEventListener("click",seedFromImport);
+  $("#saveCustBtn").addEventListener("click",openSaveSheet);
   $("#pasteEmailBtn").addEventListener("click",openEmail);
   $("#eParse").addEventListener("click",parseAndMerge);
   $("#eScrim").addEventListener("click",closeEmail);
@@ -1218,12 +1279,15 @@
   $("#xXlsxCsv").addEventListener("click",()=>{download("customers-excel.csv",custCSV(),"text/csv");closeExport();});
   $("#xJson").addEventListener("click",()=>{download("customers.json",JSON.stringify(customers,null,2),"application/json");closeExport();});
   $("#xVcf").addEventListener("click",()=>{download("customers.vcf",custVCard(),"text/vcard");closeExport();});
-  $("#xClear").addEventListener("click",async()=>{
-    if(!customers.length){ toast("Nothing to clear."); return; }
-    if(confirm("Delete all "+customers.length+" customers? This cannot be undone.")){
-      customers=[]; if(dbOk) await dbClear(); renderCustomers(); updateBadge(); closeExport(); toast("Customers cleared");
+  async function clearDatabase(){
+    if(!customers.length){ toast("The database is already empty."); return; }
+    if(confirm("Delete all "+customers.length+" customers from the database? This cannot be undone.")){
+      customers=[]; cfg.latestKml=""; store.set("fk_latestKml",""); if(dbOk) await dbClear();
+      renderCustomers(); updateBadge(); toast("Database cleared");
     }
-  });
+  }
+  $("#xClear").addEventListener("click",async()=>{ closeExport(); await clearDatabase(); });
+  $("#dbClear").addEventListener("click",clearDatabase);
   $("#textAllBtn").addEventListener("click",startGuide);
   $("#guideOpen").addEventListener("click",guideOpenCurrent);
   $("#guideClose").addEventListener("click",closeGuide);
@@ -1284,16 +1348,6 @@
       const alpha=v.filter(x=>/[a-z]/i.test(x)&&!/^\d+$/.test(x)).length/v.length; if(idx.name<0&&(alpha>0.5||/name|owner|customer|contact/i.test(h)))idx.name=i; });
     return idx;
   }
-  function kmlToRecords(headers,rows,map){
-    const latI=headers.findIndex(h=>/^lat/i.test(h)), lngI=headers.findIndex(h=>/^lon|^lng/i.test(h));
-    return rows.map(r=>{
-      const get=i=>(i>=0&&i<headers.length)?String(r[i]==null?"":r[i]).trim():"";
-      const rec={sapId:get(map.sap),name:get(map.name),lat:get(latI),lng:get(lngI),phones:[],access:get(map.access),accessNotes:"",extra:{}};
-      const ph=get(map.phone); if(ph) extractPhones(ph).forEach(p=>rec.phones.push(p));
-      headers.forEach((h,i)=>{ if([map.sap,map.name,map.phone,map.access,latI,lngI].indexOf(i)>=0)return; const v=get(i); if(v)rec.extra[h]=v; });
-      return rec;
-    });
-  }
   function mergeIntoDB(records,batchId){
     let matched=0, added=0;
     records.forEach(rec=>{
@@ -1301,32 +1355,32 @@
       if(e){ matched++;
         if(rec.lat)e.lat=rec.lat; if(rec.lng)e.lng=rec.lng;
         if(!e.name&&rec.name)e.name=rec.name;
+        if(rec.address&&!e.address)e.address=rec.address;
         if((!e.phones||!e.phones.length)&&rec.phones.length)e.phones=rec.phones;
         if(rec.access){ const have=((e.access||"")+" "+(e.accessNotes||"")).toLowerCase();
           if(!e.access)e.access=rec.access; else if(have.indexOf(rec.access.toLowerCase())<0)e.accessNotes=[e.accessNotes,rec.access].filter(Boolean).join(" | "); }
         Object.keys(rec.extra||{}).forEach(k=>{ e.extra=e.extra||{}; if(e.extra[k]==null)e.extra[k]=rec.extra[k]; });
         e.assignment=batchId;
       } else { added++;
-        customers.push({id:newId(rec.sapId),sapId:rec.sapId,name:rec.name,address:"",lat:rec.lat,lng:rec.lng,phones:rec.phones,access:rec.access,accessNotes:"",extra:rec.extra||{},status:"new",textCount:0,lastTexted:"",notes:"",assignment:batchId});
+        customers.push({id:newId(rec.sapId),sapId:rec.sapId,name:rec.name,address:rec.address||"",lat:rec.lat,lng:rec.lng,phones:rec.phones,access:rec.access,accessNotes:"",extra:rec.extra||{},status:"new",textCount:0,lastTexted:"",notes:"",assignment:batchId});
       }
     });
     return {matched,added};
   }
   function customersToKML(list){
     const pm=list.filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o);}).map(c=>{
-      const nm=c.name||(c.sapId?("SAP "+c.sapId):"Point");
-      const phones=(c.phones||[]).map(p=>p.display).join(", ");
-      const accessText=[c.access,c.accessNotes].filter(Boolean).join(" | ");
+      const nm=cleanText(c.name)||(c.sapId?("SAP "+c.sapId):"Point");
+      const phones=(c.phones||[]).map(p=>cleanText(p.display)).join(", ");
+      const accessText=[cleanText(c.access),cleanText(c.accessNotes)].filter(Boolean).join(" | ");
       const desc=[accessText?("Access: "+accessText):"",phones?("Phone: "+phones):"",c.status?("Status: "+c.status):""].filter(Boolean).join("\n");
-      const ed=[["SAP",c.sapId],["Customer",c.name],["Phone",phones],["Access",c.access],["AccessNotes",c.accessNotes],["Status",c.status]]
+      const ed=[["SAP",c.sapId],["Customer",cleanText(c.name)],["Phone",phones],["Access",cleanText(c.access)],["AccessNotes",cleanText(c.accessNotes)],["Status",c.status]]
         .filter(kv=>kv[1]!=null&&kv[1]!=="").map(kv=>'<Data name="'+xmlEsc(kv[0])+'"><value>'+xmlEsc(kv[1])+'</value></Data>').join("");
       return '<Placemark><name>'+xmlEsc(nm)+'</name>'+(desc?'<description>'+xmlEsc(desc)+'</description>':'')+'<ExtendedData>'+ed+'</ExtendedData><Point><coordinates>'+parseFloat(c.lng)+','+parseFloat(c.lat)+',0</coordinates></Point></Placemark>';
     }).join("\n");
     return '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>FieldKey export</name>\n'+pm+'\n</Document></kml>';
   }
 
-  /* ---- KML import wiring ---- */
-  let pendingKml=null;
+  /* ---- Save-to-Customers sheet wiring ---- */
   function fillKmlSelect(sel,headers,chosen){
     sel.innerHTML="";
     const none=document.createElement("option"); none.value="-1"; none.textContent="\u2014 none \u2014"; sel.appendChild(none);
@@ -1334,36 +1388,19 @@
     if(chosen<0) none.selected=true;
   }
   function closeKml(){ $("#kScrim").classList.remove("show"); $("#kSheet").classList.remove("show"); }
-  $("#importKmlBtn").addEventListener("click",()=>$("#kmlFile").click());
-  $("#kmlFile").addEventListener("change",e=>{
-    const f=e.target.files&&e.target.files[0]; if(!f)return;
-    const reader=new FileReader();
-    reader.onerror=()=>toast("Couldn't read that file.");
-    reader.onload=()=>{
-      let parsed; try{ parsed=parseKML(String(reader.result)); }catch(err){ toast("That file isn't valid KML."); return; }
-      if(!parsed.rows.length){ toast("No map points found in that KML."); return; }
-      const fields=detectKmlFields(parsed.headers,parsed.rows);
-      pendingKml={headers:parsed.headers,rows:parsed.rows,batch:(f.name||"KML").replace(/\.kml$/i,"")};
-      fillKmlSelect($("#kSap"),parsed.headers,fields.sap);
-      fillKmlSelect($("#kName"),parsed.headers,fields.name);
-      fillKmlSelect($("#kPhone"),parsed.headers,fields.phone);
-      fillKmlSelect($("#kAccess"),parsed.headers,fields.access);
-      $("#kStat").textContent=parsed.rows.length+" points in this KML";
-      $("#kScrim").classList.add("show"); $("#kSheet").classList.add("show");
-    };
-    reader.readAsText(f); e.target.value="";
-  });
   $("#kScrim").addEventListener("click",closeKml);
   $("#kMerge").addEventListener("click",async()=>{
-    if(!pendingKml)return;
+    if(!rows.length){ toast("Load a file in Requests first."); return; }
     const map={sap:parseInt($("#kSap").value,10),name:parseInt($("#kName").value,10),phone:parseInt($("#kPhone").value,10),access:parseInt($("#kAccess").value,10)};
-    const recs=kmlToRecords(pendingKml.headers,pendingKml.rows,map);
-    const res=mergeIntoDB(recs,pendingKml.batch);
-    cfg.latestKml=pendingKml.batch; store.set("fk_latestKml",pendingKml.batch);
+    const recs=recordsFromRequests(map);
+    const batch=batchLabel();
+    const res=mergeIntoDB(recs,batch);
+    cfg.latestKml=batch; store.set("fk_latestKml",batch);
     await persist(); updateBadge();
-    toast(res.matched+" matched \u00B7 "+res.added+" new");
+    toast(res.matched+" matched \u00B7 "+res.added+" new \u2014 saved");
     closeKml();
     custFilter="latest"; $("#custFilters").querySelectorAll(".chip").forEach(x=>x.classList.toggle("sel",x.dataset.f==="latest")); renderCustomers();
+    switchTab("customers");
   });
 
   /* ---- customer map + KML export ---- */
@@ -1407,7 +1444,14 @@
   $("#xKml").addEventListener("click",()=>{ const list=withCoords(); if(!list.length){ toast("No points with coordinates to export."); return; } download("customers.kml",customersToKML(list),"application/vnd.google-earth.kml+xml"); closeExport(); });
 
   /* init DB */
-  (async function(){ try{ await dbOpen(); customers=await dbAll(); }catch(e){ customers=[]; } renderCustomers(); updateBadge(); })();
+  (async function(){
+    try{ await dbOpen(); customers=await dbAll(); }catch(e){ customers=[]; }
+    let dirty=false;
+    customers.forEach(c=>{ const b=c.name+"|"+c.access+"|"+c.accessNotes+"|"+c.address+"|"+JSON.stringify(c.extra||{}); sanitizeRecord(c);
+      if(b!==(c.name+"|"+c.access+"|"+c.accessNotes+"|"+c.address+"|"+JSON.stringify(c.extra||{}))) dirty=true; });
+    if(dirty) persist();
+    renderCustomers(); updateBadge();
+  })();
 
   /* ---------------- service worker (offline) ---------------- */
   if("serviceWorker" in navigator){

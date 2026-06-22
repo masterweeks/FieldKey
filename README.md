@@ -12,42 +12,55 @@ else works offline once installed.
 
 The app has two tabs at the bottom:
 
-### Requests
-Import → map → confirm columns → build access requests → copy/share/export.
-After building, **Save these to Customers** pushes the sites (SAP ID +
-coordinates + resolved address) into the customer database for later.
+### Requests — bring data in
+Load a CSV or KML → map → confirm the SAP / latitude / longitude columns →
+**Build** (reverse-geocodes every point to an address) → copy/share/export the
+access requests.
 
-### Customers
-A persistent database on your phone for the contact info you collect back.
+After building, **Save these to Customers** is the single way data enters the
+database. It runs every check on the file — detecting the customer name, phone
+(including numbers buried in a KML's **description**), and access columns — then
+saves each point with its SAP ID, coordinates, **geocoded address**, name,
+phone, and access. It **merges** into what's already there: a point that matches
+an existing customer (by SAP ID, then name, then address) updates that record
+and keeps the phone / access / status / text history you've collected; brand-new
+points are added; points already in the database that aren't in this file are
+left untouched. The file is tagged so the **Latest KML** filter in Customers
+shows just that batch.
 
-- **Import email** — paste the reply you get after sending the list. It
+This is also how a fresh daily KML gets merged with everything you've built up,
+and — because it geocodes — how those points finally get addresses.
+
+### Customers — your database
+A persistent, on-device view of every site you've collected. The header shows
+how many are in the database, and **Clear database** wipes it (with a
+confirmation). Tap any customer to see the full record — phones, access with
+gate codes, address, coordinates, which file it came from, and any extra fields.
+
+- **Import email return** — paste the reply you get after sending a list. It
   reads each record (SAP Equipment ID, address, name, phone numbers, `AXS:`
-  access, and any gate-code / instruction lines) and merges it into your sites,
-  matching by **SAP ID first, then name, then address**. Coordinates from the
-  import are kept; contact info from the email is added on top.
-- **Import KML** — load any KML straight into the database (handy when a job is
-  issued with access notes already on it, or to bring a brand-new daily KML into
-  your history). FieldKey auto-detects the SAP / name / phone / access fields
-  (adjust if needed) — including pulling phone numbers out of the **description**
-  when that's where they're written — then merges: points that match a customer you already have
-  **keep the phone, access, status, and text history you've collected** and just
-  refresh today's location, brand-new points are added, and points you've built
-  up that aren't in the new KML are left untouched. The day's batch is tagged so
-  the **Latest KML** filter shows just today's assignment.
+  access, and any gate-code / instruction lines) and merges it in by **SAP ID,
+  then name, then address**. The email's address, name, and phones are taken as
+  authoritative; coordinates you already have are kept. (KML files don't get
+  imported here — they go through **Requests** so they pick up addresses.)
 - **Text customers** — each customer has a one-tap **Text** button that opens
-  Messages pre-filled with your template (the customer's first name and address
-  fill in automatically). The app counts each send and marks the customer
-  *Texted*. *Guided text* walks through everyone you haven't texted yet,
-  one tap each (iOS doesn't allow an app to send texts silently or in bulk).
+  Messages pre-filled with your template (first name and address fill in
+  automatically). The app counts each send and marks the customer *Texted*.
+  *Guided text* walks through everyone you haven't texted yet, one tap each
+  (iOS doesn't allow an app to send texts silently or in bulk).
 - **Track** — per-customer status (New / Texted / Replied / Scheduled / Done),
-  a text counter, and your own notes. Filter chips and search across the list.
+  a text counter, and your own notes. Filter chips (including **Latest KML**)
+  and search across the list.
 - **Map & export KML** — the **Map** button shows every customer that has
   coordinates. Tap pins to select, or pan/zoom to an area and hit *Select
   visible*, then **Export KML** of the selection — for handing off or reloading
   a reassigned area. The exported KML carries the name, phone, access, and
-  status in each placemark, and re-imports into FieldKey cleanly.
+  status in each placemark, and re-imports cleanly (through Requests).
 - **Export** — `.csv` (opens in Excel/Numbers), `.json`, `.vcf` (imports every
   customer with a phone into Contacts), and `.kml` (all points with coordinates).
+  All exported text is plain and readable — any HTML that came in from a KML's
+  description is stripped to clean text (on import, on export, and when an older
+  database is first opened in this version).
 
 Edit the text-message template anytime in **Settings → Text message**.
 
