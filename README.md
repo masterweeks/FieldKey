@@ -35,7 +35,9 @@ and — because it geocodes — how those points finally get addresses.
 A persistent, on-device view of every site you've collected. The header shows
 how many are in the database, and **Clear database** wipes it (with a
 confirmation). Tap any customer to see the full record — phones, access with
-gate codes, address, coordinates, which file it came from, and any extra fields.
+gate codes, address, coordinates, which file it came from, and any extra fields —
+plus **Apple Maps / Google Maps** directions buttons when the site has
+coordinates.
 
 - **Import email return** — paste the reply you get after sending a list. It
   reads each record (SAP Equipment ID, address, name, phone numbers, `AXS:`
@@ -52,15 +54,22 @@ gate codes, address, coordinates, which file it came from, and any extra fields.
   a text counter, and your own notes. Filter chips (including **Latest KML**)
   and search across the list.
 - **Map & export KML** — the **Map** button shows every customer that has
-  coordinates. Tap pins to select, or pan/zoom to an area and hit *Select
-  visible*, then **Export KML** of the selection — for handing off or reloading
-  a reassigned area. The exported KML carries the name, phone, access, and
-  status in each placemark, and re-imports cleanly (through Requests).
-- **Export** — `.csv` (opens in Excel/Numbers), `.json`, `.vcf` (imports every
-  customer with a phone into Contacts), and `.kml` (all points with coordinates).
-  All exported text is plain and readable — any HTML that came in from a KML's
-  description is stripped to clean text (on import, on export, and when an older
-  database is first opened in this version).
+  coordinates. Tap a pin for a popup with the site name, access, and **Apple
+  Maps / Google Maps** buttons that open turn-by-turn driving directions to that
+  point. Tap pins to select, or pan/zoom to an area and hit *Select visible*,
+  then **Export KML** of the selection — for handing off or reloading a
+  reassigned area. The exported KML carries the name, phone, access, and status
+  in each placemark, and re-imports cleanly (through Requests).
+- **Select & export** — every row has a circle on the left; tap it to pick
+  specific assets (a bar shows how many are selected). **Export** then covers
+  exactly what you've chosen — or, if nothing is selected, whatever the current
+  **filter and search** are showing. The export sheet states the scope ("Exporting
+  3 selected customers" / "Exporting 12 customers (Latest KML)") before you pick a
+  format: `.csv` (opens in Excel/Numbers), `.json`, `.vcf` (imports every
+  customer with a phone into Contacts), and `.kml` (the selected points that have
+  coordinates). All exported text is plain and readable — any HTML that came in
+  from a KML's description is stripped to clean text (on import, on export, and
+  when an older database is first opened in this version).
 
 Edit the text-message template anytime in **Settings → Text message**.
 

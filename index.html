@@ -215,6 +215,12 @@
   .linkbtn{appearance:none;border:0;background:transparent;color:var(--red);font-size:13px;font-weight:600;font-family:var(--ui);padding:4px 2px}
   .custlist{display:flex;flex-direction:column;gap:10px}
   .crow{display:flex;gap:0;background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--line2);border-radius:12px;overflow:hidden}
+  .csel{flex:0 0 auto;align-self:center;width:22px;height:22px;border-radius:50%;border:2px solid var(--line2);background:transparent;margin-left:12px;cursor:pointer;position:relative;appearance:none;-webkit-appearance:none}
+  .csel.on{background:var(--amber);border-color:var(--amber)}
+  .csel.on::after{content:"";position:absolute;left:6px;top:2.5px;width:5px;height:9px;border:solid #1a1300;border-width:0 2px 2px 0;transform:rotate(45deg)}
+  .selbar{display:flex;align-items:center;justify-content:space-between;margin:-4px 2px 12px;padding:8px 12px;background:rgba(255,176,0,.08);border:1px solid var(--amber);border-radius:10px}
+  .selbar #selCount{color:var(--amber);font-weight:700;font-size:12px}
+  .linkbtn.alt{color:var(--amber)}
   .crow.texted{border-left-color:var(--amber)} .crow.replied{border-left-color:#5AA9FF} .crow.scheduled{border-left-color:var(--green)} .crow.done{border-left-color:var(--faint)}
   .cmain{flex:1;padding:12px;min-width:0;cursor:pointer}
   .cname{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -256,6 +262,9 @@
   .mapsheet{max-height:94vh}
   .maprow{display:flex;gap:10px;margin-top:10px}
   .maprow .btn{flex:1}
+  .navrow{display:flex;gap:6px;margin-top:8px}
+  .navrow a{flex:1;text-align:center;background:var(--amber);color:#1a1300;font-weight:700;text-decoration:none;border-radius:8px;padding:8px 6px;font-size:12px;font-family:var(--ui)}
+  .navrow a:active{background:var(--amber-press)}
 </style>
 </head>
 <body>
@@ -364,6 +373,7 @@
       <button class="btn ghost" id="exportCustBtn">Export</button>
     </div>
     <div class="dbbar"><span id="dbCount" class="mono">0 in database</span><button id="dbClear" class="linkbtn">Clear database</button></div>
+    <div class="selbar hidden" id="selBar"><span id="selCount" class="mono">0 selected</span><button id="selClear" class="linkbtn alt">Clear selection</button></div>
     <div id="custList" class="custlist"></div>
     <div id="custEmpty" class="empty">Nothing here yet.<br>Load a job in <b>Requests</b>, build it, then tap <b>Save to Customers</b> — or paste an email return above.</div>
   </main>
@@ -393,6 +403,7 @@
   <div class="grab"></div>
   <h2 id="dName">—</h2>
   <p class="hint" id="dMeta"></p>
+  <div class="sgroup hidden" id="dNavGroup"><span class="label">Directions</span><div id="dNav"></div></div>
   <div class="sgroup"><span class="label">Phones</span><div id="dPhones"></div></div>
   <div class="sgroup"><span class="label">Access</span><div id="dAccess"></div></div>
   <div class="sgroup"><span class="label">Record</span><div id="dInfo" class="dinfo"></div></div>
@@ -456,12 +467,13 @@
 <div class="sheet" id="xSheet" role="dialog" aria-label="Export">
   <div class="grab"></div>
   <h2>Export customers</h2>
+  <p class="hint" id="xScope" style="color:var(--amber);font-weight:600"></p>
   <p class="hint">CSV opens in Excel or Numbers. vCard imports into your Contacts.</p>
   <div class="sgroup"><button class="btn ghost" id="xCsv">Export .csv</button></div>
   <div class="sgroup"><button class="btn ghost" id="xXlsxCsv">Export for Excel (.csv)</button></div>
   <div class="sgroup"><button class="btn ghost" id="xJson">Export .json</button></div>
   <div class="sgroup"><button class="btn ghost" id="xVcf">Export contacts (.vcf)</button></div>
-  <div class="sgroup"><button class="btn ghost" id="xKml">Export all points (.kml)</button></div>
+  <div class="sgroup"><button class="btn ghost" id="xKml">Export points (.kml)</button></div>
   <div class="sgroup" style="margin-top:18px"><button class="btn danger" id="xClear">Clear all customers</button></div>
 </div>
 
@@ -733,7 +745,7 @@
       const mk=L.circleMarker([lat,lng],{radius:7,weight:2,color:"#0E1116",fillColor:color,fillOpacity:1});
       const sap=escapeHtml(String(r[sapI]==null?"":r[sapI]));
       const addr = res&&res.addr ? "<br>"+escapeHtml(res.addr) : "";
-      mk.bindPopup("<b>"+(sap||("point "+(i+1)))+"</b>"+addr);
+      mk.bindPopup("<b>"+(sap||("point "+(i+1)))+"</b>"+addr+navLinks(lat,lng));
       mk.addTo(mLayer); pts.push([lat,lng]);
     });
     if(cnt) cnt.textContent = pts.length ? "("+pts.length+")" : "(no mappable points)";
@@ -1059,6 +1071,15 @@
     return c;
   }
 
+  /* ---- navigation: open driving directions in Apple or Google Maps ---- */
+  function navLinks(lat,lng){
+    if(lat==null||lng==null||isNaN(+lat)||isNaN(+lng)) return "";
+    const a="https://maps.apple.com/?daddr="+(+lat)+","+(+lng)+"&dirflg=d";
+    const g="https://www.google.com/maps/dir/?api=1&destination="+(+lat)+","+(+lng)+"&travelmode=driving";
+    return '<div class="navrow"><a href="'+a+'" target="_blank" rel="noopener">Apple Maps</a>'+
+           '<a href="'+g+'" target="_blank" rel="noopener">Google Maps</a></div>';
+  }
+
   /* ---- Save to Customers (from Requests): map extra fields, then merge ---- */
   function batchLabel(){ const n=(loadedName||"").replace(/\.[a-z0-9]+$/i,"").trim(); if(n) return n; const d=new Date(); return "KML "+d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
   function recordsFromRequests(map){
@@ -1087,20 +1108,21 @@
   }
 
   /* ---- export ---- */
-  function custCSV(){
-    const cols=["sapId","name","address","phones","access","accessNotes","lat","lng","status","textCount","lastTexted","notes"];
-    const head=["SAP ID","Customer","Address","Phones","Access","Access Notes","Latitude","Longitude","Status","Texts Sent","Last Texted","Notes"];
-    const extraKeys=[]; customers.forEach(c=>Object.keys(c.extra||{}).forEach(k=>{if(extraKeys.indexOf(k)<0)extraKeys.push(k);}));
+  function custCSV(list){
+    list=list||customers;
+    const cols=["sapId","name","address","phones","accessNotes","lat","lng","status","textCount","lastTexted","notes"];
+    const head=["SAP ID","Customer","Address","Phones","Access Notes","Latitude","Longitude","Status","Texts Sent","Last Texted","Notes"];
+    const extraKeys=[]; list.forEach(c=>Object.keys(c.extra||{}).forEach(k=>{if(extraKeys.indexOf(k)<0)extraKeys.push(k);}));
     const lines=[head.concat(extraKeys).map(csvEsc).join(",")];
-    customers.forEach(c=>{
+    list.forEach(c=>{
       const base=cols.map(k=>csvEsc(cleanText(k==="phones"?(c.phones||[]).map(p=>p.display).join("; "):(c[k]==null?"":c[k]))));
       const ex=extraKeys.map(k=>csvEsc(cleanText((c.extra&&c.extra[k])||"")));
       lines.push(base.concat(ex).join(","));
     });
     return lines.join("\n");
   }
-  function custVCard(){
-    return customers.filter(c=>c.phones&&c.phones.length).map(c=>{
+  function custVCard(list){
+    return (list||customers).filter(c=>c.phones&&c.phones.length).map(c=>{
       const tels=c.phones.map(p=>"TEL;TYPE=CELL:"+cleanText(p.display)).join("\n");
       const note=[c.access?("AXS: "+cleanText(c.access)):"",cleanText(c.accessNotes)].filter(Boolean).join(" | ");
       const adr=stripUSA(cleanText(c.address)).split(",").map(s=>s.trim());
@@ -1125,6 +1147,21 @@
       return true;
     });
   }
+  let cSel=new Set();
+  function exportList(){ return cSel.size ? customers.filter(c=>cSel.has(c.id)) : visibleCustomers(); }
+  function exportScopeLabel(){
+    if(cSel.size) return cSel.size+(cSel.size===1?" selected customer":" selected customers");
+    const names={latest:"Latest KML",has:"with a contact",nottexted:"not texted",texted:"texted",replied:"replied",scheduled:"scheduled"};
+    const parts=[]; if(custFilter!=="all"&&names[custFilter]) parts.push(names[custFilter]);
+    const q=custQuery.trim(); if(q) parts.push('matching "'+q+'"');
+    const n=visibleCustomers().length;
+    return n+(n===1?" customer":" customers")+(parts.length?" ("+parts.join(", ")+")":"");
+  }
+  function updateSelBar(){
+    const bar=$("#selBar"); if(!bar)return;
+    if(cSel.size){ bar.classList.remove("hidden"); $("#selCount").textContent=cSel.size+(cSel.size===1?" selected":" selected"); }
+    else bar.classList.add("hidden");
+  }
   function customerRow(c){
     const st=c.status||"new";
     const stShow=(st==="enriched"||st==="new")?"":'<span class="cstat '+st+'">'+st+'</span>';
@@ -1132,6 +1169,7 @@
     const axs=[c.access,c.accessNotes].filter(Boolean).join(" · ");
     const meta=[stripUSA(c.address),c.sapId?("SAP "+c.sapId):""].filter(Boolean).join("  ·  ");
     return '<div class="crow '+st+'" data-id="'+c.id+'">'+
+      '<button class="csel'+(cSel.has(c.id)?" on":"")+'" data-sel="'+c.id+'" aria-label="Select for export"></button>'+
       '<div class="cmain" data-open="'+c.id+'">'+
         '<div class="cname">'+escapeHtml(displayName(c))+stShow+'</div>'+
         (meta?'<div class="cmeta">'+escapeHtml(meta)+'</div>':'')+
@@ -1147,13 +1185,15 @@
     const list=$("#custList"), empty=$("#custEmpty"), dbc=$("#dbCount");
     if(dbc) dbc.textContent=customers.length+(customers.length===1?" in database":" in database");
     if(!customers.length){ list.innerHTML=""; empty.classList.remove("hidden");
-      empty.innerHTML='Nothing here yet.<br>Load a job in <b>Requests</b>, build it, then tap <b>Save to Customers</b> — or paste an email return above.'; return; }
+      empty.innerHTML='Nothing here yet.<br>Load a job in <b>Requests</b>, build it, then tap <b>Save to Customers</b> — or paste an email return above.'; updateSelBar(); return; }
     const vis=visibleCustomers();
-    if(!vis.length){ list.innerHTML=""; empty.classList.remove("hidden"); empty.textContent="No customers match this filter."; return; }
+    if(!vis.length){ list.innerHTML=""; empty.classList.remove("hidden"); empty.textContent="No customers match this filter."; updateSelBar(); return; }
     empty.classList.add("hidden");
     list.innerHTML=vis.map(customerRow).join("");
     list.querySelectorAll("[data-open]").forEach(el=>el.addEventListener("click",()=>openDetail(el.dataset.open)));
     list.querySelectorAll("[data-text]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();textCustomer(b.dataset.text);}));
+    list.querySelectorAll("[data-sel]").forEach(b=>b.addEventListener("click",e=>{ e.stopPropagation(); const id=b.dataset.sel; if(cSel.has(id))cSel.delete(id); else cSel.add(id); b.classList.toggle("on",cSel.has(id)); updateSelBar(); }));
+    updateSelBar();
   }
   function updateBadge(){
     const n=customers.filter(c=>c.phones&&c.phones.length&&!(c.textCount>0)).length;
@@ -1205,6 +1245,9 @@
     const c=findById(id); if(!c)return; curId=id;
     $("#dName").textContent=displayName(c);
     $("#dMeta").textContent=[stripUSA(c.address),c.sapId?("SAP "+c.sapId):""].filter(Boolean).join("  \u00B7  ");
+    const hasC=c.lat&&c.lng&&!isNaN(+c.lat)&&!isNaN(+c.lng);
+    $("#dNavGroup").classList.toggle("hidden",!hasC);
+    $("#dNav").innerHTML=hasC?navLinks(+c.lat,+c.lng):"";
     $("#dPhones").innerHTML=(c.phones&&c.phones.length)
       ? c.phones.map(p=>'<div class="dphone"><span class="pn">'+escapeHtml(p.display)+'</span>'+
           '<a href="tel:'+p.tel+'">Call</a>'+
@@ -1253,7 +1296,7 @@
     toast("Merged "+(matched+added)+" records");
     setTimeout(closeEmail,1000);
   }
-  function openExport(){ $("#xScrim").classList.add("show"); $("#xSheet").classList.add("show"); }
+  function openExport(){ $("#xScope").textContent="Exporting "+exportScopeLabel()+"."; $("#xScrim").classList.add("show"); $("#xSheet").classList.add("show"); }
   function closeExport(){ $("#xScrim").classList.remove("show"); $("#xSheet").classList.remove("show"); }
 
   /* ---- tabs ---- */
@@ -1275,14 +1318,15 @@
   $("#eScrim").addEventListener("click",closeEmail);
   $("#exportCustBtn").addEventListener("click",openExport);
   $("#xScrim").addEventListener("click",closeExport);
-  $("#xCsv").addEventListener("click",()=>{download("customers.csv",custCSV(),"text/csv");closeExport();});
-  $("#xXlsxCsv").addEventListener("click",()=>{download("customers-excel.csv",custCSV(),"text/csv");closeExport();});
-  $("#xJson").addEventListener("click",()=>{download("customers.json",JSON.stringify(customers,null,2),"application/json");closeExport();});
-  $("#xVcf").addEventListener("click",()=>{download("customers.vcf",custVCard(),"text/vcard");closeExport();});
+  $("#selClear").addEventListener("click",()=>{ cSel.clear(); renderCustomers(); });
+  $("#xCsv").addEventListener("click",()=>{ const l=exportList(); if(!l.length){toast("Nothing to export.");return;} download("customers.csv",custCSV(l),"text/csv");closeExport();});
+  $("#xXlsxCsv").addEventListener("click",()=>{ const l=exportList(); if(!l.length){toast("Nothing to export.");return;} download("customers-excel.csv",custCSV(l),"text/csv");closeExport();});
+  $("#xJson").addEventListener("click",()=>{ const l=exportList(); if(!l.length){toast("Nothing to export.");return;} download("customers.json",JSON.stringify(l,null,2),"application/json");closeExport();});
+  $("#xVcf").addEventListener("click",()=>{ const l=exportList(); if(!l.filter(c=>c.phones&&c.phones.length).length){toast("No phone numbers to export.");return;} download("customers.vcf",custVCard(l),"text/vcard");closeExport();});
   async function clearDatabase(){
     if(!customers.length){ toast("The database is already empty."); return; }
     if(confirm("Delete all "+customers.length+" customers from the database? This cannot be undone.")){
-      customers=[]; cfg.latestKml=""; store.set("fk_latestKml",""); if(dbOk) await dbClear();
+      customers=[]; cfg.latestKml=""; store.set("fk_latestKml",""); cSel.clear(); if(dbOk) await dbClear();
       renderCustomers(); updateBadge(); toast("Database cleared");
     }
   }
@@ -1309,7 +1353,7 @@
   $("#dTextBtn").addEventListener("click",()=>{ if(curId) textCustomer(curId); });
   $("#dDelete").addEventListener("click",async()=>{
     const c=findById(curId); if(!c)return;
-    if(confirm("Delete "+displayName(c)+"?")){ customers=customers.filter(x=>x.id!==curId); if(dbOk) await dbDel(c.id); closeDetail(); renderCustomers(); updateBadge(); toast("Deleted"); }
+    if(confirm("Delete "+displayName(c)+"?")){ customers=customers.filter(x=>x.id!==curId); cSel.delete(c.id); if(dbOk) await dbDel(c.id); closeDetail(); renderCustomers(); updateBadge(); toast("Deleted"); }
   });
 
   /* settings: SMS template load + save */
@@ -1421,7 +1465,7 @@
     list.forEach(c=>{
       const la=parseFloat(c.lat),lo=parseFloat(c.lng);
       const m=L.circleMarker([la,lo],markStyle(mSel.has(c.id)));
-      m.bindPopup("<b>"+escapeHtml(c.name||("SAP "+(c.sapId||"")))+"</b>"+(c.access?"<br>"+escapeHtml(c.access):""));
+      m.bindPopup("<b>"+escapeHtml(c.name||("SAP "+(c.sapId||"")))+"</b>"+(c.access?"<br>"+escapeHtml(c.access):"")+navLinks(la,lo));
       m.on("click",()=>{ if(mSel.has(c.id))mSel.delete(c.id); else mSel.add(c.id); m.setStyle(markStyle(mSel.has(c.id))); updateMCount(); });
       m.addTo(cmap); cmarks.push({c,marker:m}); pts.push([la,lo]);
     });
@@ -1441,7 +1485,7 @@
     download("fieldkey-selection.kml",customersToKML(list),"application/vnd.google-earth.kml+xml");
     toast("Exported "+list.length+" points");
   });
-  $("#xKml").addEventListener("click",()=>{ const list=withCoords(); if(!list.length){ toast("No points with coordinates to export."); return; } download("customers.kml",customersToKML(list),"application/vnd.google-earth.kml+xml"); closeExport(); });
+  $("#xKml").addEventListener("click",()=>{ const list=exportList().filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o);}); if(!list.length){ toast("No points with coordinates to export."); return; } download("customers.kml",customersToKML(list),"application/vnd.google-earth.kml+xml"); closeExport(); });
 
   /* init DB */
   (async function(){
