@@ -51,15 +51,22 @@ coordinates.
   *Guided text* walks through everyone you haven't texted yet, one tap each
   (iOS doesn't allow an app to send texts silently or in bulk).
 - **Track** — per-customer status (New / Texted / Replied / Scheduled / Done),
-  a text counter, and your own notes. Filter chips (including **Latest KML**)
-  and search across the list.
-- **Map & export KML** — the **Map** button shows every customer that has
-  coordinates. Tap a pin for a popup with the site name, access, and **Apple
-  Maps / Google Maps** buttons that open turn-by-turn driving directions to that
-  point. Tap pins to select, or pan/zoom to an area and hit *Select visible*,
-  then **Export KML** of the selection — for handing off or reloading a
-  reassigned area. The exported KML carries the name, phone, access, and status
-  in each placemark, and re-imports cleanly (through Requests).
+  a text counter, and your own notes. Marking a customer **Scheduled** reveals a
+  date/time picker that's saved to the database (and shown on the row), plus
+  **Apple Calendar** and **Google Calendar** buttons that create a real 30-minute
+  inspection event — pre-filled with the site name, address, phone, access notes,
+  and a directions link. Filter chips (including **Latest KML**) and a search box
+  that matches name, address, SAP ID, or **phone number** — phone matching ignores
+  formatting, so `5303398783`, `530-339-8783`, or even just the last few digits
+  all find the right customer.
+- **Map & export KML** — the **Map** button plots the customers you're currently
+  working with: whatever the filter/search is showing, or — if you've selected
+  specific assets — just those. Tap a pin for a popup with the site name, access,
+  and **Apple Maps / Google Maps** directions buttons. Tap pins to refine a
+  selection, or pan/zoom to an area and hit *Select visible*, then **Export KML**
+  — of the pins you tapped, or, if you haven't tapped any, of everything shown on
+  the map. The exported KML carries the name, phone, access, and status in each
+  placemark, and re-imports cleanly (through Requests).
 - **Select & export** — every row has a circle on the left; tap it to pick
   specific assets (a bar shows how many are selected). **Export** then covers
   exactly what you've chosen — or, if nothing is selected, whatever the current

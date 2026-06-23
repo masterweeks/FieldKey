@@ -265,6 +265,9 @@
   .navrow{display:flex;gap:6px;margin-top:8px}
   .navrow a{flex:1;text-align:center;background:var(--amber);color:#1a1300;font-weight:700;text-decoration:none;border-radius:8px;padding:8px 6px;font-size:12px;font-family:var(--ui)}
   .navrow a:active{background:var(--amber-press)}
+  .navrow a.disabled{opacity:.4;pointer-events:none}
+  .schedinput{width:100%;background:var(--bg3);border:1px solid var(--line2);color:var(--ink);border-radius:10px;padding:11px 12px;font-size:15px;font-family:var(--ui);margin-bottom:8px;color-scheme:dark}
+  .csched{color:var(--green);font-size:12px;font-weight:600;margin-top:3px}
 </style>
 </head>
 <body>
@@ -357,7 +360,7 @@
     <div class="cust-actions">
       <button class="btn primary" id="pasteEmailBtn">Import email return</button>
     </div>
-    <div class="searchrow"><input type="text" id="custSearch" placeholder="Search name, address, or SAP…" /></div>
+    <div class="searchrow"><input type="text" id="custSearch" placeholder="Search name, address, SAP, or phone…" /></div>
     <div class="filters" id="custFilters">
       <button class="chip sel" data-f="all">All</button>
       <button class="chip" data-f="latest">Latest KML</button>
@@ -412,6 +415,14 @@
     <button data-s="replied">Replied</button><button data-s="scheduled">Scheduled</button>
     <button data-s="done">Done</button>
   </div></div>
+  <div class="sgroup hidden" id="dSchedGroup">
+    <span class="label">Scheduled for</span>
+    <input type="datetime-local" id="dSched" class="schedinput" />
+    <div class="navrow" id="dCalRow">
+      <a id="dCalIcs" href="#">Apple Calendar</a>
+      <a id="dCalGoogle" href="#" target="_blank" rel="noopener">Google Calendar</a>
+    </div>
+  </div>
   <div class="sgroup"><span class="label">Texts sent</span><div class="counter" id="dCounter">
     <button id="dMinus">−</button><span class="cv" id="dCount">0</span><button id="dPlus">+</button>
   </div></div>
@@ -448,7 +459,7 @@
     <button class="btn ghost" id="mSelVis">Select visible</button>
     <button class="btn ghost" id="mClear">Clear</button>
   </div>
-  <button class="btn primary" id="mExport" style="margin-top:10px"><span id="mCount">0</span> selected · Export KML</button>
+  <button class="btn primary" id="mExport" style="margin-top:10px">Export KML</button>
 </div>
 
 <!-- email import sheet -->
@@ -1002,7 +1013,7 @@
         if((m=ln.match(/^SAP Equipment ID:\s*(.*)$/i))){rec.sapId=m[1].trim();used.add(i);}
         else if((m=ln.match(/^Address Attempted:\s*(.*)$/i))){rec.address=m[1].trim();used.add(i);}
         else if(/^\*/.test(ln)){rec.name=ln.replace(/^\*\s*/,"").trim();used.add(i);}
-        else if(PHONE_LINE.test(ln)){rec.phones.push({display:ln,tel:phoneDigits(ln)});used.add(i);}
+        else if(PHONE_LINE.test(ln)&&!isCoordinateText(ln)){rec.phones.push({display:ln,tel:phoneDigits(ln)});used.add(i);}
         else if((m=ln.match(/^AXS:\s*(.*)$/i))){rec.access=m[1].trim();used.add(i);}
       });
       lines.forEach((ln,i)=>{ if(ln&&!used.has(i)) notes.push(ln); });
@@ -1066,7 +1077,7 @@
     c.name=cleanText(c.name); c.address=cleanText(c.address);
     c.access=cleanText(c.access); c.accessNotes=cleanText(c.accessNotes);
     if(c.notes) c.notes=cleanText(c.notes);
-    if(c.phones) c.phones=c.phones.map(p=>({display:cleanText(p.display),tel:p.tel}));
+    if(c.phones) c.phones=c.phones.map(p=>({display:cleanText(p.display),tel:p.tel})).filter(p=>p.display&&!isCoordinateText(p.display));
     if(c.extra){ Object.keys(c.extra).forEach(k=>{ const v=cleanText(c.extra[k]); if(v) c.extra[k]=v; else delete c.extra[k]; }); }
     return c;
   }
@@ -1143,7 +1154,15 @@
       if(custFilter==="texted"&&!((c.textCount>0)||c.status==="texted")) return false;
       if(custFilter==="replied"&&c.status!=="replied") return false;
       if(custFilter==="scheduled"&&c.status!=="scheduled") return false;
-      if(q){ const hay=((c.name||"")+" "+(c.address||"")+" "+(c.sapId||"")).toLowerCase(); if(hay.indexOf(q)<0) return false; }
+      if(q){
+        const hay=((c.name||"")+" "+(c.address||"")+" "+(c.sapId||"")).toLowerCase();
+        let hit=hay.indexOf(q)>=0;
+        if(!hit && /^[\d\s().+\-]+$/.test(q)){
+          const qd=q.replace(/\D/g,"");
+          if(qd.length>=3){ const pd=(c.phones||[]).map(p=>(p.tel||p.display||"").replace(/\D/g,"")).join(" "); if(pd.indexOf(qd)>=0) hit=true; }
+        }
+        if(!hit) return false;
+      }
       return true;
     });
   }
@@ -1174,6 +1193,7 @@
         '<div class="cname">'+escapeHtml(displayName(c))+stShow+'</div>'+
         (meta?'<div class="cmeta">'+escapeHtml(meta)+'</div>':'')+
         (axs?'<div class="caxs">'+escapeHtml(axs)+'</div>':'')+
+        ((c.status==="scheduled"&&c.scheduledAt)?'<div class="csched">'+escapeHtml(fmtSched(c.scheduledAt))+'</div>':'')+
       '</div>'+
       '<div class="cright">'+
         '<button class="textbtn '+(hasP?"":"nophone")+'" data-text="'+c.id+'"'+(hasP?"":" disabled")+'>Text</button>'+
@@ -1241,6 +1261,44 @@
 
   /* ---- detail sheet ---- */
   let curId=null;
+  function pad2(n){ return String(n).padStart(2,"0"); }
+  function localISO(d){ return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate())+"T"+pad2(d.getHours())+":"+pad2(d.getMinutes()); }
+  function defaultSchedule(){ const d=new Date(); d.setDate(d.getDate()+1); d.setHours(9,0,0,0); return localISO(d); }
+  function fmtSched(iso){ if(!iso)return ""; const d=new Date(iso); if(isNaN(d))return ""; return d.toLocaleString([], {weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}); }
+  function utcStamp(d){ return d.getUTCFullYear()+pad2(d.getUTCMonth()+1)+pad2(d.getUTCDate())+"T"+pad2(d.getUTCHours())+pad2(d.getUTCMinutes())+pad2(d.getUTCSeconds())+"Z"; }
+  function calEvent(c){
+    const title="Inspection: "+displayName(c);
+    const loc=stripUSA(c.address)||((c.lat&&c.lng)?((+c.lat).toFixed(6)+", "+(+c.lng).toFixed(6)):"");
+    const parts=[];
+    if(c.sapId) parts.push("SAP "+c.sapId);
+    if(c.phones&&c.phones.length) parts.push("Phone: "+c.phones.map(p=>p.display).join(", "));
+    const axs=[c.access,c.accessNotes].filter(Boolean).join(" | "); if(axs) parts.push("Access: "+axs);
+    if(c.lat&&c.lng) parts.push("Directions: https://maps.apple.com/?daddr="+(+c.lat)+","+(+c.lng)+"&dirflg=d");
+    const start=new Date(c.scheduledAt), end=new Date(start.getTime()+30*60000);
+    return {title,loc,desc:parts.join("\n"),start,end};
+  }
+  function googleCalUrl(ev){
+    const p=new URLSearchParams({action:"TEMPLATE",text:ev.title,dates:utcStamp(ev.start)+"/"+utcStamp(ev.end),details:ev.desc,location:ev.loc});
+    return "https://calendar.google.com/calendar/render?"+p.toString();
+  }
+  function icsText(ev){
+    const esc=s=>String(s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n");
+    return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//FieldKey//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH","BEGIN:VEVENT",
+      "UID:"+Date.now()+"-"+Math.random().toString(36).slice(2)+"@fieldkey","DTSTAMP:"+utcStamp(new Date()),
+      "DTSTART:"+utcStamp(ev.start),"DTEND:"+utcStamp(ev.end),"SUMMARY:"+esc(ev.title),
+      "LOCATION:"+esc(ev.loc),"DESCRIPTION:"+esc(ev.desc),"END:VEVENT","END:VCALENDAR"].join("\r\n");
+  }
+  function refreshCalLinks(c){
+    const ok=!!c.scheduledAt && !isNaN(new Date(c.scheduledAt));
+    const g=$("#dCalGoogle"), ic=$("#dCalIcs");
+    g.classList.toggle("disabled",!ok); ic.classList.toggle("disabled",!ok);
+    g.href = ok ? googleCalUrl(calEvent(c)) : "#";
+  }
+  function updateSchedUI(c){
+    const on=c.status==="scheduled";
+    $("#dSchedGroup").classList.toggle("hidden",!on);
+    if(on){ $("#dSched").value=c.scheduledAt||""; refreshCalLinks(c); }
+  }
   function openDetail(id){
     const c=findById(id); if(!c)return; curId=id;
     $("#dName").textContent=displayName(c);
@@ -1266,6 +1324,7 @@
     $("#dInfo").innerHTML=info.length?info.map(kv=>'<div class="irow"><span class="ik">'+escapeHtml(kv[0])+'</span><span class="iv">'+escapeHtml(kv[1])+'</span></div>').join(""):'<div class="note">No extra details.</div>';
     const cur=(c.status==="new")?"enriched":c.status;
     $("#dStatus").querySelectorAll("button").forEach(b=>b.classList.toggle("sel",b.dataset.s===cur));
+    updateSchedUI(c);
     $("#dCount").textContent=c.textCount||0;
     $("#dNotes").value=c.notes||"";
     $("#dTextBtn").classList.toggle("force-hide",!(c.phones&&c.phones.length));
@@ -1344,9 +1403,13 @@
   $("#dScrim").addEventListener("click",closeDetail);
   $("#dStatus").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
     const c=findById(curId); if(!c)return; c.status=b.dataset.s;
+    if(c.status==="scheduled" && !c.scheduledAt) c.scheduledAt=defaultSchedule();
     $("#dStatus").querySelectorAll("button").forEach(x=>x.classList.toggle("sel",x===b));
+    updateSchedUI(c);
     persist(); renderCustomers(); updateBadge();
   }));
+  $("#dSched").addEventListener("change",e=>{ const c=findById(curId); if(!c)return; c.scheduledAt=e.target.value; refreshCalLinks(c); persist(); renderCustomers(); });
+  $("#dCalIcs").addEventListener("click",e=>{ e.preventDefault(); const c=findById(curId); if(!c||!c.scheduledAt)return; download("inspection-"+(c.sapId||"site")+".ics", icsText(calEvent(c)), "text/calendar"); toast("Calendar event ready \u2014 tap it to add."); });
   $("#dPlus").addEventListener("click",()=>{ const c=findById(curId); if(!c)return; c.textCount=(c.textCount||0)+1; $("#dCount").textContent=c.textCount; persist(); renderCustomers(); updateBadge(); });
   $("#dMinus").addEventListener("click",()=>{ const c=findById(curId); if(!c)return; c.textCount=Math.max(0,(c.textCount||0)-1); $("#dCount").textContent=c.textCount; persist(); renderCustomers(); updateBadge(); });
   $("#dNotes").addEventListener("input",e=>{ const c=findById(curId); if(c){ c.notes=e.target.value; persist(); } });
@@ -1364,8 +1427,22 @@
   function xmlEsc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;"); }
 
   // phone helpers for KML free-text (e.g. numbers embedded in a description)
-  function hasPhone(s){ return /(?:\+?1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}/.test(String(s)); }
-  function phoneMatches(s){ return String(s).match(/(?:\+?1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}/g) || []; }
+  function isCoordinateText(s){ return /^[-+]?\d{1,3}\.\d{3,}$/.test(String(s).trim()); }
+  const PHONE_RE_SRC="(?:\\+?1[\\s.\\-]?)?\\(?\\d{3}\\)?[\\s.\\-]?\\d{3}[\\s.\\-]?\\d{4}";
+  function phoneMatches(s){
+    const text=String(s), re=new RegExp(PHONE_RE_SRC,"g"), out=[]; let m;
+    while((m=re.exec(text))){
+      const mt=m[0], start=m.index, end=start+mt.length;
+      const before=text.charAt(start-1), after=text.charAt(end);
+      if(/\d/.test(after)) continue;                                  // inside a longer number
+      if(/\d/.test(before)) continue;
+      if(before==="." && /\d/.test(text.charAt(start-2))) continue;   // fractional part of a decimal
+      if(isCoordinateText(mt)) continue;                              // a coordinate like 122.3798934
+      out.push(mt);
+    }
+    return out;
+  }
+  function hasPhone(s){ return phoneMatches(s).length>0; }
   function extractPhones(text){
     const seen={}, out=[];
     phoneMatches(text).forEach(m=>{ const tel=phoneDigits(m), d=tel.replace(/\D/g,"");
@@ -1450,17 +1527,20 @@
   /* ---- customer map + KML export ---- */
   let cmap=null, cmarks=[], mSel=new Set();
   function withCoords(){ return customers.filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o)&&a>=-90&&a<=90&&o>=-180&&o<=180;}); }
+  function mapList(){ return exportList().filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o)&&a>=-90&&a<=90&&o>=-180&&o<=180;}); }
   function markStyle(sel){ return sel?{radius:9,weight:3,color:"#0E1116",fillColor:"#FFB000",fillOpacity:1}:{radius:6,weight:2,color:"#0E1116",fillColor:"#6b7480",fillOpacity:.9}; }
-  function updateMCount(){ $("#mCount").textContent=String(mSel.size); }
+  function updateMCount(){ const n=mSel.size; const e=$("#mExport"); if(e) e.textContent = n ? ("Export KML \u00B7 "+n+" selected") : ("Export KML \u00B7 "+cmarks.length+" shown"); }
   function refreshMarks(){ cmarks.forEach(o=>o.marker.setStyle(markStyle(mSel.has(o.c.id)))); updateMCount(); }
   function plotCustomerMap(){
     const note=$("#mNote");
     if(!window.L){ note.textContent="The map needs an internet connection."; return; }
     if(!cmap){ cmap=L.map("custMap",{zoomControl:true}); L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"\u00A9 OpenStreetMap contributors"}).addTo(cmap); }
     cmarks.forEach(o=>cmap.removeLayer(o.marker)); cmarks=[];
-    const list=withCoords();
-    if(!list.length){ note.textContent="No customers have coordinates yet \u2014 import a KML or save sites from Requests."; return; }
-    note.textContent=list.length+" points \u00B7 tap to select";
+    const list=mapList();
+    const showIds=new Set(list.map(c=>c.id)); Array.from(mSel).forEach(id=>{ if(!showIds.has(id)) mSel.delete(id); });
+    const scoped=cSel.size||custFilter!=="all"||custQuery.trim();
+    if(!list.length){ note.textContent=scoped?"None of these have coordinates to map.":"No customers have coordinates yet \u2014 import a KML or save sites from Requests."; updateMCount(); return; }
+    note.textContent=list.length+" point"+(list.length===1?"":"s")+(cSel.size?" selected":(scoped?" (filtered)":""))+" \u00B7 tap to select";
     const pts=[];
     list.forEach(c=>{
       const la=parseFloat(c.lat),lo=parseFloat(c.lng);
@@ -1480,8 +1560,9 @@
   $("#mSelVis").addEventListener("click",()=>{ if(!cmap)return; const b=cmap.getBounds(); cmarks.forEach(o=>{ if(b.contains([parseFloat(o.c.lat),parseFloat(o.c.lng)])) mSel.add(o.c.id); }); refreshMarks(); });
   $("#mClear").addEventListener("click",()=>{ mSel.clear(); refreshMarks(); });
   $("#mExport").addEventListener("click",()=>{
-    const list=customers.filter(c=>mSel.has(c.id));
-    if(!list.length){ toast("Tap pins or 'Select visible' first."); return; }
+    const sel=customers.filter(c=>mSel.has(c.id));
+    const list=sel.length?sel:mapList();
+    if(!list.length){ toast("No points to export."); return; }
     download("fieldkey-selection.kml",customersToKML(list),"application/vnd.google-earth.kml+xml");
     toast("Exported "+list.length+" points");
   });
