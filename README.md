@@ -65,8 +65,10 @@ coordinates.
   and **Apple Maps / Google Maps** directions buttons. Tap pins to refine a
   selection, or pan/zoom to an area and hit *Select visible*, then **Export KML**
   — of the pins you tapped, or, if you haven't tapped any, of everything shown on
-  the map. The exported KML carries the name, phone, access, and status in each
-  placemark, and re-imports cleanly (through Requests).
+  the map. Or tap **Build request email** to generate the access-request text
+  (Requestor details from Settings + each site's SAP and address) for that same
+  set, ready to copy or share/email. The exported KML carries the name, phone,
+  access, and status in each placemark, and re-imports cleanly (through Requests).
 - **Select & export** — every row has a circle on the left; tap it to pick
   specific assets (a bar shows how many are selected). **Export** then covers
   exactly what you've chosen — or, if nothing is selected, whatever the current

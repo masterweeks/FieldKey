@@ -268,6 +268,7 @@
   .navrow a.disabled{opacity:.4;pointer-events:none}
   .schedinput{width:100%;background:var(--bg3);border:1px solid var(--line2);color:var(--ink);border-radius:10px;padding:11px 12px;font-size:15px;font-family:var(--ui);margin-bottom:8px;color-scheme:dark}
   .csched{color:var(--green);font-size:12px;font-weight:600;margin-top:3px}
+  .reqtext{width:100%;height:40vh;background:var(--bg3);border:1px solid var(--line2);color:var(--ink);border-radius:10px;padding:12px;font-family:var(--mono);font-size:12px;line-height:1.5;resize:none;white-space:pre;overflow:auto;margin-bottom:12px}
 </style>
 </head>
 <body>
@@ -452,7 +453,7 @@
 <div class="sheet mapsheet" id="mSheet" role="dialog" aria-label="Map and export">
   <div class="grab"></div>
   <h2 style="margin-bottom:4px">Map · export KML</h2>
-  <p class="hint">Tap pins to select them. <b>Select visible</b> grabs everything currently in view — pan and zoom to an area first. Then export the selection as a KML.</p>
+  <p class="hint">Tap pins to select them. <b>Select visible</b> grabs everything currently in view — pan and zoom to an area first. Then export the selection as a KML, or build access requests from it.</p>
   <div id="custMap" class="mapbox" style="height:44vh"></div>
   <p class="note" id="mNote" style="margin-top:8px"></p>
   <div class="maprow">
@@ -460,6 +461,20 @@
     <button class="btn ghost" id="mClear">Clear</button>
   </div>
   <button class="btn primary" id="mExport" style="margin-top:10px">Export KML</button>
+  <button class="btn ghost" id="mReq" style="margin-top:8px">Build request email</button>
+</div>
+
+<!-- access-request preview sheet -->
+<div class="scrim" id="rqScrim"></div>
+<div class="sheet" id="rqSheet" role="dialog" aria-label="Access requests">
+  <div class="grab"></div>
+  <h2>Access requests</h2>
+  <p class="hint" id="rqInfo"></p>
+  <textarea id="rqText" class="reqtext" readonly></textarea>
+  <div class="maprow">
+    <button class="btn primary" id="rqCopy">Copy all</button>
+    <button class="btn ghost" id="rqShare">Share / Email</button>
+  </div>
 </div>
 
 <!-- email import sheet -->
@@ -535,6 +550,8 @@
 <script>
 "use strict";
 (function(){
+  /* platform flag: true on Android (native app or Chrome) */
+  const IS_ANDROID = (typeof navigator!=="undefined" && /Android/i.test(navigator.userAgent||"")) || (window.Capacitor && Capacitor.getPlatform && Capacitor.getPlatform()==="android");
   /* ---------------- storage (degrades if sandboxed) ---------------- */
   const store = {
     get(k,d){ try{const v=localStorage.getItem(k);return v===null?d:v;}catch(e){return d;} },
@@ -914,6 +931,7 @@
     document.body.removeChild(ta);
   }
   function download(name,text,type){
+    if(window.FieldKeyNative && window.FieldKeyNative.save){ window.FieldKeyNative.save(name,text,type||"text/plain"); return; }
     const blob=new Blob([text],{type:type||"text/plain"});
     const url=URL.createObjectURL(blob); const a=document.createElement("a");
     a.href=url; a.download=name; document.body.appendChild(a); a.click();
@@ -1085,8 +1103,13 @@
   /* ---- navigation: open driving directions in Apple or Google Maps ---- */
   function navLinks(lat,lng){
     if(lat==null||lng==null||isNaN(+lat)||isNaN(+lng)) return "";
-    const a="https://maps.apple.com/?daddr="+(+lat)+","+(+lng)+"&dirflg=d";
     const g="https://www.google.com/maps/dir/?api=1&destination="+(+lat)+","+(+lng)+"&travelmode=driving";
+    if(IS_ANDROID){
+      const geo="geo:"+(+lat)+","+(+lng)+"?q="+(+lat)+","+(+lng);
+      return '<div class="navrow"><a href="'+g+'" target="_blank" rel="noopener">Google Maps</a>'+
+             '<a href="'+geo+'">Open in Maps</a></div>';
+    }
+    const a="https://maps.apple.com/?daddr="+(+lat)+","+(+lng)+"&dirflg=d";
     return '<div class="navrow"><a href="'+a+'" target="_blank" rel="noopener">Apple Maps</a>'+
            '<a href="'+g+'" target="_blank" rel="noopener">Google Maps</a></div>';
   }
@@ -1291,6 +1314,7 @@
   function refreshCalLinks(c){
     const ok=!!c.scheduledAt && !isNaN(new Date(c.scheduledAt));
     const g=$("#dCalGoogle"), ic=$("#dCalIcs");
+    ic.textContent = IS_ANDROID ? "Add to Calendar" : "Apple Calendar";
     g.classList.toggle("disabled",!ok); ic.classList.toggle("disabled",!ok);
     g.href = ok ? googleCalUrl(calEvent(c)) : "#";
   }
@@ -1565,6 +1589,27 @@
     if(!list.length){ toast("No points to export."); return; }
     download("fieldkey-selection.kml",customersToKML(list),"application/vnd.google-earth.kml+xml");
     toast("Exported "+list.length+" points");
+  });
+  const REQ_SEP="\n\n----------------------------------------\n\n";
+  function requestsTextFor(list){ return list.map(c=>template({sap:c.sapId,addr:c.address||""})).join(REQ_SEP); }
+  function openReqSheet(list){
+    $("#rqText").value=requestsTextFor(list);
+    $("#rqInfo").textContent=list.length+(list.length===1?" request":" requests")+" \u00B7 built from your Settings details. Copy or share to email.";
+    $("#rqScrim").classList.add("show"); $("#rqSheet").classList.add("show");
+  }
+  function closeReqSheet(){ $("#rqScrim").classList.remove("show"); $("#rqSheet").classList.remove("show"); }
+  $("#rqScrim").addEventListener("click",closeReqSheet);
+  $("#mReq").addEventListener("click",()=>{
+    const sel=customers.filter(c=>mSel.has(c.id));
+    const list=sel.length?sel:mapList();
+    if(!list.length){ toast("No assets to build requests from."); return; }
+    openReqSheet(list);
+  });
+  $("#rqCopy").addEventListener("click",()=>{ copyText($("#rqText").value); toast("Requests copied"); });
+  $("#rqShare").addEventListener("click",async()=>{
+    const text=$("#rqText").value;
+    if(navigator.share){ try{ await navigator.share({title:"Access requests",text:text}); }catch(e){} }
+    else { copyText(text); toast("Requests copied"); }
   });
   $("#xKml").addEventListener("click",()=>{ const list=exportList().filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o);}); if(!list.length){ toast("No points with coordinates to export."); return; } download("customers.kml",customersToKML(list),"application/vnd.google-earth.kml+xml"); closeExport(); });
 
