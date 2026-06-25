@@ -287,6 +287,25 @@
   .leaflet-control-attribution a{color:#9aa3b0!important}
   .locatebtn{display:flex!important;align-items:center;justify-content:center;color:#E7ECF3}
   .locatebtn.on{color:var(--amber)}
+  /* access issue */
+  .cstat.issue{background:#3a1414;color:#FF8A8A;letter-spacing:.06em}
+  .crow.flagged{border-left-color:var(--red);border-left-width:5px}
+  .cissue{color:var(--red);font-size:12px;margin-top:3px;font-weight:600}
+  .popissue{color:#FF6B6B;font-weight:700}
+  .linkbtn.issue{color:var(--red)}
+  .chip.issue{border-color:#5a2330;color:#FF8A8A}
+  .chip.issue.sel{background:#3a1414;border-color:#7a2a3a;color:#FFB0B0}
+  .btn.issue{border-color:#5a2330;color:#FF9A9A}
+  .btn.issue:active{background:#2a1414}
+  .issuebtn{color:#FF9A9A;border-color:#5a2330}
+  .issuebox{display:flex;align-items:center;gap:10px;background:#2a1414;border:1px solid #5a2330;border-radius:10px;padding:10px 12px;margin-bottom:10px}
+  .issuebox .ibadge{font-family:var(--mono);font-size:9px;letter-spacing:.06em;background:var(--red);color:#2a0808;padding:3px 7px;border-radius:5px;font-weight:700;white-space:nowrap}
+  .issuebox .ireason{color:#FFB0B0;font-size:13px}
+  .reasonlist{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+  .reasonbtn{width:100%;text-align:left;background:var(--bg3);border:1px solid var(--line2);color:var(--ink);border-radius:10px;padding:13px 15px;font-size:15px;font-weight:600;font-family:var(--ui)}
+  .reasonbtn:active{background:var(--raise)}
+  #riScrim{z-index:100}
+  #riSheet{z-index:110}
 </style>
 </head>
 <body>
@@ -383,6 +402,7 @@
     <div class="filters" id="custFilters">
       <button class="chip sel" data-f="all">All</button>
       <button class="chip" data-f="selected">Selected</button>
+      <button class="chip issue" data-f="accessissue">Access issue</button>
       <button class="chip" data-f="latest">Latest KML</button>
       <button class="chip" data-f="has">Has contact</button>
       <button class="chip" data-f="nottexted">Not texted</button>
@@ -396,7 +416,7 @@
       <button class="btn ghost" id="exportCustBtn">Export</button>
     </div>
     <div class="dbbar"><span id="dbCount" class="mono">0 in database</span></div>
-    <div class="selbar hidden" id="selBar"><span id="selCount" class="mono">0 selected</span><button id="selClear" class="linkbtn alt">Clear selection</button></div>
+    <div class="selbar hidden" id="selBar"><span id="selCount" class="mono">0 selected</span><button id="selFlag" class="linkbtn issue">Mark access issue</button><button id="selClear" class="linkbtn alt">Clear selection</button></div>
     <div id="custList" class="custlist"></div>
     <div id="custEmpty" class="empty">Nothing here yet.<br>Load a job in <b>Requests</b>, build it, then tap <b>Save to Customers</b> — or paste an email return above.</div>
   </main>
@@ -429,6 +449,7 @@
   <div class="sgroup hidden" id="dNavGroup"><span class="label">Directions</span><div id="dNav"></div></div>
   <div class="sgroup"><span class="label">Phones</span><div id="dPhones"></div></div>
   <div class="sgroup"><span class="label">Access</span><div id="dAccess"></div></div>
+  <div class="sgroup"><span class="label">Access issue</span><div id="dIssue"></div></div>
   <div class="sgroup"><span class="label">Record</span><div id="dInfo" class="dinfo"></div></div>
   <div class="sgroup"><span class="label">Status</span><div class="statseg" id="dStatus">
     <button data-s="enriched">New</button><button data-s="texted">Texted</button>
@@ -481,6 +502,19 @@
   </div>
   <button class="btn primary" id="mExport" style="margin-top:10px">Export KML</button>
   <button class="btn ghost" id="mReq" style="margin-top:8px">Build request email</button>
+  <button class="btn ghost issue" id="mFlag" style="margin-top:8px">Mark access issue</button>
+</div>
+
+<!-- access issue reason picker -->
+<div class="scrim" id="riScrim"></div>
+<div class="sheet" id="riSheet" role="dialog" aria-label="Access issue reason">
+  <div class="grab"></div>
+  <h2 id="riTitle">Access issue</h2>
+  <p class="hint">Pick the reason these assets couldn't be accessed.</p>
+  <div id="riReasons" class="reasonlist"></div>
+  <div class="sgroup hidden" id="riOtherWrap"><input type="text" id="riOther" placeholder="Describe the issue…" /><button class="btn primary" id="riOtherSave" style="margin-top:8px">Save reason</button></div>
+  <button class="btn ghost hidden" id="riLater">Flag now, set reason later</button>
+  <button class="btn ghost danger hidden" id="riRemove" style="margin-top:8px">Remove flag</button>
 </div>
 
 <!-- access-request preview sheet -->
@@ -1183,6 +1217,7 @@
     c.name=cleanText(c.name); c.address=cleanText(c.address);
     c.access=cleanText(c.access); c.accessNotes=cleanText(c.accessNotes);
     if(c.notes) c.notes=cleanText(c.notes);
+    if(c.accessIssueReason) c.accessIssueReason=cleanText(c.accessIssueReason);
     if(c.phones) c.phones=c.phones.map(p=>({display:cleanText(p.display),tel:p.tel})).filter(p=>p.display&&!isCoordinateText(p.display));
     if(c.extra){ Object.keys(c.extra).forEach(k=>{ const v=cleanText(c.extra[k]); if(v) c.extra[k]=v; else delete c.extra[k]; }); }
     return c;
@@ -1235,11 +1270,12 @@
     const cols=["sapId","name","address","phones","accessNotes","lat","lng","status","textCount","lastTexted","notes"];
     const head=["SAP ID","Customer","Address","Phones","Access Notes","Latitude","Longitude","Status","Texts Sent","Last Texted","Notes"];
     const extraKeys=[]; list.forEach(c=>Object.keys(c.extra||{}).forEach(k=>{if(extraKeys.indexOf(k)<0)extraKeys.push(k);}));
-    const lines=[head.concat(extraKeys).map(csvEsc).join(",")];
+    const lines=[head.concat(["Access Issue","Issue Reason"]).concat(extraKeys).map(csvEsc).join(",")];
     list.forEach(c=>{
       const base=cols.map(k=>csvEsc(cleanText(k==="phones"?(c.phones||[]).map(p=>p.display).join("; "):(c[k]==null?"":c[k]))));
+      const issue=[csvEsc(c.accessIssue?"Yes":"No"),csvEsc(cleanText(c.accessIssueReason||""))];
       const ex=extraKeys.map(k=>csvEsc(cleanText((c.extra&&c.extra[k])||"")));
-      lines.push(base.concat(ex).join(","));
+      lines.push(base.concat(issue).concat(ex).join(","));
     });
     return lines.join("\n");
   }
@@ -1260,6 +1296,7 @@
     return customers.filter(c=>{
       const hasP=c.phones&&c.phones.length;
       if(custFilter==="selected"&&!cSel.has(c.id)) return false;
+      if(custFilter==="accessissue"&&!c.accessIssue) return false;
       if(custFilter==="latest"&&(!cfg.latestKml||c.assignment!==cfg.latestKml)) return false;
       if(custFilter==="has"&&!hasP) return false;
       if(custFilter==="nottexted"&&!(hasP&&!(c.textCount>0))) return false;
@@ -1292,19 +1329,24 @@
     const bar=$("#selBar"); if(!bar)return;
     if(cSel.size){ bar.classList.remove("hidden"); $("#selCount").textContent=cSel.size+(cSel.size===1?" selected":" selected"); }
     else bar.classList.add("hidden");
+    updateBulkButtons();
   }
   function customerRow(c){
     const st=c.status||"new";
     const stShow=(st==="enriched"||st==="new")?"":'<span class="cstat '+st+'">'+st+'</span>';
+    const flagged=!!c.accessIssue;
+    const issueBadge=flagged?'<span class="cstat issue">ACCESS ISSUE</span>':'';
+    const issueLine=flagged?'<div class="cissue">\u26A0\uFE0E '+escapeHtml(c.accessIssueReason||"No reason set")+'</div>':'';
     const hasP=c.phones&&c.phones.length;
     const axs=[c.access,c.accessNotes].filter(Boolean).join(" · ");
     const meta=[stripUSA(c.address),c.sapId?("SAP "+c.sapId):""].filter(Boolean).join("  ·  ");
-    return '<div class="crow '+st+'" data-id="'+c.id+'">'+
+    return '<div class="crow '+st+(flagged?" flagged":"")+'" data-id="'+c.id+'">'+
       '<button class="csel'+(cSel.has(c.id)?" on":"")+'" data-sel="'+c.id+'" aria-label="Select for export"></button>'+
       '<div class="cmain" data-open="'+c.id+'">'+
-        '<div class="cname">'+escapeHtml(displayName(c))+stShow+'</div>'+
+        '<div class="cname">'+escapeHtml(displayName(c))+issueBadge+stShow+'</div>'+
         (meta?'<div class="cmeta">'+escapeHtml(meta)+'</div>':'')+
         (axs?'<div class="caxs">'+escapeHtml(axs)+'</div>':'')+
+        issueLine+
         ((c.status==="scheduled"&&c.scheduledAt)?'<div class="csched">'+escapeHtml(fmtSched(c.scheduledAt))+'</div>':'')+
       '</div>'+
       '<div class="cright">'+
@@ -1333,6 +1375,61 @@
     const b=$("#custBadge");
     if(n>0){ b.textContent=n>99?"99+":String(n); b.classList.remove("hidden"); } else b.classList.add("hidden");
   }
+
+  /* ---- access issue flag ---- */
+  const ACCESS_REASONS=["Locked gate","Need gate code","No answer / nobody home","Aggressive dog","Customer refused","Can't locate / blocked"];
+  let riIds=[];
+  function selectedIds(){ return customers.filter(c=>cSel.has(c.id)).map(c=>c.id); }
+  function allFlagged(ids){ return ids.length>0 && ids.every(id=>{const c=findById(id);return c&&c.accessIssue;}); }
+  async function setAccessIssue(ids,on,reason){
+    ids.forEach(id=>{ const c=findById(id); if(!c)return;
+      if(on){ c.accessIssue=true; if(reason!=null) c.accessIssueReason=reason; }
+      else { c.accessIssue=false; c.accessIssueReason=""; } });
+    await persist(); renderCustomers(); if(cmap) refreshMarks();
+    if(curId){ const cc=findById(curId); if(cc) renderIssueSection(cc); }
+  }
+  function renderIssueSection(c){
+    const box=$("#dIssue"); if(!box)return;
+    if(c.accessIssue){
+      box.innerHTML='<div class="issuebox"><span class="ibadge">ACCESS ISSUE</span><span class="ireason">'+escapeHtml(c.accessIssueReason||"No reason set")+'</span></div>'+
+        '<div class="row"><button class="btn ghost" id="dIssueChange">Change reason</button><button class="btn ghost danger" id="dIssueClear">Clear flag</button></div>';
+      $("#dIssueChange").addEventListener("click",()=>openReasonPicker([c.id],false));
+      $("#dIssueClear").addEventListener("click",()=>setAccessIssue([c.id],false));
+    } else {
+      box.innerHTML='<button class="btn ghost issuebtn" id="dIssueFlag">\u26A0\uFE0E Flag access issue</button>';
+      $("#dIssueFlag").addEventListener("click",()=>openReasonPicker([c.id],false));
+    }
+  }
+  function openReasonPicker(ids,allowLater){
+    riIds=ids.slice();
+    const anyFlagged=ids.some(id=>{const c=findById(id);return c&&c.accessIssue;});
+    $("#riTitle").textContent=ids.length>1?("Access issue \u00B7 "+ids.length+" assets"):"Access issue";
+    const wrap=$("#riReasons");
+    wrap.innerHTML=ACCESS_REASONS.map(r=>'<button class="reasonbtn" data-r="'+escapeHtml(r)+'">'+escapeHtml(r)+'</button>').join("")+'<button class="reasonbtn" data-other="1">Other\u2026</button>';
+    wrap.querySelectorAll("[data-r]").forEach(b=>b.addEventListener("click",()=>{ setAccessIssue(riIds,true,b.dataset.r); closeReasonPicker(); }));
+    wrap.querySelector("[data-other]").addEventListener("click",()=>{ $("#riOtherWrap").classList.remove("hidden"); $("#riOther").focus(); });
+    $("#riOtherWrap").classList.add("hidden"); $("#riOther").value="";
+    $("#riLater").classList.toggle("hidden",!allowLater);
+    $("#riRemove").classList.toggle("hidden",!anyFlagged);
+    $("#riScrim").classList.add("show"); $("#riSheet").classList.add("show");
+  }
+  function closeReasonPicker(){ $("#riScrim").classList.remove("show"); $("#riSheet").classList.remove("show"); }
+  function bulkAccessIssue(){
+    const ids=selectedIds();
+    if(!ids.length){ toast("Select some assets first."); return; }
+    if(allFlagged(ids)){ setAccessIssue(ids,false); toast("Cleared access issue on "+ids.length); }
+    else openReasonPicker(ids,true);
+  }
+  function updateBulkButtons(){
+    const clear=allFlagged(selectedIds()); const t=clear?"Clear access issue":"Mark access issue";
+    const sf=$("#selFlag"), mf=$("#mFlag"); if(sf) sf.textContent=t; if(mf) mf.textContent=t;
+  }
+  $("#riScrim").addEventListener("click",closeReasonPicker);
+  $("#riOtherSave").addEventListener("click",()=>{ const v=$("#riOther").value.trim(); setAccessIssue(riIds,true,v||"Other"); closeReasonPicker(); });
+  $("#riLater").addEventListener("click",()=>{ setAccessIssue(riIds,true,""); closeReasonPicker(); });
+  $("#riRemove").addEventListener("click",()=>{ setAccessIssue(riIds,false); closeReasonPicker(); });
+  $("#selFlag").addEventListener("click",bulkAccessIssue);
+  $("#mFlag").addEventListener("click",bulkAccessIssue);
 
   /* ---- texting ---- */
   function openSms(tel,name,address){
@@ -1441,6 +1538,7 @@
     updateSchedUI(c);
     $("#dCount").textContent=c.textCount||0;
     $("#dNotes").value=c.notes||"";
+    renderIssueSection(c);
     $("#dTextBtn").classList.toggle("force-hide",!(c.phones&&c.phones.length));
     $("#dPhones").querySelectorAll("[data-sms]").forEach(a=>a.addEventListener("click",()=>markTexted(a.dataset.sms)));
     $("#dScrim").classList.add("show"); $("#dSheet").classList.add("show");
@@ -1691,9 +1789,14 @@
   let cmap=null, cmarks=[];
   function withCoords(){ return customers.filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o)&&a>=-90&&a<=90&&o>=-180&&o<=180;}); }
   function mapList(){ return exportList().filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o)&&a>=-90&&a<=90&&o>=-180&&o<=180;}); }
-  function markStyle(sel){ return sel?{radius:9,weight:3,color:"#0E1116",fillColor:"#FFB000",fillOpacity:1}:{radius:6,weight:2,color:"#0E1116",fillColor:"#6b7480",fillOpacity:.9}; }
-  function updateMCount(){ const n=cSel.size; const e=$("#mExport"); if(e) e.textContent = n ? ("Export KML \u00B7 "+n+" selected") : ("Export KML \u00B7 "+cmarks.length+" shown"); }
-  function refreshMarks(){ cmarks.forEach(o=>o.marker.setStyle(markStyle(cSel.has(o.c.id)))); updateMCount(); updateSelBar(); }
+  function markStyle(sel,flag){
+    if(flag&&sel) return {radius:9,weight:4,color:"#FFD24D",fillColor:"#FF4D4D",fillOpacity:1};
+    if(flag) return {radius:8,weight:2.5,color:"#0E1116",fillColor:"#FF4D4D",fillOpacity:1};
+    if(sel) return {radius:9,weight:3,color:"#0E1116",fillColor:"#FFB000",fillOpacity:1};
+    return {radius:6,weight:2,color:"#0E1116",fillColor:"#6b7480",fillOpacity:.9};
+  }
+  function updateMCount(){ const n=cSel.size; const e=$("#mExport"); if(e) e.textContent = n ? ("Export KML \u00B7 "+n+" selected") : ("Export KML \u00B7 "+cmarks.length+" shown"); updateBulkButtons(); }
+  function refreshMarks(){ cmarks.forEach(o=>o.marker.setStyle(markStyle(cSel.has(o.c.id),!!o.c.accessIssue))); updateMCount(); updateSelBar(); }
   function plotCustomerMap(){
     const note=$("#mNote");
     if(!window.L){ note.textContent="The map needs an internet connection."; return; }
@@ -1706,9 +1809,9 @@
     const pts=[];
     list.forEach(c=>{
       const la=parseFloat(c.lat),lo=parseFloat(c.lng);
-      const m=L.circleMarker([la,lo],markStyle(cSel.has(c.id)));
-      m.bindPopup("<b>"+escapeHtml(c.name||("SAP "+(c.sapId||"")))+"</b>"+(c.access?"<br>"+escapeHtml(c.access):"")+navLinks(la,lo));
-      m.on("click",()=>{ if(cSel.has(c.id))cSel.delete(c.id); else cSel.add(c.id); m.setStyle(markStyle(cSel.has(c.id))); updateMCount(); updateSelBar(); });
+      const m=L.circleMarker([la,lo],markStyle(cSel.has(c.id),!!c.accessIssue));
+      m.bindPopup("<b>"+escapeHtml(c.name||("SAP "+(c.sapId||"")))+"</b>"+(c.access?"<br>"+escapeHtml(c.access):"")+(c.accessIssue?'<br><span class="popissue">\u26A0\uFE0E '+escapeHtml(c.accessIssueReason||"Access issue")+'</span>':"")+navLinks(la,lo));
+      m.on("click",()=>{ if(cSel.has(c.id))cSel.delete(c.id); else cSel.add(c.id); m.setStyle(markStyle(cSel.has(c.id),!!c.accessIssue)); updateMCount(); updateSelBar(); });
       m.addTo(cmap); cmarks.push({c,marker:m}); pts.push([la,lo]);
     });
     if(pts.length) cmap.fitBounds(pts,{padding:[28,28],maxZoom:15});

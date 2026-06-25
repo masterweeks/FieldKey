@@ -59,7 +59,7 @@ clearing the database all live in **Settings → Data** — see below.)
   and a directions link. Filter chips (including **Latest KML** and **Selected**,
   which shows whatever you've picked in the list or on the map) and a search box
   that matches name, address, SAP ID, or **phone number** — phone matching ignores
-  formatting, so `530000000`, `530-000-0000`, or even just the last few digits
+  formatting, so `5303398783`, `530-339-8783`, or even just the last few digits
   all find the right customer.
 - **Map & export KML** — the **Map** button plots the customers you're currently
   working with: whatever the filter/search is showing, or — if you've selected
@@ -92,6 +92,21 @@ clearing the database all live in **Settings → Data** — see below.)
   points that have coordinates). All exported text is plain and readable — any HTML
   that came in from a KML's description is stripped to clean text (on import, on
   export, and when an older database is first opened in this version).
+- **Access issues** — flag any site you couldn't get into. Open a site and tap
+  **Flag access issue**, then pick a reason (Locked gate / Need gate code / No
+  answer / Aggressive dog / Customer refused / Can't locate / Other → free text).
+  To flag several at once, select them (row circles *or* map pins) and hit **Mark
+  access issue** — in the selection bar or on the map sheet — then pick one reason
+  for the whole batch (or "Flag now, set reason later"). Flagged sites show a solid
+  **red dot** on the map (a red dot with a bright ring when also selected), and in
+  the list they get a bold **red left border**, a red **ACCESS ISSUE** badge, and
+  the reason. The flag is independent of status — a site can be *Texted* or
+  *Scheduled* and still flagged — so it stays red until you clear it (open the site
+  → **Clear flag**, or select flagged sites → the button flips to **Clear access
+  issue**). The red **Access issue** filter chip pulls up just the problem sites in
+  one tap, and CSV exports include **Access Issue** and **Issue Reason** columns.
+  Flagging is purely visual — it doesn't pull a site out of your Not-texted /
+  Scheduled / etc. views.
 
 ### Settings → Data
 - **Back up data** downloads a single `.json` file with every customer and your
