@@ -1127,7 +1127,7 @@
     fn = (fn||"").replace(/\b(jr|sr|ii|iii|iv)\b/ig,"").trim().split(/\s+/)[0] || name;
     return titleCase(fn);
   }
-  const PHONE_LINE=/^\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}$/;
+  const PHONE_LINE=/^\(?\d{3}\)?[\s.\u2010-\u2015\u2212\-]?\d{3}[\s.\u2010-\u2015\u2212\-]?\d{4}$/;
   function phoneDigits(s){ const d=s.replace(/\D/g,""); return d.length===10?"+1"+d:(d.length===11&&d[0]==="1"?"+"+d:"+"+d); }
   function csvEsc(v){ v=String(v==null?"":v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
   function stripUSA(a){ return String(a||"").replace(/,?\s*USA\s*$/i,""); }
@@ -1137,25 +1137,45 @@
   }
 
   /* ---- email parser ---- */
+  function sapInLine(ln){
+    let m=ln.match(/SAP\b[^\d\n]{0,24}(\d{6,12})/i); if(m) return m[1];
+    m=ln.match(/(?:^|[^\d.])(\d{9})(?![\d.])/); if(m) return m[1];
+    return "";
+  }
+  function finishRecord(r){
+    const used=new Set(), notes=[];
+    r._lines.forEach((ln,i)=>{
+      if(!ln){used.add(i);return;} let m;
+      if((m=ln.match(/^Address Attempted:\s*(.*)$/i))){r.address=m[1].trim();used.add(i);}
+      else if(/^\*/.test(ln)){r.name=ln.replace(/^\*\s*/,"").trim();used.add(i);}
+      else if(PHONE_LINE.test(ln)&&!isCoordinateText(ln)){r.phones.push({display:ln,tel:phoneDigits(ln)});used.add(i);}
+      else if((m=ln.match(/^AXS:\s*(.*)$/i))){r.access=m[1].trim();used.add(i);}
+    });
+    const sapDigits=String(r.sapId||"").replace(/\D/g,"");
+    extractPhones(r._lines.join("\n")).forEach(p=>{
+      if(sapDigits && p.tel.replace(/\D/g,"").indexOf(sapDigits)>=0) return;   // don't read the SAP id as a phone
+      if(!r.phones.some(x=>x.tel===p.tel)) r.phones.push(p);
+    });
+    const esc=String(r.sapId).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+    const sapRe=new RegExp("(?:\\b(?:SAP|Equipment|Equip|Number|No|ID)\\b[^\\d\\n]{0,24})?"+esc,"i");
+    r._lines.forEach((ln,i)=>{ if(!ln||used.has(i))return;
+      let t=ln.replace(sapRe,"").replace(/^[\s:#,\-]+/,"").trim();
+      if(t) notes.push(t);
+    });
+    r.accessNotes=notes.join(" | ");
+    delete r._lines;
+    return r;
+  }
   function parseReturnEmail(text){
     text=text.replace(/\r\n?/g,"\n");
-    const chunks=text.split(/(?=SAP Equipment ID:)/i).filter(c=>/SAP Equipment ID:/i.test(c));
-    return chunks.map(chunk=>{
-      const lines=chunk.split("\n").map(l=>l.trim());
-      const rec={sapId:"",address:"",name:"",phones:[],access:"",accessNotes:""};
-      const used=new Set(); const notes=[];
-      lines.forEach((ln,i)=>{
-        if(!ln){used.add(i);return;} let m;
-        if((m=ln.match(/^SAP Equipment ID:\s*(.*)$/i))){rec.sapId=m[1].trim();used.add(i);}
-        else if((m=ln.match(/^Address Attempted:\s*(.*)$/i))){rec.address=m[1].trim();used.add(i);}
-        else if(/^\*/.test(ln)){rec.name=ln.replace(/^\*\s*/,"").trim();used.add(i);}
-        else if(PHONE_LINE.test(ln)&&!isCoordinateText(ln)){rec.phones.push({display:ln,tel:phoneDigits(ln)});used.add(i);}
-        else if((m=ln.match(/^AXS:\s*(.*)$/i))){rec.access=m[1].trim();used.add(i);}
-      });
-      lines.forEach((ln,i)=>{ if(ln&&!used.has(i)) notes.push(ln); });
-      rec.accessNotes=notes.join(" | ");
-      return rec;
+    const records=[]; let cur=null;
+    text.split("\n").forEach(raw=>{
+      const ln=raw.trim();
+      const sap=sapInLine(ln);
+      if(sap){ cur={sapId:sap,address:"",name:"",phones:[],access:"",accessNotes:"",_lines:[ln]}; records.push(cur); }
+      else if(cur){ cur._lines.push(ln); }
     });
+    return records.map(finishRecord);
   }
 
   /* ---- matching ---- */
@@ -1692,7 +1712,7 @@
 
   // phone helpers for KML free-text (e.g. numbers embedded in a description)
   function isCoordinateText(s){ return /^[-+]?\d{1,3}\.\d{3,}$/.test(String(s).trim()); }
-  const PHONE_RE_SRC="(?:\\+?1[\\s.\\-]?)?\\(?\\d{3}\\)?[\\s.\\-]?\\d{3}[\\s.\\-]?\\d{4}";
+  const PHONE_RE_SRC="(?:\\+?1[\\s.\\u2010-\\u2015\\u2212\\-]?)?\\(?\\d{3}\\)?[\\s.\\u2010-\\u2015\\u2212\\-]?\\d{3}[\\s.\\u2010-\\u2015\\u2212\\-]?\\d{4}";
   function phoneMatches(s){
     const text=String(s), re=new RegExp(PHONE_RE_SRC,"g"), out=[]; let m;
     while((m=re.exec(text))){

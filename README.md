@@ -46,11 +46,15 @@ has coordinates. (Backing up, restoring, rolling back to an earlier day, and
 clearing the database all live in **Settings → Data** — see below.)
 
 - **Import email return** — paste the reply you get after sending a list. It
-  reads each record (SAP Equipment ID, address, name, phone numbers, `AXS:`
-  access, and any gate-code / instruction lines) and merges it in by **SAP ID,
-  then name, then address**. The email's address, name, and phones are taken as
-  authoritative; coordinates you already have are kept. (KML files don't get
-  imported here — they go through **Requests** so they pick up addresses.)
+  reads each record and merges it in by **SAP ID, then name, then address**. The
+  SAP ID is matched **by its structure** — a standalone 9-digit number — so it's
+  found whether the sender labels it "SAP Equipment ID", "SAP ID", "Equipment ID",
+  or doesn't label it at all. Phone numbers are pulled out **wherever they appear**
+  — even mid-line (e.g. `Mobile Primary  (541) 591-3438`) — and odd dash
+  characters that email programs sometimes substitute (en-dashes, etc.) are handled.
+  The email's address, name, and phones are taken as authoritative; coordinates you
+  already have are kept. (KML files don't get imported here — they go through
+  **Requests** so they pick up addresses.)
 - **Text customers** — each customer has a one-tap **Text** button that opens
   Messages pre-filled with your template (first name and address fill in
   automatically). The app counts each send and marks the customer *Texted*.
@@ -64,7 +68,7 @@ clearing the database all live in **Settings → Data** — see below.)
   and a directions link. Filter chips (including **Latest KML** and **Selected**,
   which shows whatever you've picked in the list or on the map) and a search box
   that matches name, address, SAP ID, or **phone number** — phone matching ignores
-  formatting, so `530000000`, `530-000-0000`, or even just the last few digits
+  formatting, so `5303398783`, `530-339-8783`, or even just the last few digits
   all find the right customer.
 - **Map & export KML** — the **Map** button plots the customers you're currently
   working with: whatever the filter/search is showing, or — if you've selected
