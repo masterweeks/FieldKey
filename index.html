@@ -285,6 +285,8 @@
   .leaflet-container a.leaflet-popup-close-button{color:#8a93a0}
   .leaflet-control-attribution{background:rgba(20,24,31,.82)!important;color:#7f8794!important}
   .leaflet-control-attribution a{color:#9aa3b0!important}
+  .locatebtn{display:flex!important;align-items:center;justify-content:center;color:#E7ECF3}
+  .locatebtn.on{color:var(--amber)}
 </style>
 </head>
 <body>
@@ -798,6 +800,37 @@
     (bases[choice]||dark).addTo(map);
     L.control.layers(bases,null,{position:"topright",collapsed:false}).addTo(map);
     map.on("baselayerchange",e=>{ if(e&&e.name) store.set("fk_basemap",e.name); });
+    return map;
+  }
+  const LOCATE_ICON='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:middle"><circle cx="12" cy="12" r="3.4"/><line x1="12" y1="2.5" x2="12" y2="5.5"/><line x1="12" y1="18.5" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="5.5" y2="12"/><line x1="18.5" y1="12" x2="21.5" y2="12"/></svg>';
+  function addLocateControl(map){
+    let watching=false, dot=null, acc=null, centered=false, btn=null;
+    function setActive(on){ if(btn) btn.classList.toggle("on",on); }
+    function clearDot(){ if(dot){map.removeLayer(dot);dot=null;} if(acc){map.removeLayer(acc);acc=null;} }
+    function stop(){ watching=false; centered=false; setActive(false); try{map.stopLocate();}catch(e){} clearDot(); }
+    function start(){ watching=true; centered=false; setActive(true); map.locate({watch:true,enableHighAccuracy:true,maximumAge:3000,timeout:20000}); }
+    function toggle(){ watching?stop():start(); }
+    map._locStop=stop;
+    map.on("locationfound",e=>{
+      if(!watching) return;
+      const r=e.accuracy||0;
+      if(!acc){ acc=L.circle(e.latlng,{radius:r,color:"#1f8fff",weight:1,fillColor:"#1f8fff",fillOpacity:.12,interactive:false}).addTo(map); }
+      else acc.setLatLng(e.latlng).setRadius(r);
+      if(!dot){ dot=L.circleMarker(e.latlng,{radius:7,color:"#fff",weight:3,fillColor:"#1f8fff",fillOpacity:1,interactive:false}).addTo(map); }
+      else dot.setLatLng(e.latlng);
+      if(!centered){ centered=true; map.setView(e.latlng, Math.max(map.getZoom()||0,15)); }
+    });
+    map.on("locationerror",err=>{
+      if(!watching) return; stop();
+      toast(err&&err.code===1 ? "Location is blocked. Allow it for this site in your browser settings." : "Couldn't get your location \u2014 try again outdoors.");
+    });
+    const Ctrl=L.Control.extend({options:{position:"topleft"},onAdd:function(){
+      const wrap=L.DomUtil.create("div","leaflet-bar locatebar");
+      btn=L.DomUtil.create("a","locatebtn",wrap); btn.href="#"; btn.title="Show my location"; btn.setAttribute("role","button"); btn.setAttribute("aria-label","Show my location"); btn.innerHTML=LOCATE_ICON;
+      L.DomEvent.on(btn,"click",L.DomEvent.stop); L.DomEvent.on(btn,"click",toggle);
+      return wrap;
+    }});
+    map.addControl(new Ctrl());
     return map;
   }
   function ensureMap(){
@@ -1664,7 +1697,7 @@
   function plotCustomerMap(){
     const note=$("#mNote");
     if(!window.L){ note.textContent="The map needs an internet connection."; return; }
-    if(!cmap){ cmap=L.map("custMap",{zoomControl:true}); addBaseLayers(cmap); }
+    if(!cmap){ cmap=L.map("custMap",{zoomControl:true}); addBaseLayers(cmap); addLocateControl(cmap); }
     cmarks.forEach(o=>cmap.removeLayer(o.marker)); cmarks=[];
     const list=mapList();
     const scoped=cSel.size||custFilter!=="all"||custQuery.trim();
@@ -1683,7 +1716,7 @@
     updateMCount();
   }
   function openMapSheet(){ $("#mScrim").classList.add("show"); $("#mSheet").classList.add("show"); setTimeout(plotCustomerMap,60); }
-  function closeMapSheet(){ $("#mScrim").classList.remove("show"); $("#mSheet").classList.remove("show"); renderCustomers(); }
+  function closeMapSheet(){ if(cmap&&cmap._locStop) cmap._locStop(); $("#mScrim").classList.remove("show"); $("#mSheet").classList.remove("show"); renderCustomers(); }
   $("#mapBtn").addEventListener("click",openMapSheet);
   $("#mScrim").addEventListener("click",closeMapSheet);
   $("#mSelVis").addEventListener("click",()=>{ if(!cmap)return; const b=cmap.getBounds(); cmarks.forEach(o=>{ if(b.contains([parseFloat(o.c.lat),parseFloat(o.c.lng)])) cSel.add(o.c.id); }); refreshMarks(); });

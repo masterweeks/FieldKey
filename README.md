@@ -67,14 +67,20 @@ clearing the database all live in **Settings → Data** — see below.)
   basemap: **Dark** (a clean low-glare style that matches the app), **Satellite**
   (high-resolution aerial imagery with road/place labels — often the most useful
   for spotting rooftops, access roads, and terrain on an inspection), or
-  **Streets**. Your choice is remembered. Tap a pin for a popup with the site name,
-  access, and **Apple Maps / Google Maps** directions buttons. Tap pins to refine a
-  selection, or pan/zoom to an area and hit *Select visible*, then **Export KML**
-  — of the pins you tapped, or, if you haven't tapped any, of everything shown on
-  the map. Or tap **Build request email** to generate the access-request text
-  (Requestor details from Settings + each site's SAP and address) for that same
-  set, ready to copy or share/email. The exported KML carries the name, phone,
-  access, and status in each placemark, and re-imports cleanly (through Requests).
+  **Streets**. Your choice is remembered. The crosshair button (under the zoom
+  controls) drops a live blue dot showing **your current location**, with an
+  accuracy ring, and tracks it as you move — handy for seeing which site you're
+  closest to. It centers on you the first time you tap it; tap again to turn it
+  off (it also stops automatically when you close the map, to save battery). The
+  first time, your browser will ask permission to use your location. Tap a pin for
+  a popup with the site name, access, and **Apple Maps / Google Maps** directions
+  buttons. Tap pins to refine a selection, or pan/zoom to an area and hit *Select
+  visible*, then **Export KML** — of the pins you tapped, or, if you haven't tapped
+  any, of everything shown on the map. Or tap **Build request email** to generate
+  the access-request text (Requestor details from Settings + each site's SAP and
+  address) for that same set, ready to copy or share/email. The exported KML
+  carries the name, phone, access, and status in each placemark, and re-imports
+  cleanly (through Requests).
 - **Select & export** — every row has a circle on the left; tap it to pick
   specific assets (a bar shows how many are selected). This is the same selection
   you build by tapping pins on the **Map**, and the **Selected** filter shows it.
