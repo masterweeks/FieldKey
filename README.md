@@ -7,7 +7,8 @@ address → gives you one tappable, copyable request per site, plus batch
 copy/share and `.txt` / `.csv` export.
 
 Everything parses on-device; only the coordinates are sent out for address
-lookup. The map needs an internet connection (it streams map tiles); everything
+lookup. The maps need an internet connection (they stream map tiles — OpenStreetMap,
+CARTO, or Esri aerial imagery depending on the basemap you pick); everything
 else works offline once installed.
 
 The app has two tabs at the bottom:
@@ -33,11 +34,11 @@ and — because it geocodes — how those points finally get addresses.
 
 ### Customers — your database
 A persistent, on-device view of every site you've collected. The header shows
-how many are in the database, and **Clear database** wipes it (with a
-confirmation). Tap any customer to see the full record — phones, access with
-gate codes, address, coordinates, which file it came from, and any extra fields —
-plus **Apple Maps / Google Maps** directions buttons when the site has
-coordinates.
+how many are in the database. Tap any customer to see the full record — phones,
+access with gate codes, address, coordinates, which file it came from, and any
+extra fields — plus **Apple Maps / Google Maps** directions buttons when the site
+has coordinates. (Backing up, restoring, rolling back to an earlier day, and
+clearing the database all live in **Settings → Data** — see below.)
 
 - **Import email return** — paste the reply you get after sending a list. It
   reads each record (SAP Equipment ID, address, name, phone numbers, `AXS:`
@@ -55,14 +56,19 @@ coordinates.
   date/time picker that's saved to the database (and shown on the row), plus
   **Apple Calendar** and **Google Calendar** buttons that create a real 30-minute
   inspection event — pre-filled with the site name, address, phone, access notes,
-  and a directions link. Filter chips (including **Latest KML**) and a search box
+  and a directions link. Filter chips (including **Latest KML** and **Selected**,
+  which shows whatever you've picked in the list or on the map) and a search box
   that matches name, address, SAP ID, or **phone number** — phone matching ignores
   formatting, so `5303398783`, `530-339-8783`, or even just the last few digits
   all find the right customer.
 - **Map & export KML** — the **Map** button plots the customers you're currently
   working with: whatever the filter/search is showing, or — if you've selected
-  specific assets — just those. Tap a pin for a popup with the site name, access,
-  and **Apple Maps / Google Maps** directions buttons. Tap pins to refine a
+  specific assets — just those. Use the switcher in the top-right corner to pick a
+  basemap: **Dark** (a clean low-glare style that matches the app), **Satellite**
+  (high-resolution aerial imagery with road/place labels — often the most useful
+  for spotting rooftops, access roads, and terrain on an inspection), or
+  **Streets**. Your choice is remembered. Tap a pin for a popup with the site name,
+  access, and **Apple Maps / Google Maps** directions buttons. Tap pins to refine a
   selection, or pan/zoom to an area and hit *Select visible*, then **Export KML**
   — of the pins you tapped, or, if you haven't tapped any, of everything shown on
   the map. Or tap **Build request email** to generate the access-request text
@@ -70,15 +76,28 @@ coordinates.
   set, ready to copy or share/email. The exported KML carries the name, phone,
   access, and status in each placemark, and re-imports cleanly (through Requests).
 - **Select & export** — every row has a circle on the left; tap it to pick
-  specific assets (a bar shows how many are selected). **Export** then covers
-  exactly what you've chosen — or, if nothing is selected, whatever the current
-  **filter and search** are showing. The export sheet states the scope ("Exporting
-  3 selected customers" / "Exporting 12 customers (Latest KML)") before you pick a
-  format: `.csv` (opens in Excel/Numbers), `.json`, `.vcf` (imports every
-  customer with a phone into Contacts), and `.kml` (the selected points that have
-  coordinates). All exported text is plain and readable — any HTML that came in
-  from a KML's description is stripped to clean text (on import, on export, and
-  when an older database is first opened in this version).
+  specific assets (a bar shows how many are selected). This is the same selection
+  you build by tapping pins on the **Map**, and the **Selected** filter shows it.
+  **Export** then covers exactly what you've chosen — or, if nothing is selected,
+  whatever the current **filter and search** are showing. The export sheet states
+  the scope ("Exporting 3 selected customers" / "Exporting 12 customers (Latest
+  KML)") before you pick a format: `.csv` (opens in Excel/Numbers), `.json`, `.vcf`
+  (imports every customer with a phone into Contacts), and `.kml` (the selected
+  points that have coordinates). All exported text is plain and readable — any HTML
+  that came in from a KML's description is stripped to clean text (on import, on
+  export, and when an older database is first opened in this version).
+
+### Settings → Data
+- **Back up data** downloads a single `.json` file with every customer and your
+  Settings — keep it somewhere safe (Files, email, cloud).
+- **Restore from backup** reads that file back in, replacing the current database
+  (after a confirmation).
+- **Earlier versions** — FieldKey automatically snapshots the database the first
+  time you open it each day (the last 14 days are kept). Restore any of them to
+  roll the whole database back to how it looked that morning — useful if a day's
+  import or edits went sideways.
+- **Clear database** wipes everything (with a confirmation). Moved here so it's
+  out of the way of day-to-day work.
 
 Edit the text-message template anytime in **Settings → Text message**.
 

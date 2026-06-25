@@ -269,6 +269,23 @@
   .schedinput{width:100%;background:var(--bg3);border:1px solid var(--line2);color:var(--ink);border-radius:10px;padding:11px 12px;font-size:15px;font-family:var(--ui);margin-bottom:8px;color-scheme:dark}
   .csched{color:var(--green);font-size:12px;font-weight:600;margin-top:3px}
   .reqtext{width:100%;height:40vh;background:var(--bg3);border:1px solid var(--line2);color:var(--ink);border-radius:10px;padding:12px;font-family:var(--mono);font-size:12px;line-height:1.5;resize:none;white-space:pre;overflow:auto;margin-bottom:12px}
+  .filebtn{display:block;text-align:center;cursor:pointer}
+  .verrow{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .verrow .vmeta{color:var(--faint);font-size:12px;margin-top:2px}
+  .verrow .btn{width:auto;flex:0 0 auto;padding:8px 16px}
+  /* dark map chrome */
+  .leaflet-container{background:#0E1116}
+  .leaflet-control-layers{background:#1B212B!important;color:#E7ECF3;border:1px solid #2A3340!important;border-radius:10px!important;box-shadow:0 2px 10px rgba(0,0,0,.45)!important}
+  .leaflet-control-layers-expanded{padding:7px 12px 7px 10px;font:13px/1.25 -apple-system,system-ui,sans-serif}
+  .leaflet-control-layers label{margin:3px 0;display:flex;align-items:center;gap:7px;cursor:pointer}
+  .leaflet-control-layers-selector{accent-color:#FFB000;margin:0}
+  .leaflet-bar a,.leaflet-bar a:hover{background:#1B212B;color:#E7ECF3;border-bottom-color:#2A3340}
+  .leaflet-bar a.leaflet-disabled{background:#141820;color:#566270}
+  .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#1B212B;color:#E7ECF3;box-shadow:0 2px 14px rgba(0,0,0,.5)}
+  .leaflet-popup-content a{color:#FFB000}
+  .leaflet-container a.leaflet-popup-close-button{color:#8a93a0}
+  .leaflet-control-attribution{background:rgba(20,24,31,.82)!important;color:#7f8794!important}
+  .leaflet-control-attribution a{color:#9aa3b0!important}
 </style>
 </head>
 <body>
@@ -364,6 +381,7 @@
     <div class="searchrow"><input type="text" id="custSearch" placeholder="Search name, address, SAP, or phone…" /></div>
     <div class="filters" id="custFilters">
       <button class="chip sel" data-f="all">All</button>
+      <button class="chip" data-f="selected">Selected</button>
       <button class="chip" data-f="latest">Latest KML</button>
       <button class="chip" data-f="has">Has contact</button>
       <button class="chip" data-f="nottexted">Not texted</button>
@@ -376,7 +394,7 @@
       <button class="btn ghost" id="mapBtn">Map</button>
       <button class="btn ghost" id="exportCustBtn">Export</button>
     </div>
-    <div class="dbbar"><span id="dbCount" class="mono">0 in database</span><button id="dbClear" class="linkbtn">Clear database</button></div>
+    <div class="dbbar"><span id="dbCount" class="mono">0 in database</span></div>
     <div class="selbar hidden" id="selBar"><span id="selCount" class="mono">0 selected</span><button id="selClear" class="linkbtn alt">Clear selection</button></div>
     <div id="custList" class="custlist"></div>
     <div id="custEmpty" class="empty">Nothing here yet.<br>Load a job in <b>Requests</b>, build it, then tap <b>Save to Customers</b> — or paste an email return above.</div>
@@ -453,12 +471,12 @@
 <div class="sheet mapsheet" id="mSheet" role="dialog" aria-label="Map and export">
   <div class="grab"></div>
   <h2 style="margin-bottom:4px">Map · export KML</h2>
-  <p class="hint">Tap pins to select them. <b>Select visible</b> grabs everything currently in view — pan and zoom to an area first. Then export the selection as a KML, or build access requests from it.</p>
+  <p class="hint">Tap pins to select them (the same selection as the list — see the <b>Selected</b> filter). <b>Select visible</b> grabs everything currently in view — pan and zoom to an area first. Then export the selection as a KML, or build access requests from it.</p>
   <div id="custMap" class="mapbox" style="height:44vh"></div>
   <p class="note" id="mNote" style="margin-top:8px"></p>
   <div class="maprow">
     <button class="btn ghost" id="mSelVis">Select visible</button>
-    <button class="btn ghost" id="mClear">Clear</button>
+    <button class="btn ghost" id="mClear">Clear selection</button>
   </div>
   <button class="btn primary" id="mExport" style="margin-top:10px">Export KML</button>
   <button class="btn ghost" id="mReq" style="margin-top:8px">Build request email</button>
@@ -500,7 +518,6 @@
   <div class="sgroup"><button class="btn ghost" id="xJson">Export .json</button></div>
   <div class="sgroup"><button class="btn ghost" id="xVcf">Export contacts (.vcf)</button></div>
   <div class="sgroup"><button class="btn ghost" id="xKml">Export points (.kml)</button></div>
-  <div class="sgroup" style="margin-top:18px"><button class="btn danger" id="xClear">Clear all customers</button></div>
 </div>
 
 <!-- settings -->
@@ -542,7 +559,26 @@
   <div class="sgroup"><textarea id="sSms" style="min-height:120px"></textarea></div>
 
   <button class="btn primary" id="saveSettings">Save</button>
+
+  <h2 style="margin-top:22px">Data</h2>
+  <p class="hint">Your database lives on this device. Back it up, restore from a backup file, or roll back to an earlier day.</p>
+  <div class="sgroup"><button class="btn ghost" id="sBackup">Back up data (.json)</button></div>
+  <div class="sgroup">
+    <label class="btn ghost filebtn" for="sRestoreFile">Restore from backup…</label>
+    <input type="file" id="sRestoreFile" accept="application/json,.json" style="display:none" />
+  </div>
+  <div class="sgroup"><button class="btn ghost" id="sVersions">Earlier versions…</button></div>
+  <div class="sgroup"><button class="btn danger" id="sClearDb">Clear database</button></div>
   <p class="note" style="text-align:center;margin-top:14px">FieldKey · v1 · runs offline once added to your Home Screen</p>
+</div>
+
+<!-- earlier versions (daily snapshots) sheet -->
+<div class="scrim" id="verScrim"></div>
+<div class="sheet" id="verSheet" role="dialog" aria-label="Earlier versions">
+  <div class="grab"></div>
+  <h2>Earlier versions</h2>
+  <p class="hint">A snapshot of your database is saved automatically the first time you open FieldKey each day (last 14 kept). Restore one to roll the whole database back to that day.</p>
+  <div id="verList"></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -751,11 +787,24 @@
 
   /* ---------------- map ---------------- */
   let lmap=null, mLayer=null;
+  function addBaseLayers(map){
+    const osm=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"\u00A9 OpenStreetMap"});
+    const dark=L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:20,subdomains:"abcd",attribution:"\u00A9 OpenStreetMap \u00A9 CARTO"});
+    const sat=L.layerGroup([
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Imagery \u00A9 Esri"}),
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19})
+    ]);
+    const bases={"Dark":dark,"Satellite":sat,"Streets":osm};
+    const choice=store.get("fk_basemap","Dark");
+    (bases[choice]||dark).addTo(map);
+    L.control.layers(bases,null,{position:"topright",collapsed:false}).addTo(map);
+    map.on("baselayerchange",e=>{ if(e&&e.name) store.set("fk_basemap",e.name); });
+    return map;
+  }
   function ensureMap(){
     if(lmap || !window.L) return lmap;
     lmap=L.map("map",{zoomControl:true});
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      {maxZoom:19,attribution:"\u00A9 OpenStreetMap contributors"}).addTo(lmap);
+    addBaseLayers(lmap);
     mLayer=L.layerGroup().addTo(lmap);
     return lmap;
   }
@@ -1060,18 +1109,25 @@
   }
 
   /* ---- IndexedDB ---- */
-  const DB_NAME="fieldkey", STORE="customers";
+  const DB_NAME="fieldkey", STORE="customers", SNAP="snapshots";
   let _db=null, dbOk=true;
   function dbOpen(){ return new Promise((res,rej)=>{ if(_db)return res(_db);
     if(!("indexedDB" in window)){ dbOk=false; return rej(new Error("no idb")); }
-    const rq=indexedDB.open(DB_NAME,1);
-    rq.onupgradeneeded=e=>{ const db=e.target.result; if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:"id"}); };
+    const rq=indexedDB.open(DB_NAME,2);
+    rq.onupgradeneeded=e=>{ const db=e.target.result;
+      if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:"id"});
+      if(!db.objectStoreNames.contains(SNAP)) db.createObjectStore(SNAP,{keyPath:"date"}); };
     rq.onsuccess=e=>{_db=e.target.result;res(_db);}; rq.onerror=e=>{dbOk=false;rej(e.target.error);}; }); }
   function _store(mode){ return _db.transaction(STORE,mode).objectStore(STORE); }
   function dbAll(){ return new Promise((res,rej)=>{ try{const r=_store("readonly").getAll(); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
   function dbBulk(recs){ return new Promise((res,rej)=>{ try{const s=_store("readwrite"); recs.forEach(r=>s.put(r)); s.transaction.oncomplete=()=>res(); s.transaction.onerror=()=>rej(s.transaction.error);}catch(e){rej(e);} }); }
   function dbDel(id){ return new Promise((res,rej)=>{ try{const r=_store("readwrite").delete(id); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
   function dbClear(){ return new Promise((res,rej)=>{ try{const r=_store("readwrite").clear(); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
+  function _snap(mode){ return _db.transaction(SNAP,mode).objectStore(SNAP); }
+  function snapPut(rec){ return new Promise((res,rej)=>{ try{const r=_snap("readwrite").put(rec); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
+  function snapAll(){ return new Promise((res,rej)=>{ try{const r=_snap("readonly").getAll(); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
+  function snapGet(date){ return new Promise((res,rej)=>{ try{const r=_snap("readonly").get(date); r.onsuccess=()=>res(r.result||null); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
+  function snapDel(date){ return new Promise((res,rej)=>{ try{const r=_snap("readwrite").delete(date); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
 
   let customers=[];
   function persist(){ if(!dbOk) return Promise.resolve(); return dbBulk(customers).catch(()=>{}); }
@@ -1171,6 +1227,7 @@
     const q=custQuery.trim().toLowerCase();
     return customers.filter(c=>{
       const hasP=c.phones&&c.phones.length;
+      if(custFilter==="selected"&&!cSel.has(c.id)) return false;
       if(custFilter==="latest"&&(!cfg.latestKml||c.assignment!==cfg.latestKml)) return false;
       if(custFilter==="has"&&!hasP) return false;
       if(custFilter==="nottexted"&&!(hasP&&!(c.textCount>0))) return false;
@@ -1230,7 +1287,8 @@
     if(!customers.length){ list.innerHTML=""; empty.classList.remove("hidden");
       empty.innerHTML='Nothing here yet.<br>Load a job in <b>Requests</b>, build it, then tap <b>Save to Customers</b> — or paste an email return above.'; updateSelBar(); return; }
     const vis=visibleCustomers();
-    if(!vis.length){ list.innerHTML=""; empty.classList.remove("hidden"); empty.textContent="No customers match this filter."; updateSelBar(); return; }
+    if(!vis.length){ list.innerHTML=""; empty.classList.remove("hidden");
+      empty.innerHTML=(custFilter==="selected")?'Nothing selected yet.<br>Tap the circle on a row, or pins on the <b>Map</b>, to select assets.':"No customers match this filter."; updateSelBar(); return; }
     empty.classList.add("hidden");
     list.innerHTML=vis.map(customerRow).join("");
     list.querySelectorAll("[data-open]").forEach(el=>el.addEventListener("click",()=>openDetail(el.dataset.open)));
@@ -1406,15 +1464,64 @@
   $("#xXlsxCsv").addEventListener("click",()=>{ const l=exportList(); if(!l.length){toast("Nothing to export.");return;} download("customers-excel.csv",custCSV(l),"text/csv");closeExport();});
   $("#xJson").addEventListener("click",()=>{ const l=exportList(); if(!l.length){toast("Nothing to export.");return;} download("customers.json",JSON.stringify(l,null,2),"application/json");closeExport();});
   $("#xVcf").addEventListener("click",()=>{ const l=exportList(); if(!l.filter(c=>c.phones&&c.phones.length).length){toast("No phone numbers to export.");return;} download("customers.vcf",custVCard(l),"text/vcard");closeExport();});
+  function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
   async function clearDatabase(){
     if(!customers.length){ toast("The database is already empty."); return; }
     if(confirm("Delete all "+customers.length+" customers from the database? This cannot be undone.")){
       customers=[]; cfg.latestKml=""; store.set("fk_latestKml",""); cSel.clear(); if(dbOk) await dbClear();
-      renderCustomers(); updateBadge(); toast("Database cleared");
+      renderCustomers(); updateBadge(); closeSheet(); toast("Database cleared");
     }
   }
-  $("#xClear").addEventListener("click",async()=>{ closeExport(); await clearDatabase(); });
-  $("#dbClear").addEventListener("click",clearDatabase);
+  async function dailySnapshot(){
+    if(!dbOk) return;
+    try{
+      const today=todayStr(), ex=await snapGet(today);
+      if(!ex && customers.length){ await snapPut({date:today, savedAt:Date.now(), customers:JSON.parse(JSON.stringify(customers))}); }
+      const all=await snapAll(); all.map(s=>s.date).sort().reverse().slice(14).forEach(d=>snapDel(d));
+    }catch(e){}
+  }
+  function backupData(){
+    const data={app:"FieldKey", kind:"backup", exportedAt:new Date().toISOString(), count:customers.length, settings:{}, customers:customers};
+    ["name","lan","phone","issue","work","provider","email","gkey","delay","smsTemplate","latestKml"].forEach(k=>data.settings[k]=cfg[k]);
+    download("fieldkey-backup-"+todayStr()+".json", JSON.stringify(data,null,2), "application/json"); toast("Backup downloaded");
+  }
+  function restoreFromFile(file){
+    if(!file) return;
+    const r=new FileReader();
+    r.onload=async()=>{
+      let data; try{ data=JSON.parse(r.result); }catch(e){ toast("That file isn't a valid backup."); return; }
+      const list=Array.isArray(data)?data:(data&&Array.isArray(data.customers)?data.customers:null);
+      if(!list){ toast("No customer data found in that file."); return; }
+      if(!confirm("Replace the current database ("+customers.length+") with "+list.length+" customers from this backup?")) return;
+      customers=list.map(c=>sanitizeRecord(Object.assign({status:"new",textCount:0,phones:[],extra:{}},c))); cSel.clear();
+      if(dbOk){ try{ await dbClear(); await dbBulk(customers); }catch(e){} }
+      renderCustomers(); updateBadge(); closeSheet(); toast("Restored "+customers.length+" customers");
+    };
+    r.readAsText(file);
+  }
+  async function restoreSnapshot(date){
+    const s=await snapGet(date); if(!s){ toast("That version is no longer available."); return; }
+    const list=s.customers||[];
+    if(!confirm("Restore the database as it was on "+date+" ("+list.length+" customers)? Your current data will be replaced.")) return;
+    customers=list.map(c=>sanitizeRecord(JSON.parse(JSON.stringify(c)))); cSel.clear();
+    if(dbOk){ try{ await dbClear(); await dbBulk(customers); }catch(e){} }
+    renderCustomers(); updateBadge(); closeVersions(); closeSheet(); toast("Restored "+date);
+  }
+  async function openVersions(){
+    const wrap=$("#verList"); wrap.innerHTML="Loading\u2026";
+    $("#verScrim").classList.add("show"); $("#verSheet").classList.add("show");
+    let all=[]; try{ all=await snapAll(); }catch(e){}
+    all.sort((a,b)=>a.date<b.date?1:-1); const today=todayStr();
+    if(!all.length){ wrap.innerHTML='<p class="note">No earlier versions yet. A snapshot is saved automatically the first time you open FieldKey each day, so previous days will appear here over time.</p>'; return; }
+    wrap.innerHTML=all.map(s=>'<div class="verrow"><div><b>'+escapeHtml(s.date)+(s.date===today?" \u00B7 today":"")+'</b><div class="vmeta">'+((s.customers||[]).length)+' customers</div></div><button class="btn ghost vrestore" data-d="'+escapeHtml(s.date)+'">Restore</button></div>').join("");
+    wrap.querySelectorAll(".vrestore").forEach(b=>b.addEventListener("click",()=>restoreSnapshot(b.dataset.d)));
+  }
+  function closeVersions(){ $("#verScrim").classList.remove("show"); $("#verSheet").classList.remove("show"); }
+  $("#sClearDb").addEventListener("click",clearDatabase);
+  $("#sBackup").addEventListener("click",backupData);
+  $("#sRestoreFile").addEventListener("change",e=>{ restoreFromFile(e.target.files[0]); e.target.value=""; });
+  $("#sVersions").addEventListener("click",openVersions);
+  $("#verScrim").addEventListener("click",closeVersions);
   $("#textAllBtn").addEventListener("click",startGuide);
   $("#guideOpen").addEventListener("click",guideOpenCurrent);
   $("#guideClose").addEventListener("click",closeGuide);
@@ -1549,28 +1656,27 @@
   });
 
   /* ---- customer map + KML export ---- */
-  let cmap=null, cmarks=[], mSel=new Set();
+  let cmap=null, cmarks=[];
   function withCoords(){ return customers.filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o)&&a>=-90&&a<=90&&o>=-180&&o<=180;}); }
   function mapList(){ return exportList().filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o)&&a>=-90&&a<=90&&o>=-180&&o<=180;}); }
   function markStyle(sel){ return sel?{radius:9,weight:3,color:"#0E1116",fillColor:"#FFB000",fillOpacity:1}:{radius:6,weight:2,color:"#0E1116",fillColor:"#6b7480",fillOpacity:.9}; }
-  function updateMCount(){ const n=mSel.size; const e=$("#mExport"); if(e) e.textContent = n ? ("Export KML \u00B7 "+n+" selected") : ("Export KML \u00B7 "+cmarks.length+" shown"); }
-  function refreshMarks(){ cmarks.forEach(o=>o.marker.setStyle(markStyle(mSel.has(o.c.id)))); updateMCount(); }
+  function updateMCount(){ const n=cSel.size; const e=$("#mExport"); if(e) e.textContent = n ? ("Export KML \u00B7 "+n+" selected") : ("Export KML \u00B7 "+cmarks.length+" shown"); }
+  function refreshMarks(){ cmarks.forEach(o=>o.marker.setStyle(markStyle(cSel.has(o.c.id)))); updateMCount(); updateSelBar(); }
   function plotCustomerMap(){
     const note=$("#mNote");
     if(!window.L){ note.textContent="The map needs an internet connection."; return; }
-    if(!cmap){ cmap=L.map("custMap",{zoomControl:true}); L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"\u00A9 OpenStreetMap contributors"}).addTo(cmap); }
+    if(!cmap){ cmap=L.map("custMap",{zoomControl:true}); addBaseLayers(cmap); }
     cmarks.forEach(o=>cmap.removeLayer(o.marker)); cmarks=[];
     const list=mapList();
-    const showIds=new Set(list.map(c=>c.id)); Array.from(mSel).forEach(id=>{ if(!showIds.has(id)) mSel.delete(id); });
     const scoped=cSel.size||custFilter!=="all"||custQuery.trim();
     if(!list.length){ note.textContent=scoped?"None of these have coordinates to map.":"No customers have coordinates yet \u2014 import a KML or save sites from Requests."; updateMCount(); return; }
     note.textContent=list.length+" point"+(list.length===1?"":"s")+(cSel.size?" selected":(scoped?" (filtered)":""))+" \u00B7 tap to select";
     const pts=[];
     list.forEach(c=>{
       const la=parseFloat(c.lat),lo=parseFloat(c.lng);
-      const m=L.circleMarker([la,lo],markStyle(mSel.has(c.id)));
+      const m=L.circleMarker([la,lo],markStyle(cSel.has(c.id)));
       m.bindPopup("<b>"+escapeHtml(c.name||("SAP "+(c.sapId||"")))+"</b>"+(c.access?"<br>"+escapeHtml(c.access):"")+navLinks(la,lo));
-      m.on("click",()=>{ if(mSel.has(c.id))mSel.delete(c.id); else mSel.add(c.id); m.setStyle(markStyle(mSel.has(c.id))); updateMCount(); });
+      m.on("click",()=>{ if(cSel.has(c.id))cSel.delete(c.id); else cSel.add(c.id); m.setStyle(markStyle(cSel.has(c.id))); updateMCount(); updateSelBar(); });
       m.addTo(cmap); cmarks.push({c,marker:m}); pts.push([la,lo]);
     });
     if(pts.length) cmap.fitBounds(pts,{padding:[28,28],maxZoom:15});
@@ -1578,13 +1684,13 @@
     updateMCount();
   }
   function openMapSheet(){ $("#mScrim").classList.add("show"); $("#mSheet").classList.add("show"); setTimeout(plotCustomerMap,60); }
-  function closeMapSheet(){ $("#mScrim").classList.remove("show"); $("#mSheet").classList.remove("show"); }
+  function closeMapSheet(){ $("#mScrim").classList.remove("show"); $("#mSheet").classList.remove("show"); renderCustomers(); }
   $("#mapBtn").addEventListener("click",openMapSheet);
   $("#mScrim").addEventListener("click",closeMapSheet);
-  $("#mSelVis").addEventListener("click",()=>{ if(!cmap)return; const b=cmap.getBounds(); cmarks.forEach(o=>{ if(b.contains([parseFloat(o.c.lat),parseFloat(o.c.lng)])) mSel.add(o.c.id); }); refreshMarks(); });
-  $("#mClear").addEventListener("click",()=>{ mSel.clear(); refreshMarks(); });
+  $("#mSelVis").addEventListener("click",()=>{ if(!cmap)return; const b=cmap.getBounds(); cmarks.forEach(o=>{ if(b.contains([parseFloat(o.c.lat),parseFloat(o.c.lng)])) cSel.add(o.c.id); }); refreshMarks(); });
+  $("#mClear").addEventListener("click",()=>{ cSel.clear(); refreshMarks(); });
   $("#mExport").addEventListener("click",()=>{
-    const sel=customers.filter(c=>mSel.has(c.id));
+    const sel=customers.filter(c=>cSel.has(c.id));
     const list=sel.length?sel:mapList();
     if(!list.length){ toast("No points to export."); return; }
     download("fieldkey-selection.kml",customersToKML(list),"application/vnd.google-earth.kml+xml");
@@ -1600,7 +1706,7 @@
   function closeReqSheet(){ $("#rqScrim").classList.remove("show"); $("#rqSheet").classList.remove("show"); }
   $("#rqScrim").addEventListener("click",closeReqSheet);
   $("#mReq").addEventListener("click",()=>{
-    const sel=customers.filter(c=>mSel.has(c.id));
+    const sel=customers.filter(c=>cSel.has(c.id));
     const list=sel.length?sel:mapList();
     if(!list.length){ toast("No assets to build requests from."); return; }
     openReqSheet(list);
@@ -1621,6 +1727,7 @@
       if(b!==(c.name+"|"+c.access+"|"+c.accessNotes+"|"+c.address+"|"+JSON.stringify(c.extra||{}))) dirty=true; });
     if(dirty) persist();
     renderCustomers(); updateBadge();
+    dailySnapshot();
   })();
 
   /* ---------------- service worker (offline) ---------------- */
