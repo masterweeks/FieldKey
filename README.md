@@ -13,6 +13,11 @@ else works offline once installed.
 
 The app has two tabs at the bottom:
 
+Any panel that slides up — an asset's details, the map, build-request, settings,
+and so on — has a **✕** button in its top-right corner to close it and go back.
+(Opening one panel from another, like build-request from the map, returns you to
+where you were.) You can also tap the dimmed area behind a panel to dismiss it.
+
 ### Requests — bring data in
 Load a CSV or KML → map → confirm the SAP / latitude / longitude columns →
 **Build** (reverse-geocodes every point to an address) → copy/share/export the

@@ -1,5 +1,5 @@
 /* FieldKey offline shell. Bump CACHE when files change. */
-const CACHE = "fieldkey-v19";
+const CACHE = "fieldkey-v20";
 const SHELL = [
   "./", "./index.html", "./manifest.webmanifest",
   "./icon-192.png", "./icon-512.png", "./icon-rounded-512.png", "./apple-touch-icon.png"
