@@ -64,7 +64,7 @@ clearing the database all live in **Settings → Data** — see below.)
   and a directions link. Filter chips (including **Latest KML** and **Selected**,
   which shows whatever you've picked in the list or on the map) and a search box
   that matches name, address, SAP ID, or **phone number** — phone matching ignores
-  formatting, so `5303398783`, `530-339-8783`, or even just the last few digits
+  formatting, so `530000000`, `530-000-0000`, or even just the last few digits
   all find the right customer.
 - **Map & export KML** — the **Map** button plots the customers you're currently
   working with: whatever the filter/search is showing, or — if you've selected
