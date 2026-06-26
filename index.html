@@ -75,6 +75,7 @@
 
   /* ---- upload zone ---- */
   .drop{
+    display:block;cursor:pointer;
     border:1.5px dashed var(--line2);border-radius:var(--r);background:var(--bg2);
     padding:30px 18px;text-align:center;transition:border-color .15s,background .15s;
   }
@@ -204,14 +205,14 @@
   #viewRequests main{padding-bottom:268px}
 
   /* ---- customers ---- */
-  #viewCustomers main{padding-bottom:90px}
+  #viewCustomers main{padding-bottom:28px}
   .cust-actions{margin-bottom:12px}
   .searchrow input{margin-bottom:10px}
   .filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;-webkit-overflow-scrolling:touch}
   .filters::-webkit-scrollbar{display:none}
   .chip{flex:0 0 auto;appearance:none;border:1px solid var(--line2);background:var(--bg3);color:var(--muted);border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600;font-family:var(--ui)}
   .chip.sel{background:var(--amber);color:#1a1300;border-color:var(--amber)}
-  .bulkrow{display:flex;gap:10px;margin-bottom:14px}
+  .bulkrow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
   .bulkrow .btn{flex:1}
   .dbbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 2px}
   .dbbar #dbCount{color:var(--muted);font-size:12px}
@@ -221,7 +222,10 @@
   .csel{flex:0 0 auto;align-self:center;width:22px;height:22px;border-radius:50%;border:2px solid var(--line2);background:transparent;margin-left:12px;cursor:pointer;position:relative;appearance:none;-webkit-appearance:none}
   .csel.on{background:var(--amber);border-color:var(--amber)}
   .csel.on::after{content:"";position:absolute;left:6px;top:2.5px;width:5px;height:9px;border:solid #1a1300;border-width:0 2px 2px 0;transform:rotate(45deg)}
-  .selbar{display:flex;align-items:center;justify-content:space-between;margin:-4px 2px 12px;padding:8px 12px;background:rgba(255,176,0,.08);border:1px solid var(--amber);border-radius:10px}
+  .selbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:-4px 2px 12px;padding:8px 12px;background:rgba(255,176,0,.08);border:1px solid var(--amber);border-radius:10px}
+  .selbar #selCount{margin-right:auto}
+  .impbar{height:8px;border-radius:5px;background:var(--bg3);overflow:hidden;margin:4px 0 10px}
+  .impbar i{display:block;height:100%;width:0;background:var(--amber);transition:width .15s linear}
   .selbar #selCount{color:var(--amber);font-weight:700;font-size:12px}
   .linkbtn.alt{color:var(--amber)}
   .crow.texted{border-left-color:var(--amber)} .crow.replied{border-left-color:#5AA9FF} .crow.scheduled{border-left-color:var(--green)} .crow.done{border-left-color:var(--faint)}
@@ -319,16 +323,16 @@
     <span class="spacer"></span>
     <button class="iconbtn" id="settingsBtn" aria-label="Settings">⚙</button>
   </div>
-  <div class="readout">
+  <div class="readout" style="display:none">
     <span class="cell">Rows<span class="v" id="rRows">—</span></span>
     <span class="cell">SAP&nbsp;col<span class="v" id="rSap">—</span></span>
     <span class="cell">Resolved<span class="v" id="rGeo">—</span></span>
     <span class="cell">Status<span class="v" id="rStatus">IDLE</span></span>
   </div>
-  <div class="scan"><i id="scanBar"></i></div>
+  <div class="scan" style="display:none"><i id="scanBar"></i></div>
 </header>
 
-<div id="viewRequests" class="view">
+<div id="viewRequests" class="view hidden">
 <main>
   <!-- STEP 1 : load -->
   <section class="step" id="stepLoad">
@@ -396,10 +400,17 @@
 </div><!-- /viewRequests -->
 
 <!-- ================= CUSTOMERS VIEW ================= -->
-<div id="viewCustomers" class="view hidden">
+<div id="viewCustomers" class="view">
   <main>
     <div class="cust-actions">
-      <button class="btn primary" id="pasteEmailBtn">Import email return</button>
+      <label class="drop" id="impDrop" for="impFile">
+        <svg class="pin" viewBox="0 0 48 60" aria-hidden="true"><path d="M24 4a17 17 0 0 1 17 17c0 11-17 33-17 33S7 32 7 21A17 17 0 0 1 24 4z" fill="#FFB000"/><circle cx="24" cy="20" r="9" fill="#0E1116"/><rect x="22" y="20" width="4" height="9" rx="2" fill="#0E1116"/></svg>
+        <div class="big">Choose a CSV or KML file</div>
+        <div class="sub">Needs latitude, longitude, and a 9-digit SAP ID column</div>
+      </label>
+      <input type="file" id="impFile" accept=".csv,.kml,text/csv,text/plain,application/vnd.google-earth.kml+xml" style="display:none" />
+      <p class="note">Your file never leaves your phone — parsing happens on-device. Only the coordinates are sent to the map service to look up addresses.</p>
+      <button class="btn ghost" id="pasteEmailBtn" style="margin-top:16px">Import email return</button>
     </div>
     <div class="searchrow"><input type="text" id="custSearch" placeholder="Search name, address, SAP, or phone…" /></div>
     <div class="filters" id="custFilters">
@@ -414,14 +425,15 @@
       <button class="chip" data-f="scheduled">Scheduled</button>
     </div>
     <div class="bulkrow">
-      <button class="btn ghost" id="textAllBtn">Guided text</button>
+      <button class="btn ghost" id="buildReqBtn">Build request</button>
       <button class="btn ghost" id="mapBtn">Map</button>
       <button class="btn ghost" id="exportCustBtn">Export</button>
+      <button class="btn ghost" id="textAllBtn">Guided text</button>
     </div>
     <div class="dbbar"><span id="dbCount" class="mono">0 in database</span></div>
-    <div class="selbar hidden" id="selBar"><span id="selCount" class="mono">0 selected</span><button id="selFlag" class="linkbtn issue">Mark access issue</button><button id="selClear" class="linkbtn alt">Clear selection</button></div>
+    <div class="selbar hidden" id="selBar"><span id="selCount" class="mono">0 selected</span><button id="selBuild" class="linkbtn">Build request</button><button id="selFlag" class="linkbtn issue">Mark access issue</button><button id="selClear" class="linkbtn alt">Clear selection</button></div>
     <div id="custList" class="custlist"></div>
-    <div id="custEmpty" class="empty">Nothing here yet.<br>Load a job in <b>Requests</b>, build it, then tap <b>Save to Customers</b> — or paste an email return above.</div>
+    <div id="custEmpty" class="empty">Nothing here yet.<br>Import a CSV or KML above, or paste an email return.</div>
   </main>
 </div>
 
@@ -432,7 +444,7 @@
 </div>
 
 <!-- tab bar -->
-<nav class="tabbar" id="tabbar">
+<nav class="tabbar" id="tabbar" style="display:none">
   <button data-tab="requests" class="sel">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h6"/></svg>
     Requests
@@ -489,6 +501,28 @@
   <div class="field"><label class="label">Access info</label><select id="kAccess"></select></div>
   <p class="note" id="kStat"></p>
   <button class="btn primary" id="kMerge" style="margin-top:12px">Save to customers</button>
+</div>
+
+<!-- import KML/CSV sheet -->
+<div class="scrim" id="impScrim"></div>
+<div class="sheet" id="impSheet" role="dialog" aria-label="Import file">
+  <div class="grab"></div>
+  <h2>Import</h2>
+  <p class="hint" id="impInfo"></p>
+  <div id="impCols">
+    <div class="field"><label class="label">SAP ID</label><select id="impSap"></select></div>
+    <div class="field"><label class="label">Latitude</label><select id="impLat"></select></div>
+    <div class="field"><label class="label">Longitude</label><select id="impLng"></select></div>
+    <div class="field"><label class="label">Customer name</label><select id="impNameC"></select></div>
+    <div class="field"><label class="label">Phone</label><select id="impPhone"></select></div>
+    <div class="field"><label class="label">Access info</label><select id="impAccess"></select></div>
+  </div>
+  <div id="impProgWrap" class="hidden">
+    <div class="impbar"><i id="impBar"></i></div>
+    <p class="note" id="impProg"></p>
+    <button class="btn ghost danger" id="impCancel" style="margin-top:8px">Cancel</button>
+  </div>
+  <button class="btn primary" id="impGo" style="margin-top:12px">Import</button>
 </div>
 
 <!-- map + KML export sheet -->
@@ -1382,7 +1416,7 @@
     const list=$("#custList"), empty=$("#custEmpty"), dbc=$("#dbCount");
     if(dbc) dbc.textContent=customers.length+(customers.length===1?" in database":" in database");
     if(!customers.length){ list.innerHTML=""; empty.classList.remove("hidden");
-      empty.innerHTML='Nothing here yet.<br>Load a job in <b>Requests</b>, build it, then tap <b>Save to Customers</b> — or paste an email return above.'; updateSelBar(); return; }
+      empty.innerHTML='Nothing here yet.<br>Import a CSV or KML above, or paste an email return.'; updateSelBar(); return; }
     const vis=visibleCustomers();
     if(!vis.length){ list.innerHTML=""; empty.classList.remove("hidden");
       empty.innerHTML=(custFilter==="selected")?'Nothing selected yet.<br>Tap the circle on a row, or pins on the <b>Map</b>, to select assets.':"No customers match this filter."; updateSelBar(); return; }
@@ -1863,8 +1897,91 @@
   }
   function closeReqSheet(){ $("#rqScrim").classList.remove("show"); $("#rqSheet").classList.remove("show"); }
   $("#rqScrim").addEventListener("click",closeReqSheet);
+
+  /* ---- Build request from the database (selection-or-filter) ---- */
+  function buildReqFromList(){
+    const list=exportList();
+    if(!list.length){ toast("No assets selected or shown to build requests for."); return; }
+    openReqSheet(list);
+  }
+  $("#buildReqBtn").addEventListener("click",buildReqFromList);
+  $("#selBuild").addEventListener("click",buildReqFromList);
+
+  /* ---- Import KML / CSV straight into the database ---- */
+  let impBusy=false, impCancel=false;
+  function hideImport(){ $("#impScrim").classList.remove("show"); $("#impSheet").classList.remove("show"); impBusy=false; }
+  function reqCloseImport(){ if(impBusy){ impCancel=true; } else { hideImport(); } }
+  function openImport(file){
+    loadedName=file.name||"";
+    const reader=new FileReader();
+    reader.onerror=()=>toast("Couldn't read that file. Try again.");
+    reader.onload=()=>{
+      const txt=String(reader.result), head=txt.slice(0,300);
+      const isKml=/\.kml$/i.test(file.name) || /^\s*<\?xml|<kml[\s>]/i.test(head);
+      try{
+        if(isKml){ const p=parseKML(txt); if(!p.rows.length){ toast("No map points found in that KML."); return; } headers=p.headers; rows=p.rows; }
+        else { const grid=parseCSV(txt); if(grid.length<2){ toast("CSV needs a header row and at least one site."); return; } headers=grid[0].map(h=>String(h).trim()); rows=grid.slice(1); }
+      }catch(e){ toast(isKml?"That file isn't valid KML.":"That file isn't valid CSV."); return; }
+      const det=detectColumns(), kf=detectKmlFields(headers,rows);
+      fillKmlSelect($("#impSap"),headers, det.sap>=0?det.sap:kf.sap);
+      fillKmlSelect($("#impLat"),headers, det.lat);
+      fillKmlSelect($("#impLng"),headers, det.lng);
+      fillKmlSelect($("#impNameC"),headers, kf.name);
+      fillKmlSelect($("#impPhone"),headers, kf.phone);
+      fillKmlSelect($("#impAccess"),headers, kf.access);
+      $("#impCols").classList.toggle("hidden", isKml);
+      const n=rows.length;
+      $("#impInfo").innerHTML=escapeHtml(file.name||"File")+" \u00B7 <b>"+n+"</b> asset"+(n===1?"":"s")+" found"+(isKml?". Coordinates read straight from the KML." : ". Confirm the columns below, then import.");
+      $("#impGo").textContent="Import "+n+(n===1?" asset":" assets"); $("#impGo").disabled=false; $("#impGo").classList.remove("hidden");
+      $("#impProgWrap").classList.add("hidden"); $("#impBar").style.width="0%"; $("#impProg").textContent="";
+      impBusy=false; impCancel=false;
+      $("#impScrim").classList.add("show"); $("#impSheet").classList.add("show");
+    };
+    reader.readAsText(file);
+  }
+  async function doImport(){
+    if(impBusy) return;
+    const sapI=+$("#impSap").value, latI=+$("#impLat").value, lngI=+$("#impLng").value;
+    const nameI=+$("#impNameC").value, phoneI=+$("#impPhone").value, accessI=+$("#impAccess").value;
+    if(isNaN(latI)||latI<0||isNaN(lngI)||lngI<0){ toast("Pick the latitude and longitude columns."); return; }
+    impBusy=true; impCancel=false;
+    $("#impGo").classList.add("hidden"); $("#impCols").classList.add("hidden"); $("#impProgWrap").classList.remove("hidden");
+    const provider = cfg.provider==="google" && cfg.gkey ? geocodeGoogle : geocodeOSM;
+    const delay = Math.max(0, parseInt(cfg.delay,10)||0);
+    const addrs=new Array(rows.length).fill(""); let ok=0;
+    for(let i=0;i<rows.length;i++){
+      if(impCancel) break;
+      const la=String(rows[i][latI]==null?"":rows[i][latI]).trim(), lo=String(rows[i][lngI]==null?"":rows[i][lngI]).trim();
+      try{ if(la&&lo&&!isNaN(parseFloat(la))&&!isNaN(parseFloat(lo))){ addrs[i]=await provider(la,lo); if(addrs[i])ok++; } }catch(e){}
+      const done=i+1;
+      $("#impBar").style.width=Math.round(done/rows.length*100)+"%";
+      $("#impProg").textContent="Resolving addresses "+done+"/"+rows.length+" \u00B7 "+ok+" found";
+      if(i<rows.length-1 && !impCancel && delay) await sleep(delay);
+    }
+    if(impCancel){ hideImport(); toast("Import canceled — nothing was saved."); return; }
+    const get=(r,i)=>(i>=0&&i<headers.length)?cleanText(String(r[i]==null?"":r[i])):"";
+    const skip=[sapI,nameI,phoneI,accessI,latI,lngI];
+    const recs=rows.map((r,ri)=>{
+      const rec={sapId:get(r,sapI),name:get(r,nameI),lat:get(r,latI),lng:get(r,lngI),
+                 address:addrs[ri]?cleanText(addrs[ri]):"",phones:[],access:get(r,accessI),accessNotes:"",extra:{}};
+      const ph=get(r,phoneI); if(ph) extractPhones(ph).forEach(p=>rec.phones.push(p));
+      headers.forEach((h,i)=>{ if(skip.indexOf(i)>=0)return; const v=get(r,i); if(v)rec.extra[h]=v; });
+      return rec;
+    });
+    const batch=batchLabel(), res=mergeIntoDB(recs,batch);
+    cfg.latestKml=batch; store.set("fk_latestKml",batch);
+    await persist(); updateBadge();
+    hideImport();
+    custFilter="latest"; $("#custFilters").querySelectorAll(".chip").forEach(x=>x.classList.toggle("sel",x.dataset.f==="latest")); renderCustomers();
+    toast(res.matched+" matched \u00B7 "+res.added+" new \u2014 imported");
+  }
+  $("#impFile").addEventListener("change",e=>{ if(e.target.files[0]) openImport(e.target.files[0]); e.target.value=""; });
+  $("#impGo").addEventListener("click",doImport);
+  $("#impScrim").addEventListener("click",reqCloseImport);
+  $("#impCancel").addEventListener("click",reqCloseImport);
+
   (function addSheetCloseButtons(){
-    const closers={ dSheet:closeDetail, kSheet:closeKml, mSheet:closeMapSheet, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions };
+    const closers={ dSheet:closeDetail, kSheet:closeKml, mSheet:closeMapSheet, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport };
     Object.keys(closers).forEach(id=>{
       const sh=document.getElementById(id); if(!sh)return;
       const bar=document.createElement("div"); bar.className="sheettop";

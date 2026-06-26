@@ -1,43 +1,51 @@
 # FieldKey — Access Request Builder
 
-A phone app (PWA) that turns a CSV **or KML** of inspection sites into
-copy-ready access requests. Pick a file → it finds your SAP ID / latitude /
-longitude columns → plots every point on a map → reverse-geocodes each one to an
-address → gives you one tappable, copyable request per site, plus batch
-copy/share and `.txt` / `.csv` export.
+A phone app (PWA) that turns a CSV **or KML** of inspection sites into an on-device
+customer database and copy-ready access requests. Import a file → it finds your SAP
+ID / latitude / longitude columns → reverse-geocodes each point to an address →
+merges them into your database. Then select or filter the sites you want and build
+batch access-request text, plus `.csv` / `.kml` export and SMS outreach.
 
 Everything parses on-device; only the coordinates are sent out for address
 lookup. The maps need an internet connection (they stream map tiles — OpenStreetMap,
 CARTO, or Esri aerial imagery depending on the basemap you pick); everything
 else works offline once installed.
 
-The app has two tabs at the bottom:
+Everything happens on one screen — your customer database. Data comes in at the
+top, and you build access requests from whatever you've selected or filtered to.
 
-Any panel that slides up — an asset's details, the map, build-request, settings,
-and so on — has a **✕** button in its top-right corner to close it and go back.
-(Opening one panel from another, like build-request from the map, returns you to
-where you were.) You can also tap the dimmed area behind a panel to dismiss it.
+Any panel that slides up — an asset's details, the map, build-request, import,
+settings, and so on — has a **✕** button in its top-right corner to close it and go
+back. (Opening one panel from another, like build-request from the map, returns you
+to where you were.) You can also tap the dimmed area behind a panel to dismiss it.
 
-### Requests — bring data in
-Load a CSV or KML → map → confirm the SAP / latitude / longitude columns →
-**Build** (reverse-geocodes every point to an address) → copy/share/export the
-access requests.
+### Bringing data in
+**Import KML / CSV** takes your daily site file. It auto-detects the SAP ID,
+latitude, and longitude — for a CSV it shows those columns so you can confirm or fix
+them; a KML's coordinates are unambiguous, so it skips straight through — then shows
+**"N assets found."** Tap **Import** and it reverse-geocodes every point to a street
+address (with a progress bar) and saves the batch into the database in one step —
+there's no separate "save." It **merges** into what's already there: a point that
+matches an existing customer (by SAP ID, then name, then address) updates that
+record and keeps the phone / access / status / text history you've collected;
+brand-new points are added; anything already in the database that isn't in this file
+is left untouched. The file is tagged and the view auto-filters to **Latest KML** so
+you immediately see just what you loaded — which is also the set you'll usually build
+requests for. (Import runs the geocode; if you pick the wrong file, **Cancel** stops
+it before anything is saved, and the daily snapshot is your undo otherwise.)
 
-After building, **Save these to Customers** is the single way data enters the
-database. It runs every check on the file — detecting the customer name, phone
-(including numbers buried in a KML's **description**), and access columns — then
-saves each point with its SAP ID, coordinates, **geocoded address**, name,
-phone, and access. It **merges** into what's already there: a point that matches
-an existing customer (by SAP ID, then name, then address) updates that record
-and keeps the phone / access / status / text history you've collected; brand-new
-points are added; points already in the database that aren't in this file are
-left untouched. The file is tagged so the **Latest KML** filter in Customers
-shows just that batch.
+This is how a fresh daily KML both gets merged with everything you've built up and —
+because it geocodes — finally gets addresses.
 
-This is also how a fresh daily KML gets merged with everything you've built up,
-and — because it geocodes — how those points finally get addresses.
+### Building access requests
+**Build request** — in the toolbar, in the selection bar once you've picked assets,
+and on the map — generates copy-ready access-request text: Requestor details from
+Settings plus each site's SAP ID and address. It acts on **whatever you've selected
+or filtered to** — tick specific rows (or map pins) to build for just those, or leave
+nothing selected and it builds for everything currently shown (e.g. the whole *Latest
+KML* batch). The preview shows the count before you copy or share.
 
-### Customers — your database
+### Your database
 A persistent, on-device view of every site you've collected. The header shows
 how many are in the database. Tap any customer to see the full record — phones,
 access with gate codes, address, coordinates, which file it came from, and any
@@ -53,8 +61,8 @@ clearing the database all live in **Settings → Data** — see below.)
   — even mid-line (e.g. `Mobile Primary  (541) 591-3438`) — and odd dash
   characters that email programs sometimes substitute (en-dashes, etc.) are handled.
   The email's address, name, and phones are taken as authoritative; coordinates you
-  already have are kept. (KML files don't get imported here — they go through
-  **Requests** so they pick up addresses.)
+  already have are kept. (This is for email replies only — site files go through
+  **Import KML / CSV** so they pick up addresses.)
 - **Text customers** — each customer has a one-tap **Text** button that opens
   Messages pre-filled with your template (first name and address fill in
   automatically). The app counts each send and marks the customer *Texted*.
@@ -89,7 +97,7 @@ clearing the database all live in **Settings → Data** — see below.)
   the access-request text (Requestor details from Settings + each site's SAP and
   address) for that same set, ready to copy or share/email. The exported KML
   carries the name, phone, access, and status in each placemark, and re-imports
-  cleanly (through Requests).
+  cleanly through **Import KML / CSV**.
 - **Select & export** — every row has a circle on the left; tap it to pick
   specific assets (a bar shows how many are selected). This is the same selection
   you build by tapping pins on the **Map**, and the **Selected** filter shows it.
