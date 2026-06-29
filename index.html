@@ -1348,6 +1348,7 @@
   /* ---- render list ---- */
   let custFilter="all", custQuery="";
   function displayName(c){ return c.name || (c.sapId?("SAP "+c.sapId):"(no name)"); }
+  function assetTitle(c){ return c.sapId ? ("SAP "+c.sapId) : (c.name || "(no name)"); }
   function visibleCustomers(){
     const q=custQuery.trim().toLowerCase();
     return customers.filter(c=>{
@@ -1396,11 +1397,11 @@
     const issueLine=flagged?'<div class="cissue">\u26A0\uFE0E '+escapeHtml(c.accessIssueReason||"No reason set")+'</div>':'';
     const hasP=c.phones&&c.phones.length;
     const axs=[c.access,c.accessNotes].filter(Boolean).join(" · ");
-    const meta=[stripUSA(c.address),c.sapId?("SAP "+c.sapId):""].filter(Boolean).join("  ·  ");
+    const meta=[(c.sapId&&c.name)?c.name:"",stripUSA(c.address)].filter(Boolean).join("  ·  ");
     return '<div class="crow '+st+(flagged?" flagged":"")+'" data-id="'+c.id+'">'+
       '<button class="csel'+(cSel.has(c.id)?" on":"")+'" data-sel="'+c.id+'" aria-label="Select for export"></button>'+
       '<div class="cmain" data-open="'+c.id+'">'+
-        '<div class="cname">'+escapeHtml(displayName(c))+issueBadge+stShow+'</div>'+
+        '<div class="cname">'+escapeHtml(assetTitle(c))+issueBadge+stShow+'</div>'+
         (meta?'<div class="cmeta">'+escapeHtml(meta)+'</div>':'')+
         (axs?'<div class="caxs">'+escapeHtml(axs)+'</div>':'')+
         issueLine+
@@ -1569,8 +1570,8 @@
   }
   function openDetail(id){
     const c=findById(id); if(!c)return; curId=id;
-    $("#dName").textContent=displayName(c);
-    $("#dMeta").textContent=[stripUSA(c.address),c.sapId?("SAP "+c.sapId):""].filter(Boolean).join("  \u00B7  ");
+    $("#dName").textContent=assetTitle(c);
+    $("#dMeta").textContent=[(c.sapId&&c.name)?c.name:"",stripUSA(c.address)].filter(Boolean).join("  \u00B7  ");
     const hasC=c.lat&&c.lng&&!isNaN(+c.lat)&&!isNaN(+c.lng);
     $("#dNavGroup").classList.toggle("hidden",!hasC);
     $("#dNav").innerHTML=hasC?navLinks(+c.lat,+c.lng):"";
