@@ -12,10 +12,8 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="FieldKey" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" crossorigin="" />
+<script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js" crossorigin=""></script>
 <style>
   :root{
     --bg:#0E1116; --bg2:#14181F; --bg3:#1B212B; --raise:#212935;
@@ -100,6 +98,31 @@
   .leaflet-bar a:hover{background:var(--raise)}
   .leaflet-control-attribution{background:rgba(14,17,22,.7)!important;color:var(--faint)!important}
   .leaflet-control-attribution a{color:var(--muted)!important}
+
+  /* ---- MapLibre customer map ---- */
+  .mapwrap{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg2)}
+  #custMap{height:56vh;width:100%}
+  .maplibregl-ctrl-group{background:#1B212B!important;border:1px solid #2A3340!important;box-shadow:0 2px 10px rgba(0,0,0,.45)!important}
+  .maplibregl-ctrl-group button{background:#1B212B!important;width:32px;height:32px}
+  .maplibregl-ctrl-group button+button{border-top:1px solid #2A3340!important}
+  .maplibregl-ctrl button .maplibregl-ctrl-icon{filter:invert(1) hue-rotate(180deg) brightness(1.1)}
+  .maplibregl-popup-content{background:#1B212B;color:#E7ECF3;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.55);font-family:var(--mono);font-size:12px;line-height:1.5;padding:10px 13px;min-width:180px}
+  .maplibregl-popup-anchor-top .maplibregl-popup-tip,.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,.maplibregl-popup-anchor-top-right .maplibregl-popup-tip{border-bottom-color:#1B212B!important}
+  .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip{border-top-color:#1B212B!important}
+  .maplibregl-popup-anchor-left .maplibregl-popup-tip{border-right-color:#1B212B!important}
+  .maplibregl-popup-anchor-right .maplibregl-popup-tip{border-left-color:#1B212B!important}
+  .maplibregl-popup-content b{color:var(--amber)}
+  .maplibregl-popup-close-button{color:var(--muted);font-size:17px;padding:0 7px}
+  .maplibregl-ctrl-attrib.maplibregl-compact{background:rgba(20,24,32,.8)!important}
+  .maplibregl-ctrl-attrib a{color:var(--muted)!important}
+  .maplibregl-ctrl-scale{background:rgba(14,17,22,.55)!important;color:var(--faint)!important;border:1px solid #2A3340!important;border-top:0!important}
+  .bmsw{position:absolute;top:10px;left:10px;z-index:5;display:flex;background:#141820;border:1px solid #2A3340;border-radius:9px;overflow:hidden;font:600 12px var(--ui)}
+  .bmsw button{background:transparent;color:var(--muted);border:0;padding:7px 11px;cursor:pointer}
+  .bmsw button.on{background:var(--amber);color:#10141a}
+  .bmsw button+button{border-left:1px solid #2A3340}
+  .maplegend{position:absolute;left:10px;bottom:12px;z-index:5;background:rgba(20,24,32,.85);border:1px solid #2A3340;border-radius:9px;padding:7px 9px;display:flex;flex-direction:column;gap:3px;font:500 11px var(--ui);color:var(--ink)}
+  .maplegend span{display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .maplegend i{width:10px;height:10px;border-radius:50%;border:1.5px solid #0E1116;flex:none}
 
   /* ---- mapping selects ---- */
   .grid3{display:grid;grid-template-columns:1fr;gap:10px}
@@ -531,7 +554,21 @@
   <div class="grab"></div>
   <h2 style="margin-bottom:4px">Map · export KML</h2>
   <p class="hint">Tap pins to select them (the same selection as the list — see the <b>Selected</b> filter). <b>Select visible</b> grabs everything currently in view — pan and zoom to an area first. Then export the selection as a KML, or build access requests from it.</p>
-  <div id="custMap" class="mapbox" style="height:44vh"></div>
+  <div class="mapwrap">
+    <div id="custMap"></div>
+    <div class="bmsw" id="mBasemaps">
+      <button type="button" data-bm="Dark" class="on">Dark</button>
+      <button type="button" data-bm="Aerial">Aerial</button>
+      <button type="button" data-bm="Streets">Streets</button>
+    </div>
+    <div class="maplegend" id="mLegend">
+      <span><i style="background:#9aa4b0"></i>New</span>
+      <span><i style="background:#FFB000"></i>Texted</span>
+      <span><i style="background:#5AA9FF"></i>Replied</span>
+      <span><i style="background:#41D88B"></i>Scheduled</span>
+      <span><i style="background:#FF4D4D"></i>Access issue</span>
+    </div>
+  </div>
   <p class="note" id="mNote" style="margin-top:8px"></p>
   <div class="maprow">
     <button class="btn ghost" id="mSelVis">Select visible</button>
@@ -1844,43 +1881,110 @@
   });
 
   /* ---- customer map + KML export ---- */
-  let cmap=null, cmarks=[];
+  let cmap=null, cMapReady=false, cShown=[], geoCtrl=null;
   function withCoords(){ return customers.filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o)&&a>=-90&&a<=90&&o>=-180&&o<=180;}); }
   function mapList(){ return exportList().filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o)&&a>=-90&&a<=90&&o>=-180&&o<=180;}); }
-  function markStyle(sel,flag){
-    if(flag&&sel) return {radius:9,weight:4,color:"#FFD24D",fillColor:"#FF4D4D",fillOpacity:1};
-    if(flag) return {radius:8,weight:2.5,color:"#0E1116",fillColor:"#FF4D4D",fillOpacity:1};
-    if(sel) return {radius:9,weight:3,color:"#0E1116",fillColor:"#FFB000",fillOpacity:1};
-    return {radius:6,weight:2,color:"#0E1116",fillColor:"#6b7480",fillOpacity:.9};
+  function siteFeature(c){ const la=parseFloat(c.lat),lo=parseFloat(c.lng); return {type:"Feature",geometry:{type:"Point",coordinates:[lo,la]},properties:{
+    id:c.id, st:c.status||"new", flag:c.accessIssue?1:0, sel:cSel.has(c.id)?1:0,
+    title:assetTitle(c), sub:(c.sapId&&c.name)?c.name:"", axs:c.access||"",
+    issue:c.accessIssue?(c.accessIssueReason||"Access issue"):"", lat:la, lng:lo }}; }
+  function sitesGeo(list){ return {type:"FeatureCollection",features:(list||[]).map(siteFeature)}; }
+  function updateMCount(){ const n=cSel.size; const e=$("#mExport"); if(e) e.textContent = n ? ("Export KML \u00B7 "+n+" selected") : ("Export KML \u00B7 "+cShown.length+" shown"); updateBulkButtons(); }
+  function refreshMarks(){ if(cmap&&cMapReady&&cmap.getSource("sites")) cmap.getSource("sites").setData(sitesGeo(cShown)); updateMCount(); updateSelBar(); }
+  function applyBasemap(choice){
+    if(!cmap||!cMapReady)return;
+    const aerial=choice==="Aerial", streets=choice==="Streets";
+    try{
+      cmap.setLayoutProperty("esri","visibility",aerial?"visible":"none");
+      cmap.setLayoutProperty("esri-ref","visibility",aerial?"visible":"none");
+      cmap.setLayoutProperty("osm","visibility",streets?"visible":"none");
+    }catch(e){}
+    store.set("fk_basemap",choice);
+    const sw=$("#mBasemaps"); if(sw) sw.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.bm===choice));
   }
-  function updateMCount(){ const n=cSel.size; const e=$("#mExport"); if(e) e.textContent = n ? ("Export KML \u00B7 "+n+" selected") : ("Export KML \u00B7 "+cmarks.length+" shown"); updateBulkButtons(); }
-  function refreshMarks(){ cmarks.forEach(o=>o.marker.setStyle(markStyle(cSel.has(o.c.id),!!o.c.accessIssue))); updateMCount(); updateSelBar(); }
-  function plotCustomerMap(){
-    const note=$("#mNote");
-    if(!window.L){ note.textContent="The map needs an internet connection."; return; }
-    if(!cmap){ cmap=L.map("custMap",{zoomControl:true}); addBaseLayers(cmap); addLocateControl(cmap); }
-    cmarks.forEach(o=>cmap.removeLayer(o.marker)); cmarks=[];
-    const list=mapList();
-    const scoped=cSel.size||custFilter!=="all"||custQuery.trim();
-    if(!list.length){ note.textContent=scoped?"None of these have coordinates to map.":"No customers have coordinates yet \u2014 import a KML or save sites from Requests."; updateMCount(); return; }
-    note.textContent=list.length+" point"+(list.length===1?"":"s")+(cSel.size?" selected":(scoped?" (filtered)":""))+" \u00B7 tap to select";
-    const pts=[];
-    list.forEach(c=>{
-      const la=parseFloat(c.lat),lo=parseFloat(c.lng);
-      const m=L.circleMarker([la,lo],markStyle(cSel.has(c.id),!!c.accessIssue));
-      m.bindPopup("<b>"+escapeHtml(c.name||("SAP "+(c.sapId||"")))+"</b>"+(c.access?"<br>"+escapeHtml(c.access):"")+(c.accessIssue?'<br><span class="popissue">\u26A0\uFE0E '+escapeHtml(c.accessIssueReason||"Access issue")+'</span>':"")+navLinks(la,lo));
-      m.on("click",()=>{ if(cSel.has(c.id))cSel.delete(c.id); else cSel.add(c.id); m.setStyle(markStyle(cSel.has(c.id),!!c.accessIssue)); updateMCount(); updateSelBar(); });
-      m.addTo(cmap); cmarks.push({c,marker:m}); pts.push([la,lo]);
+  function fitToSites(){
+    if(!cmap||!cShown.length)return;
+    if(cShown.length===1){ cmap.jumpTo({center:[parseFloat(cShown[0].lng),parseFloat(cShown[0].lat)],zoom:14}); return; }
+    let w=180,s=90,e=-180,n=-90;
+    cShown.forEach(c=>{ const la=parseFloat(c.lat),lo=parseFloat(c.lng); if(lo<w)w=lo; if(lo>e)e=lo; if(la<s)s=la; if(la>n)n=la; });
+    try{ cmap.fitBounds([[w,s],[e,n]],{padding:48,maxZoom:15,duration:0}); }catch(e){}
+  }
+  const MAP_STYLE="https://tiles.openfreemap.org/styles/dark";
+  const ESRI_IMG="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+  const ESRI_REF="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
+  const OSM_RASTER="https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+  function buildMap(){
+    try{ cmap=new maplibregl.Map({container:"custMap",style:MAP_STYLE,center:[-120.5,40.5],zoom:5,attributionControl:false}); }
+    catch(e){ const note=$("#mNote"); if(note) note.textContent="Map couldn't start on this device."; return; }
+    cmap.addControl(new maplibregl.NavigationControl({visualizePitch:true}),"top-right");
+    geoCtrl=new maplibregl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:true,showUserHeading:true});
+    cmap.addControl(geoCtrl,"top-right");
+    cmap.addControl(new maplibregl.ScaleControl({maxWidth:90,unit:"imperial"}),"bottom-right");
+    cmap.addControl(new maplibregl.AttributionControl({compact:true}),"bottom-left");
+    cmap.on("error",()=>{});   // swallow tile/glyph fetch noise
+    cmap.on("load",()=>{
+      try{
+        cmap.addSource("esri-src",{type:"raster",tiles:[ESRI_IMG],tileSize:256,maxzoom:19,attribution:"Imagery \u00A9 Esri"});
+        cmap.addSource("esriref-src",{type:"raster",tiles:[ESRI_REF],tileSize:256,maxzoom:19});
+        cmap.addSource("osm-src",{type:"raster",tiles:[OSM_RASTER],tileSize:256,maxzoom:19,attribution:"\u00A9 OpenStreetMap"});
+        cmap.addLayer({id:"esri",type:"raster",source:"esri-src",layout:{visibility:"none"}});
+        cmap.addLayer({id:"esri-ref",type:"raster",source:"esriref-src",layout:{visibility:"none"}});
+        cmap.addLayer({id:"osm",type:"raster",source:"osm-src",layout:{visibility:"none"}});
+        cmap.addSource("sites",{type:"geojson",data:sitesGeo(cShown),cluster:true,clusterRadius:48,clusterMaxZoom:14});
+        cmap.addLayer({id:"clusters",type:"circle",source:"sites",filter:["has","point_count"],paint:{
+          "circle-color":["step",["get","point_count"],"#46566b",10,"#5d7392",50,"#9a7b35"],
+          "circle-radius":["step",["get","point_count"],15,10,19,50,25],
+          "circle-stroke-width":2,"circle-stroke-color":"#0E1116","circle-opacity":.92}});
+        cmap.addLayer({id:"cluster-count",type:"symbol",source:"sites",filter:["has","point_count"],
+          layout:{"text-field":["get","point_count_abbreviated"],"text-font":["Noto Sans Regular"],"text-size":13},
+          paint:{"text-color":"#F2F5F9","text-halo-color":"#0E1116","text-halo-width":1.2}});
+        cmap.addLayer({id:"sites-pts",type:"circle",source:"sites",filter:["!",["has","point_count"]],paint:{
+          "circle-color":["case",
+            ["==",["get","flag"],1],"#FF4D4D",
+            ["==",["get","st"],"replied"],"#5AA9FF",
+            ["==",["get","st"],"scheduled"],"#41D88B",
+            ["==",["get","st"],"texted"],"#FFB000",
+            ["==",["get","st"],"done"],"#7a8693",
+            "#9aa4b0"],
+          "circle-radius":["case",["==",["get","sel"],1],9,["==",["get","flag"],1],8,6.5],
+          "circle-stroke-width":["case",["==",["get","sel"],1],3,2],
+          "circle-stroke-color":["case",["==",["get","sel"],1],"#FFD24D","#0E1116"]}});
+        cmap.on("click","clusters",ev=>{ const f=ev.features[0]; cmap.getSource("sites").getClusterExpansionZoom(f.properties.cluster_id).then(z=>cmap.easeTo({center:f.geometry.coordinates,zoom:z})).catch(()=>{}); });
+        cmap.on("click","sites-pts",ev=>{
+          const f=ev.features[0], id=f.properties.id;
+          if(cSel.has(id))cSel.delete(id); else cSel.add(id);
+          refreshMarks();
+          const p=f.properties;
+          const html="<b>"+escapeHtml(p.title)+"</b>"+(p.sub?"<br>"+escapeHtml(p.sub):"")+(p.axs?"<br>"+escapeHtml(p.axs):"")+(p.issue?'<br><span class="popissue">\u26A0\uFE0E '+escapeHtml(p.issue)+'</span>':"")+navLinks(p.lat,p.lng);
+          new maplibregl.Popup({offset:12}).setLngLat(f.geometry.coordinates).setHTML(html).addTo(cmap);
+        });
+        ["clusters","sites-pts"].forEach(L=>{ cmap.on("mouseenter",L,()=>{cmap.getCanvas().style.cursor="pointer";}); cmap.on("mouseleave",L,()=>{cmap.getCanvas().style.cursor="";}); });
+        cMapReady=true;
+        applyBasemap(store.get("fk_basemap","Dark"));
+        fitToSites();
+        setTimeout(()=>{ if(cmap) try{cmap.resize();}catch(e){} },140);
+      }catch(e){ const note=$("#mNote"); if(note) note.textContent="Map layers failed to load \u2014 check your connection."; }
     });
-    if(pts.length) cmap.fitBounds(pts,{padding:[28,28],maxZoom:15});
-    setTimeout(()=>cmap.invalidateSize(),250);
+  }
+  function plotCustomerMap(){
+    cShown=mapList();
+    if(cmap&&cMapReady&&cmap.getSource("sites")){ cmap.getSource("sites").setData(sitesGeo(cShown)); fitToSites(); }
     updateMCount();
   }
-  function openMapSheet(){ $("#mScrim").classList.add("show"); $("#mSheet").classList.add("show"); setTimeout(plotCustomerMap,60); }
-  function closeMapSheet(){ if(cmap&&cmap._locStop) cmap._locStop(); $("#mScrim").classList.remove("show"); $("#mSheet").classList.remove("show"); renderCustomers(); }
+  function openMapSheet(){
+    $("#mScrim").classList.add("show"); $("#mSheet").classList.add("show");
+    cShown=mapList();
+    const note=$("#mNote"), scoped=cSel.size||custFilter!=="all"||custQuery.trim();
+    if(!window.maplibregl){ if(note) note.textContent="The map needs an internet connection to load."; updateMCount(); return; }
+    if(note) note.textContent = cShown.length ? (cShown.length+" point"+(cShown.length===1?"":"s")+(cSel.size?" selected":(scoped?" (filtered)":""))+" \u00B7 tap to select") : (scoped?"None of these have coordinates to map.":"No customers have coordinates yet \u2014 import a KML or CSV above.");
+    updateMCount();
+    setTimeout(()=>{ if($("#mSheet").classList.contains("show")&&!cmap) buildMap(); },80);
+  }
+  function closeMapSheet(){ $("#mScrim").classList.remove("show"); $("#mSheet").classList.remove("show"); if(cmap){ try{cmap.remove();}catch(e){} cmap=null; cMapReady=false; } renderCustomers(); }
   $("#mapBtn").addEventListener("click",openMapSheet);
   $("#mScrim").addEventListener("click",closeMapSheet);
-  $("#mSelVis").addEventListener("click",()=>{ if(!cmap)return; const b=cmap.getBounds(); cmarks.forEach(o=>{ if(b.contains([parseFloat(o.c.lat),parseFloat(o.c.lng)])) cSel.add(o.c.id); }); refreshMarks(); });
+  { const sw=$("#mBasemaps"); if(sw) sw.addEventListener("click",ev=>{ const b=ev.target.closest("button"); if(b&&b.dataset.bm) applyBasemap(b.dataset.bm); }); }
+  $("#mSelVis").addEventListener("click",()=>{ if(!cmap||!cMapReady)return; const b=cmap.getBounds(); cShown.forEach(c=>{ const la=parseFloat(c.lat),lo=parseFloat(c.lng); if(b.contains([lo,la])) cSel.add(c.id); }); refreshMarks(); });
   $("#mClear").addEventListener("click",()=>{ cSel.clear(); refreshMarks(); });
   $("#mExport").addEventListener("click",()=>{
     const sel=customers.filter(c=>cSel.has(c.id));

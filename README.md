@@ -7,8 +7,9 @@ merges them into your database. Then select or filter the sites you want and bui
 batch access-request text, plus `.csv` / `.kml` export and SMS outreach.
 
 Everything parses on-device; only the coordinates are sent out for address
-lookup. The maps need an internet connection (they stream map tiles — OpenStreetMap,
-CARTO, or Esri aerial imagery depending on the basemap you pick); everything
+lookup. The maps need an internet connection (they stream a vector basemap from
+OpenFreeMap, plus Esri aerial or OpenStreetMap tiles depending on the basemap you
+pick); everything
 else works offline once installed.
 
 Everything happens on one screen — your customer database. Data comes in at the
@@ -58,7 +59,7 @@ clearing the database all live in **Settings → Data** — see below.)
   SAP ID is matched **by its structure** — a standalone 9-digit number — so it's
   found whether the sender labels it "SAP Equipment ID", "SAP ID", "Equipment ID",
   or doesn't label it at all. Phone numbers are pulled out **wherever they appear**
-  — even mid-line (e.g. `Mobile Primary  (541) 000-0000`) — and odd dash
+  — even mid-line (e.g. `Mobile Primary  (541) 591-3438`) — and odd dash
   characters that email programs sometimes substitute (en-dashes, etc.) are handled.
   The email's address, name, and phones are taken as authoritative; coordinates you
   already have are kept. (This is for email replies only — site files go through
@@ -76,20 +77,24 @@ clearing the database all live in **Settings → Data** — see below.)
   and a directions link. Filter chips (including **Latest KML** and **Selected**,
   which shows whatever you've picked in the list or on the map) and a search box
   that matches name, address, SAP ID, or **phone number** — phone matching ignores
-  formatting, so `5300000000`, `530-000-0000`, or even just the last few digits
+  formatting, so `5303398783`, `530-339-8783`, or even just the last few digits
   all find the right customer.
 - **Map & export KML** — the **Map** button plots the customers you're currently
   working with: whatever the filter/search is showing, or — if you've selected
-  specific assets — just those. Use the switcher in the top-right corner to pick a
-  basemap: **Dark** (a clean low-glare style that matches the app), **Satellite**
-  (high-resolution aerial imagery with road/place labels — often the most useful
-  for spotting rooftops, access roads, and terrain on an inspection), or
-  **Streets**. Your choice is remembered. The crosshair button (under the zoom
-  controls) drops a live blue dot showing **your current location**, with an
-  accuracy ring, and tracks it as you move — handy for seeing which site you're
-  closest to. It centers on you the first time you tap it; tap again to turn it
-  off (it also stops automatically when you close the map, to save battery). The
-  first time, your browser will ask permission to use your location. Tap a pin for
+  specific assets — just those. The map is a fast vector map you can **rotate and
+  tilt** (twist or drag with two fingers). Use the switcher in the top-left corner
+  to pick a basemap: **Dark** (a clean low-glare vector style that matches the app),
+  **Aerial** (high-resolution Esri imagery with road/place labels — often the most
+  useful for spotting rooftops, access roads, and terrain on an inspection), or
+  **Streets**. Your choice is remembered. When many sites sit close together they
+  **cluster** into a single numbered circle — tap it to zoom in and split it apart.
+  Individual pins are **colored by status** (grey = new, amber = texted, blue =
+  replied, green = scheduled, red = access issue), with a legend in the corner; a
+  selected pin gets a bright gold ring. The location button (top-right, under the
+  zoom controls) drops a live dot showing **your current location** with an accuracy
+  ring and heading, and tracks it as you move — handy for seeing which site you're
+  closest to. Tap it once to start; the browser will ask permission the first time.
+  Location stops automatically when you close the map, to save battery. Tap a pin for
   a popup with the site name, access, and **Apple Maps / Google Maps** directions
   buttons. Tap pins to refine a selection, or pan/zoom to an area and hit *Select
   visible*, then **Export KML** — of the pins you tapped, or, if you haven't tapped
