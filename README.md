@@ -79,9 +79,10 @@ clearing the database all live in **Settings → Data** — see below.)
   that matches name, address, SAP ID, or **phone number** — phone matching ignores
   formatting, so `5303398783`, `530-339-8783`, or even just the last few digits
   all find the right customer.
-- **Map & export KML** — the **Map** button plots the customers you're currently
-  working with: whatever the filter/search is showing, or — if you've selected
-  specific assets — just those. The map is a fast vector map you can **rotate and
+- **Map & export KML** — the **Map** button opens a **full-screen** map of the
+  customers you're currently working with: whatever the filter/search is showing,
+  or — if you've selected specific assets — just those. Close it with the **✕** in
+  the top-left corner. The map is a fast vector map you can **rotate and
   tilt** (twist or drag with two fingers). Use the switcher in the top-left corner
   to pick a basemap: **Dark** (a clean low-glare vector style that matches the app),
   **Aerial** (high-resolution Esri imagery with road/place labels — often the most
@@ -89,14 +90,15 @@ clearing the database all live in **Settings → Data** — see below.)
   **Streets**. Your choice is remembered. When many sites sit close together they
   **cluster** into a single numbered circle — tap it to zoom in and split it apart.
   Individual pins are **colored by status** (grey = new, amber = texted, blue =
-  replied, green = scheduled, red = access issue), with a legend in the corner; a
+  replied, green = scheduled, red = access issue), with a legend along the bottom; a
   selected pin gets a bright gold ring. The location button (top-right, under the
   zoom controls) drops a live dot showing **your current location** with an accuracy
   ring and heading, and tracks it as you move — handy for seeing which site you're
   closest to. Tap it once to start; the browser will ask permission the first time.
   Location stops automatically when you close the map, to save battery. Tap a pin for
   a popup with the site name, access, and **Apple Maps / Google Maps** directions
-  buttons. Tap pins to refine a selection, or pan/zoom to an area and hit *Select
+  buttons. The action bar along the bottom is where you turn a selection into work:
+  tap pins to refine a selection, or pan/zoom to an area and hit *Select
   visible*, then **Export KML** — of the pins you tapped, or, if you haven't tapped
   any, of everything shown on the map. Or tap **Build request email** to generate
   the access-request text (Requestor details from Settings + each site's SAP and

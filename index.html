@@ -99,13 +99,15 @@
   .leaflet-control-attribution{background:rgba(14,17,22,.7)!important;color:var(--faint)!important}
   .leaflet-control-attribution a{color:var(--muted)!important}
 
-  /* ---- MapLibre customer map ---- */
-  .mapwrap{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg2)}
-  #custMap{height:56vh;width:100%}
+  /* ---- MapLibre customer map (full-screen) ---- */
+  .mapfull{position:fixed;inset:0;z-index:85;background:var(--bg);transform:translateY(100%);transition:transform .22s ease}
+  .mapfull.show{transform:translateY(0)}
+  #custMap{position:absolute;inset:0}
   .maplibregl-ctrl-group{background:#1B212B!important;border:1px solid #2A3340!important;box-shadow:0 2px 10px rgba(0,0,0,.45)!important}
-  .maplibregl-ctrl-group button{background:#1B212B!important;width:32px;height:32px}
+  .maplibregl-ctrl-group button{background:#1B212B!important;width:34px;height:34px}
   .maplibregl-ctrl-group button+button{border-top:1px solid #2A3340!important}
   .maplibregl-ctrl button .maplibregl-ctrl-icon{filter:invert(1) hue-rotate(180deg) brightness(1.1)}
+  .maplibregl-ctrl-top-right{top:calc(env(safe-area-inset-top) + 6px)!important;right:6px!important}
   .maplibregl-popup-content{background:#1B212B;color:#E7ECF3;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.55);font-family:var(--mono);font-size:12px;line-height:1.5;padding:10px 13px;min-width:180px}
   .maplibregl-popup-anchor-top .maplibregl-popup-tip,.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,.maplibregl-popup-anchor-top-right .maplibregl-popup-tip{border-bottom-color:#1B212B!important}
   .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip{border-top-color:#1B212B!important}
@@ -115,14 +117,25 @@
   .maplibregl-popup-close-button{color:var(--muted);font-size:17px;padding:0 7px}
   .maplibregl-ctrl-attrib.maplibregl-compact{background:rgba(20,24,32,.8)!important}
   .maplibregl-ctrl-attrib a{color:var(--muted)!important}
-  .maplibregl-ctrl-scale{background:rgba(14,17,22,.55)!important;color:var(--faint)!important;border:1px solid #2A3340!important;border-top:0!important}
-  .bmsw{position:absolute;top:10px;left:10px;z-index:5;display:flex;background:#141820;border:1px solid #2A3340;border-radius:9px;overflow:hidden;font:600 12px var(--ui)}
+  /* close button */
+  .mapx{position:absolute;top:calc(env(safe-area-inset-top) + 8px);left:10px;z-index:7;width:38px;height:38px;border-radius:50%;border:1px solid var(--line2);background:rgba(20,24,32,.92);color:var(--ink);font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 10px rgba(0,0,0,.5)}
+  .mapx:active{background:var(--raise)}
+  /* basemap switcher */
+  .bmsw{position:absolute;top:calc(env(safe-area-inset-top) + 54px);left:10px;z-index:6;display:flex;background:#141820;border:1px solid #2A3340;border-radius:9px;overflow:hidden;font:600 12px var(--ui)}
   .bmsw button{background:transparent;color:var(--muted);border:0;padding:7px 11px;cursor:pointer}
   .bmsw button.on{background:var(--amber);color:#10141a}
   .bmsw button+button{border-left:1px solid #2A3340}
-  .maplegend{position:absolute;left:10px;bottom:12px;z-index:5;background:rgba(20,24,32,.85);border:1px solid #2A3340;border-radius:9px;padding:7px 9px;display:flex;flex-direction:column;gap:3px;font:500 11px var(--ui);color:var(--ink)}
-  .maplegend span{display:flex;align-items:center;gap:6px;white-space:nowrap}
-  .maplegend i{width:10px;height:10px;border-radius:50%;border:1.5px solid #0E1116;flex:none}
+  /* bottom dock */
+  .mapdock{position:absolute;left:0;right:0;bottom:0;z-index:6;background:rgba(14,17,22,.92);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-top:1px solid var(--line2);border-radius:16px 16px 0 0;padding:10px 14px calc(env(safe-area-inset-bottom) + 12px);display:flex;flex-direction:column;gap:9px}
+  .maplegend{display:flex;flex-wrap:wrap;gap:5px 12px;font:500 11px var(--ui);color:var(--muted)}
+  .maplegend span{display:flex;align-items:center;gap:5px;white-space:nowrap}
+  .maplegend i{width:9px;height:9px;border-radius:50%;border:1.5px solid #0E1116;flex:none}
+  .mapbar-row{display:flex;align-items:center;gap:8px}
+  .mapbar-row.main>.btn{flex:1}
+  .mapcount{flex:1;font:600 13px var(--ui);color:var(--ink)}
+  .mapbar-helpers{display:flex;gap:6px}
+  .btn.sm{padding:7px 11px;font-size:13px;min-width:0;white-space:nowrap}
+  .mapissue{width:100%}
 
   /* ---- mapping selects ---- */
   .grid3{display:grid;grid-template-columns:1fr;gap:10px}
@@ -550,17 +563,15 @@
 
 <!-- map + KML export sheet -->
 <div class="scrim" id="mScrim"></div>
-<div class="sheet mapsheet" id="mSheet" role="dialog" aria-label="Map and export">
-  <div class="grab"></div>
-  <h2 style="margin-bottom:4px">Map · export KML</h2>
-  <p class="hint">Tap pins to select them (the same selection as the list — see the <b>Selected</b> filter). <b>Select visible</b> grabs everything currently in view — pan and zoom to an area first. Then export the selection as a KML, or build access requests from it.</p>
-  <div class="mapwrap">
-    <div id="custMap"></div>
-    <div class="bmsw" id="mBasemaps">
-      <button type="button" data-bm="Dark" class="on">Dark</button>
-      <button type="button" data-bm="Aerial">Aerial</button>
-      <button type="button" data-bm="Streets">Streets</button>
-    </div>
+<div class="mapfull" id="mSheet" role="dialog" aria-label="Map">
+  <div id="custMap"></div>
+  <button class="mapx" id="mClose" type="button" aria-label="Close map">&#10005;</button>
+  <div class="bmsw" id="mBasemaps">
+    <button type="button" data-bm="Dark" class="on">Dark</button>
+    <button type="button" data-bm="Aerial">Aerial</button>
+    <button type="button" data-bm="Streets">Streets</button>
+  </div>
+  <div class="mapdock">
     <div class="maplegend" id="mLegend">
       <span><i style="background:#9aa4b0"></i>New</span>
       <span><i style="background:#FFB000"></i>Texted</span>
@@ -568,15 +579,19 @@
       <span><i style="background:#41D88B"></i>Scheduled</span>
       <span><i style="background:#FF4D4D"></i>Access issue</span>
     </div>
+    <div class="mapbar-row">
+      <span class="mapcount" id="mNote"></span>
+      <span class="mapbar-helpers">
+        <button class="btn ghost sm" id="mSelVis" type="button">Select visible</button>
+        <button class="btn ghost sm" id="mClear" type="button">Clear</button>
+      </span>
+    </div>
+    <div class="mapbar-row main">
+      <button class="btn primary" id="mReq" type="button">Build request</button>
+      <button class="btn ghost" id="mExport" type="button">Export KML</button>
+    </div>
+    <button class="btn ghost issue mapissue" id="mFlag" type="button">Mark access issue</button>
   </div>
-  <p class="note" id="mNote" style="margin-top:8px"></p>
-  <div class="maprow">
-    <button class="btn ghost" id="mSelVis">Select visible</button>
-    <button class="btn ghost" id="mClear">Clear selection</button>
-  </div>
-  <button class="btn primary" id="mExport" style="margin-top:10px">Export KML</button>
-  <button class="btn ghost" id="mReq" style="margin-top:8px">Build request email</button>
-  <button class="btn ghost issue" id="mFlag" style="margin-top:8px">Mark access issue</button>
 </div>
 
 <!-- access issue reason picker -->
@@ -1889,7 +1904,13 @@
     title:assetTitle(c), sub:(c.sapId&&c.name)?c.name:"", axs:c.access||"",
     issue:c.accessIssue?(c.accessIssueReason||"Access issue"):"", lat:la, lng:lo }}; }
   function sitesGeo(list){ return {type:"FeatureCollection",features:(list||[]).map(siteFeature)}; }
-  function updateMCount(){ const n=cSel.size; const e=$("#mExport"); if(e) e.textContent = n ? ("Export KML \u00B7 "+n+" selected") : ("Export KML \u00B7 "+cShown.length+" shown"); updateBulkButtons(); }
+  function mapCountLine(){
+    const scoped=cSel.size||custFilter!=="all"||custQuery.trim();
+    if(!cShown.length) return scoped?"None of these are mapped":"No mapped sites yet";
+    if(cSel.size) return cSel.size+" selected";
+    return cShown.length+(cShown.length===1?" site":" sites")+(scoped?" \u00B7 filtered":"")+" \u00B7 tap to select";
+  }
+  function updateMCount(){ const e=$("#mNote"); if(e) e.textContent=mapCountLine(); const ex=$("#mExport"); if(ex) ex.textContent="Export KML"; updateBulkButtons(); }
   function refreshMarks(){ if(cmap&&cMapReady&&cmap.getSource("sites")) cmap.getSource("sites").setData(sitesGeo(cShown)); updateMCount(); updateSelBar(); }
   function applyBasemap(choice){
     if(!cmap||!cMapReady)return;
@@ -1919,8 +1940,7 @@
     cmap.addControl(new maplibregl.NavigationControl({visualizePitch:true}),"top-right");
     geoCtrl=new maplibregl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:true,showUserHeading:true});
     cmap.addControl(geoCtrl,"top-right");
-    cmap.addControl(new maplibregl.ScaleControl({maxWidth:90,unit:"imperial"}),"bottom-right");
-    cmap.addControl(new maplibregl.AttributionControl({compact:true}),"bottom-left");
+    cmap.addControl(new maplibregl.AttributionControl({compact:true}),"top-right");
     cmap.on("error",()=>{});   // swallow tile/glyph fetch noise
     cmap.on("load",()=>{
       try{
@@ -1972,17 +1992,15 @@
     updateMCount();
   }
   function openMapSheet(){
-    $("#mScrim").classList.add("show"); $("#mSheet").classList.add("show");
+    $("#mSheet").classList.add("show");
     cShown=mapList();
-    const note=$("#mNote"), scoped=cSel.size||custFilter!=="all"||custQuery.trim();
-    if(!window.maplibregl){ if(note) note.textContent="The map needs an internet connection to load."; updateMCount(); return; }
-    if(note) note.textContent = cShown.length ? (cShown.length+" point"+(cShown.length===1?"":"s")+(cSel.size?" selected":(scoped?" (filtered)":""))+" \u00B7 tap to select") : (scoped?"None of these have coordinates to map.":"No customers have coordinates yet \u2014 import a KML or CSV above.");
     updateMCount();
+    if(!window.maplibregl){ const note=$("#mNote"); if(note) note.textContent="No internet \u2014 the map needs a connection"; return; }
     setTimeout(()=>{ if($("#mSheet").classList.contains("show")&&!cmap) buildMap(); },80);
   }
-  function closeMapSheet(){ $("#mScrim").classList.remove("show"); $("#mSheet").classList.remove("show"); if(cmap){ try{cmap.remove();}catch(e){} cmap=null; cMapReady=false; } renderCustomers(); }
+  function closeMapSheet(){ $("#mSheet").classList.remove("show"); if(cmap){ try{cmap.remove();}catch(e){} cmap=null; cMapReady=false; } renderCustomers(); }
   $("#mapBtn").addEventListener("click",openMapSheet);
-  $("#mScrim").addEventListener("click",closeMapSheet);
+  { const x=$("#mClose"); if(x) x.addEventListener("click",closeMapSheet); }
   { const sw=$("#mBasemaps"); if(sw) sw.addEventListener("click",ev=>{ const b=ev.target.closest("button"); if(b&&b.dataset.bm) applyBasemap(b.dataset.bm); }); }
   $("#mSelVis").addEventListener("click",()=>{ if(!cmap||!cMapReady)return; const b=cmap.getBounds(); cShown.forEach(c=>{ const la=parseFloat(c.lat),lo=parseFloat(c.lng); if(b.contains([lo,la])) cSel.add(c.id); }); refreshMarks(); });
   $("#mClear").addEventListener("click",()=>{ cSel.clear(); refreshMarks(); });
@@ -2086,7 +2104,7 @@
   $("#impCancel").addEventListener("click",reqCloseImport);
 
   (function addSheetCloseButtons(){
-    const closers={ dSheet:closeDetail, kSheet:closeKml, mSheet:closeMapSheet, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport };
+    const closers={ dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport };
     Object.keys(closers).forEach(id=>{
       const sh=document.getElementById(id); if(!sh)return;
       const bar=document.createElement("div"); bar.className="sheettop";
