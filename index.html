@@ -136,6 +136,18 @@
   .mapbar-helpers{display:flex;gap:6px}
   .btn.sm{padding:7px 11px;font-size:13px;min-width:0;white-space:nowrap}
   .mapissue{width:100%}
+  /* save-offline button + download overlay */
+  .mapsave{position:absolute;top:calc(env(safe-area-inset-top) + 98px);left:10px;z-index:6;display:inline-flex;align-items:center;gap:4px;background:rgba(20,24,32,.92);border:1px solid #2A3340;color:var(--ink);border-radius:9px;padding:7px 11px;font:600 12px var(--ui);cursor:pointer}
+  .mapsave:active{background:var(--raise)}
+  .mapsave.busy{color:var(--amber);border-color:var(--amber)}
+  .dloverlay{position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;background:rgba(8,10,14,.55);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+  .dlcard{width:min(86%,340px);background:var(--bg2);border:1px solid var(--line2);border-radius:14px;padding:18px 18px 14px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+  .dltitle{font:700 16px var(--ui);color:var(--ink);margin-bottom:4px}
+  .dlsub{font:500 13px var(--ui);color:var(--muted);margin-bottom:14px}
+  .dlbarwrap{height:8px;border-radius:5px;background:#0E1116;border:1px solid #2A3340;overflow:hidden;margin-bottom:14px}
+  .dlbarfill{height:100%;width:0;background:var(--amber);transition:width .15s}
+  .dlrow{display:flex;gap:10px}
+  .dlrow>.btn{flex:1}
 
   /* ---- mapping selects ---- */
   .grid3{display:grid;grid-template-columns:1fr;gap:10px}
@@ -571,6 +583,18 @@
     <button type="button" data-bm="Aerial">Aerial</button>
     <button type="button" data-bm="Streets">Streets</button>
   </div>
+  <button class="mapsave" id="mSave" type="button" aria-label="Save this area offline">&#8675; Save offline</button>
+  <div class="dloverlay hidden" id="dlOverlay">
+    <div class="dlcard">
+      <div class="dltitle" id="dlTitle">Save this area offline</div>
+      <div class="dlsub" id="dlSub">Preparing\u2026</div>
+      <div class="dlbarwrap hidden" id="dlBarWrap"><div class="dlbarfill" id="dlBar"></div></div>
+      <div class="dlrow">
+        <button class="btn ghost" id="dlCancel" type="button">Cancel</button>
+        <button class="btn primary hidden" id="dlGo" type="button">Save</button>
+      </div>
+    </div>
+  </div>
   <div class="mapdock">
     <div class="maplegend" id="mLegend">
       <span><i style="background:#9aa4b0"></i>New</span>
@@ -693,6 +717,11 @@
   </div>
   <div class="sgroup"><button class="btn ghost" id="sVersions">Earlier versions…</button></div>
   <div class="sgroup"><button class="btn danger" id="sClearDb">Clear database</button></div>
+
+  <h2 style="margin-top:22px">Offline maps</h2>
+  <p class="hint">Open the map, frame your work area, and tap <b>Save offline</b> to store it for use with no signal. Saved tiles stay on this device until you clear them.</p>
+  <div class="sgroup"><div class="note" id="offlineStat">No offline maps saved yet.</div></div>
+  <div class="sgroup"><button class="btn ghost danger" id="sClearMaps">Clear offline maps</button></div>
   <p class="note" style="text-align:center;margin-top:14px">FieldKey · v1 · runs offline once added to your Home Screen</p>
 </div>
 
@@ -1164,6 +1193,7 @@
     $("#sIssue").value=cfg.issue; $("#sWork").value=cfg.work;
     $("#sEmail").value=cfg.email; $("#sGkey").value=cfg.gkey; $("#sDelay").value=cfg.delay;
     setProviderUI(cfg.provider);
+    refreshOfflineStat();
     els.scrim.classList.add("show"); els.sheet.classList.add("show");
   }
   function closeSheet(){ els.scrim.classList.remove("show"); els.sheet.classList.remove("show"); }
@@ -2003,6 +2033,105 @@
   { const x=$("#mClose"); if(x) x.addEventListener("click",closeMapSheet); }
   { const sw=$("#mBasemaps"); if(sw) sw.addEventListener("click",ev=>{ const b=ev.target.closest("button"); if(b&&b.dataset.bm) applyBasemap(b.dataset.bm); }); }
   $("#mSelVis").addEventListener("click",()=>{ if(!cmap||!cMapReady)return; const b=cmap.getBounds(); cShown.forEach(c=>{ const la=parseFloat(c.lat),lo=parseFloat(c.lng); if(b.contains([lo,la])) cSel.add(c.id); }); refreshMarks(); });
+
+  /* ---------------- offline map tiles ---------------- */
+  const MAPCACHE="fieldkey-maps", MAX_OFFLINE_TILES=2500;
+  function lon2tile(lon,z){ return Math.floor((lon+180)/360*Math.pow(2,z)); }
+  function lat2tile(lat,z){ const r=lat*Math.PI/180; return Math.floor((1-Math.asinh(Math.tan(r))/Math.PI)/2*Math.pow(2,z)); }
+  function clampT(v,z){ const n=Math.pow(2,z); return Math.max(0,Math.min(n-1,v)); }
+  function tilesForBounds(b,z){ // b={w,s,e,n}
+    const x0=clampT(lon2tile(b.w,z),z), x1=clampT(lon2tile(b.e,z),z);
+    const y0=clampT(lat2tile(b.n,z),z), y1=clampT(lat2tile(b.s,z),z);
+    const out=[];
+    for(let x=Math.min(x0,x1);x<=Math.max(x0,x1);x++) for(let y=Math.min(y0,y1);y<=Math.max(y0,y1);y++) out.push([z,x,y]);
+    return out;
+  }
+  function fillTpl(tpl,z,x,y){ return tpl.replace(/\{z\}/g,z).replace(/\{x\}/g,x).replace(/\{y\}/g,y); }
+  async function gatherStyleResources(style){
+    const glyphs=[], sprite=[], tilejson=[], vectorTiles=[];
+    if(style.glyphs){
+      const fonts=new Set();
+      (style.layers||[]).forEach(l=>{ const f=l.layout&&l.layout["text-font"]; if(Array.isArray(f)&&f.every(x=>typeof x==="string")) fonts.add(f.join(",")); });
+      if(!fonts.size) fonts.add("Noto Sans Regular");
+      ["0-255","256-511"].forEach(rg=>fonts.forEach(stack=>{ glyphs.push(style.glyphs.replace(/\{fontstack\}/g,encodeURIComponent(stack)).replace(/\{range\}/g,rg)); }));
+    }
+    if(typeof style.sprite==="string"){ const s=style.sprite; sprite.push(s+".json",s+".png",s+"@2x.json",s+"@2x.png"); }
+    for(const k in (style.sources||{})){
+      const s=style.sources[k]; if(!s||s.type!=="vector") continue;
+      if(Array.isArray(s.tiles)) vectorTiles.push({tiles:s.tiles,maxzoom:s.maxzoom||14});
+      else if(s.url){ try{ const tj=await fetch(s.url,{mode:"cors"}).then(r=>r.json()); tilejson.push(s.url); if(Array.isArray(tj.tiles)) vectorTiles.push({tiles:tj.tiles,maxzoom:(tj.maxzoom!=null?tj.maxzoom:(s.maxzoom||14))}); }catch(e){} }
+    }
+    return {glyphs,sprite,tilejson,vectorTiles};
+  }
+  function planOffline(b,zoom,chrome){
+    const chromeUrls=[MAP_STYLE].concat(chrome.glyphs, chrome.sprite, chrome.tilejson);
+    const tiles=[]; const zLo=Math.max(10,zoom-2);
+    for(const src of chrome.vectorTiles){
+      const smax=src.maxzoom||14, zHi=Math.min(smax,16);
+      for(let zz=zLo; zz<=zHi; zz++){ for(const [tz,tx,ty] of tilesForBounds(b,zz)){ for(const tpl of src.tiles) tiles.push(fillTpl(tpl,tz,tx,ty)); } }
+    }
+    return { chromeUrls, tiles:[...new Set(tiles)], zLo };
+  }
+  let dlBusy=false, dlCancel=false, dlPlan=null, dlBounds=null;
+  function showDl(){ $("#dlOverlay").classList.remove("hidden"); }
+  function hideDl(){ $("#dlOverlay").classList.add("hidden"); }
+  function setDlBar(done,total){ const f=$("#dlBar"); if(f) f.style.width=(total?Math.round(done/total*100):0)+"%"; }
+  async function beginSaveOffline(){
+    if(dlBusy) return;
+    if(!cmap||!cMapReady){ toast("Open the map first."); return; }
+    if(!navigator.onLine){ toast("You're offline \u2014 connect to save a new area."); return; }
+    const bb=cmap.getBounds(); dlBounds={w:bb.getWest(),s:bb.getSouth(),e:bb.getEast(),n:bb.getNorth()};
+    const zoom=Math.floor(cmap.getZoom());
+    $("#dlTitle").textContent="Save this area offline"; $("#dlSub").textContent="Preparing\u2026";
+    $("#dlGo").classList.add("hidden"); $("#dlBarWrap").classList.add("hidden"); setDlBar(0,1);
+    $("#dlCancel").textContent="Cancel"; showDl();
+    let style; try{ style=await fetch(MAP_STYLE,{mode:"cors"}).then(r=>r.json()); }catch(e){ hideDl(); toast("Couldn't reach the map server."); return; }
+    const chrome=await gatherStyleResources(style);
+    dlPlan=planOffline(dlBounds,zoom,chrome);
+    const total=dlPlan.tiles.length;
+    if(!total){ hideDl(); toast("Nothing to save for this view."); return; }
+    if(total>MAX_OFFLINE_TILES){ hideDl(); toast("Area too large \u2014 zoom in or frame a smaller area."); return; }
+    const mb=Math.max(1,Math.round(total*0.045));
+    $("#dlSub").textContent="~"+total+" tiles \u00B7 about "+mb+" MB \u00B7 works with no signal";
+    $("#dlGo").classList.remove("hidden");
+  }
+  async function runSaveOffline(){
+    if(dlBusy||!dlPlan) return;
+    dlBusy=true; dlCancel=false;
+    $("#dlGo").classList.add("hidden"); $("#dlBarWrap").classList.remove("hidden"); $("#dlCancel").textContent="Stop";
+    const all=dlPlan.chromeUrls.concat(dlPlan.tiles), total=all.length;
+    const save=$("#mSave"); if(save) save.classList.add("busy");
+    let done=0, ok=0; const cache=await caches.open(MAPCACHE); const CONC=6;
+    for(let i=0;i<all.length && !dlCancel;i+=CONC){
+      const batch=all.slice(i,i+CONC);
+      await Promise.all(batch.map(async u=>{ try{ const r=await fetch(u,{mode:"cors"}); if(r&&r.ok){ await cache.put(u,r.clone()); ok++; } }catch(e){} done++; }));
+      setDlBar(done,total); $("#dlSub").textContent=done+" / "+total+" tiles";
+    }
+    dlBusy=false; if(save) save.classList.remove("busy"); hideDl();
+    if(dlCancel){ toast("Stopped \u2014 partial area saved ("+ok+" tiles)"); }
+    else { toast("Saved "+ok+" tiles for offline"); }
+    try{ const regions=JSON.parse(store.get("fk_offline_regions","[]")||"[]");
+      regions.push({date:Date.now(), w:dlBounds.w,s:dlBounds.s,e:dlBounds.e,n:dlBounds.n, tiles:ok}); 
+      store.set("fk_offline_regions",JSON.stringify(regions)); }catch(e){}
+    refreshOfflineStat();
+  }
+  $("#mSave") && $("#mSave").addEventListener("click",beginSaveOffline);
+  $("#dlGo") && $("#dlGo").addEventListener("click",runSaveOffline);
+  $("#dlCancel") && $("#dlCancel").addEventListener("click",()=>{ if(dlBusy){ dlCancel=true; } else { hideDl(); } });
+  async function refreshOfflineStat(){
+    const el=$("#offlineStat"); if(!el) return;
+    let regions=[]; try{ regions=JSON.parse(store.get("fk_offline_regions","[]")||"[]"); }catch(e){}
+    let usage="";
+    if(navigator.storage&&navigator.storage.estimate){ try{ const est=await navigator.storage.estimate(); if(est&&est.usage) usage=" \u00B7 ~"+Math.round(est.usage/1048576)+" MB total app storage"; }catch(e){} }
+    if(!regions.length){ el.textContent="No offline maps saved yet."+usage; }
+    else { const t=regions.reduce((a,r)=>a+(r.tiles||0),0); el.textContent=regions.length+(regions.length===1?" area":" areas")+" saved \u00B7 "+t+" tiles"+usage; }
+  }
+  async function clearOfflineMaps(){
+    try{ await caches.delete(MAPCACHE); }catch(e){}
+    store.set("fk_offline_regions","[]"); toast("Offline maps cleared"); refreshOfflineStat();
+  }
+  $("#sClearMaps") && $("#sClearMaps").addEventListener("click",()=>{ if(confirm("Clear all saved offline maps?")) clearOfflineMaps(); });
+
   $("#mClear").addEventListener("click",()=>{ cSel.clear(); refreshMarks(); });
   $("#mExport").addEventListener("click",()=>{
     const sel=customers.filter(c=>cSel.has(c.id));

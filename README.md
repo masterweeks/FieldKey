@@ -131,6 +131,21 @@ clearing the database all live in **Settings → Data** — see below.)
   one tap, and CSV exports include **Access Issue** and **Issue Reason** columns.
   Flagging is purely visual — it doesn't pull a site out of your Not-texted /
   Scheduled / etc. views.
+- **Offline maps** — the map works with no signal for areas you've saved first.
+  On the map, frame the area you'll be working (pan/zoom so it fills the screen),
+  then tap **⤓ Save offline** (top-left, under the basemap switcher). It checks the
+  size, shows roughly how many tiles and megabytes it'll store, and — once you tap
+  **Save** — downloads the dark basemap for that area onto the device with a
+  progress bar (tap **Stop** to halt; whatever finished is kept). After that, in a
+  dead zone, opening the map still shows that area's roads and labels, your pins,
+  and your live GPS location — everything but a data connection. The app shell and
+  map engine are cached automatically, so the whole app launches offline once it's
+  on your Home Screen; **Save offline** is only for the *map tiles* of a specific
+  area. Saved tiles persist across app updates and stay until you remove them:
+  **Settings → Offline maps** shows how many areas you've saved and the storage
+  used, with **Clear offline maps** to free it all. (Aerial and terrain layers for
+  offline come next; for now the saved layer is the dark basemap, which is the one
+  that matters for finding sites and roads in the field.)
 
 ### Settings → Data
 - **Back up data** downloads a single `.json` file with every customer and your
