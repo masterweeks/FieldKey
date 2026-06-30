@@ -87,7 +87,7 @@ clearing the database all live in **Settings → Data** — see below.)
   to pick a basemap: **Dark** (a clean low-glare vector style that matches the app),
   **Aerial** (high-resolution Esri imagery with road/place labels — often the most
   useful for spotting rooftops, access roads, and terrain on an inspection), or
-  **Streets**. Your choice is remembered. On the **Dark** basemap the map also shows subtle **terrain shading** (hillshade relief), so ridges and canyons read at a glance — useful for sizing up access and approach in hilly country. When many sites sit close together they
+  **Streets**. Your choice is remembered. On the **Dark** basemap the map shows **terrain shading** (hillshade relief) so ridges and canyons read at a glance. For a stronger sense of the land, the **3D** button (top-left) tilts into a 3-D view — drag up with two fingers and the terrain physically rises, on any basemap (try it over **Aerial** for a draped-satellite view). 3D is on by default and remembered; tap the button to switch back to a flat map. Both are useful for sizing up access and approach in hilly country. When many sites sit close together they
   **cluster** into a single numbered circle — tap it to zoom in and split it apart.
   Individual pins are **colored by status** (grey = new, amber = texted, blue =
   replied, green = scheduled, red = access issue), with a legend along the bottom; a

@@ -140,6 +140,8 @@
   .mapsave{position:absolute;top:calc(env(safe-area-inset-top) + 98px);left:10px;z-index:6;display:inline-flex;align-items:center;gap:4px;background:rgba(20,24,32,.92);border:1px solid #2A3340;color:var(--ink);border-radius:9px;padding:7px 11px;font:600 12px var(--ui);cursor:pointer}
   .mapsave:active{background:var(--raise)}
   .mapsave.busy{color:var(--amber);border-color:var(--amber)}
+  .mapterr{top:calc(env(safe-area-inset-top) + 138px)}
+  .mapsave.on{color:var(--amber);border-color:var(--amber)}
   .dloverlay{position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;background:rgba(8,10,14,.55);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
   .dlcard{width:min(86%,340px);background:var(--bg2);border:1px solid var(--line2);border-radius:14px;padding:18px 18px 14px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
   .dltitle{font:700 16px var(--ui);color:var(--ink);margin-bottom:4px}
@@ -584,6 +586,7 @@
     <button type="button" data-bm="Streets">Streets</button>
   </div>
   <button class="mapsave" id="mSave" type="button" aria-label="Save this area offline">&#8675; Save offline</button>
+  <button class="mapsave mapterr" id="mTerr" type="button" aria-label="Toggle 3D terrain">&#9968; 3D</button>
   <div class="dloverlay hidden" id="dlOverlay">
     <div class="dlcard">
       <div class="dltitle" id="dlTitle">Save this area offline</div>
@@ -1953,6 +1956,11 @@
     store.set("fk_basemap",choice);
     const sw=$("#mBasemaps"); if(sw) sw.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.bm===choice));
   }
+  let terrainOn=store.get("fk_terrain","1")!=="0";
+  function applyTerrain(){
+    if(cmap&&cMapReady){ try{ cmap.setTerrain(terrainOn?{source:"dem-src",exaggeration:1.5}:null); }catch(e){} }
+    const t=$("#mTerr"); if(t) t.classList.toggle("on",terrainOn);
+  }
   function fitToSites(){
     if(!cmap||!cShown.length)return;
     if(cShown.length===1){ cmap.jumpTo({center:[parseFloat(cShown[0].lng),parseFloat(cShown[0].lat)],zoom:14}); return; }
@@ -1981,10 +1989,10 @@
         cmap.addSource("dem-src",{type:"raster-dem",tiles:[DEM_TILE],encoding:"terrarium",tileSize:256,maxzoom:13,attribution:"Elevation: Terrain Tiles (AWS)"});
         const _ls=(cmap.getStyle().layers||[]), _sym=_ls.find(l=>l.type==="symbol");
         cmap.addLayer({id:"hillshade",type:"hillshade",source:"dem-src",paint:{
-          "hillshade-exaggeration":0.4,
-          "hillshade-shadow-color":"#05080d",
-          "hillshade-accent-color":"#05080d",
-          "hillshade-highlight-color":"#4a5666",
+          "hillshade-exaggeration":0.85,
+          "hillshade-shadow-color":"#00040c",
+          "hillshade-accent-color":"#2b3c54",
+          "hillshade-highlight-color":"#aebfd6",
           "hillshade-illumination-direction":315}}, _sym?_sym.id:undefined);
         cmap.addSource("esri-src",{type:"raster",tiles:[ESRI_IMG],tileSize:256,maxzoom:19,attribution:"Imagery \u00A9 Esri"});
         cmap.addSource("esriref-src",{type:"raster",tiles:[ESRI_REF],tileSize:256,maxzoom:19});
@@ -2023,6 +2031,7 @@
         ["clusters","sites-pts"].forEach(L=>{ cmap.on("mouseenter",L,()=>{cmap.getCanvas().style.cursor="pointer";}); cmap.on("mouseleave",L,()=>{cmap.getCanvas().style.cursor="";}); });
         cMapReady=true;
         applyBasemap(store.get("fk_basemap","Dark"));
+        applyTerrain();
         fitToSites();
         setTimeout(()=>{ if(cmap) try{cmap.resize();}catch(e){} },140);
       }catch(e){ const note=$("#mNote"); if(note) note.textContent="Map layers failed to load \u2014 check your connection."; }
@@ -2044,6 +2053,7 @@
   $("#mapBtn").addEventListener("click",openMapSheet);
   { const x=$("#mClose"); if(x) x.addEventListener("click",closeMapSheet); }
   { const sw=$("#mBasemaps"); if(sw) sw.addEventListener("click",ev=>{ const b=ev.target.closest("button"); if(b&&b.dataset.bm) applyBasemap(b.dataset.bm); }); }
+  { const t=$("#mTerr"); if(t){ t.classList.toggle("on",terrainOn); t.addEventListener("click",()=>{ terrainOn=!terrainOn; store.set("fk_terrain",terrainOn?"1":"0"); applyTerrain(); toast(terrainOn?"3D terrain on \u2014 tilt with two fingers":"3D terrain off"); }); } }
   $("#mSelVis").addEventListener("click",()=>{ if(!cmap||!cMapReady)return; const b=cmap.getBounds(); cShown.forEach(c=>{ const la=parseFloat(c.lat),lo=parseFloat(c.lng); if(b.contains([lo,la])) cSel.add(c.id); }); refreshMarks(); });
 
   /* ---------------- offline map tiles ---------------- */
