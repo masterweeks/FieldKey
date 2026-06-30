@@ -87,7 +87,7 @@ clearing the database all live in **Settings → Data** — see below.)
   to pick a basemap: **Dark** (a clean low-glare vector style that matches the app),
   **Aerial** (high-resolution Esri imagery with road/place labels — often the most
   useful for spotting rooftops, access roads, and terrain on an inspection), or
-  **Streets**. Your choice is remembered. When many sites sit close together they
+  **Streets**. Your choice is remembered. On the **Dark** basemap the map also shows subtle **terrain shading** (hillshade relief), so ridges and canyons read at a glance — useful for sizing up access and approach in hilly country. When many sites sit close together they
   **cluster** into a single numbered circle — tap it to zoom in and split it apart.
   Individual pins are **colored by status** (grey = new, amber = texted, blue =
   replied, green = scheduled, red = access issue), with a legend along the bottom; a
@@ -143,9 +143,12 @@ clearing the database all live in **Settings → Data** — see below.)
   on your Home Screen; **Save offline** is only for the *map tiles* of a specific
   area. Saved tiles persist across app updates and stay until you remove them:
   **Settings → Offline maps** shows how many areas you've saved and the storage
-  used, with **Clear offline maps** to free it all. (Aerial and terrain layers for
-  offline come next; for now the saved layer is the dark basemap, which is the one
-  that matters for finding sites and roads in the field.)
+  used, with **Clear offline maps** to free it all. Saving an area also stores the
+  **terrain elevation** for it, so the hillshade relief (below) keeps working with no
+  signal — and it's the same elevation data the upcoming parking-spot line-of-sight
+  check will use. (Offline **aerial** imagery is the next addition; for now the saved
+  picture is the dark basemap with terrain shading, which is what matters for finding
+  sites and roads in the field.)
 
 ### Settings → Data
 - **Back up data** downloads a single `.json` file with every customer and your

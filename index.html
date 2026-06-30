@@ -1964,6 +1964,7 @@
   const ESRI_IMG="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
   const ESRI_REF="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
   const OSM_RASTER="https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+  const DEM_TILE="https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
   function buildMap(){
     try{ cmap=new maplibregl.Map({container:"custMap",style:MAP_STYLE,center:[-120.5,40.5],zoom:5,attributionControl:false}); }
     catch(e){ const note=$("#mNote"); if(note) note.textContent="Map couldn't start on this device."; return; }
@@ -1974,6 +1975,17 @@
     cmap.on("error",()=>{});   // swallow tile/glyph fetch noise
     cmap.on("load",()=>{
       try{
+        // terrain relief: hillshade from a Terrarium DEM, placed under the labels so it
+        // shades the dark basemap without dimming text. Imagery/Streets rasters are added
+        // afterward (on top), so hillshade only shows through on the Dark basemap.
+        cmap.addSource("dem-src",{type:"raster-dem",tiles:[DEM_TILE],encoding:"terrarium",tileSize:256,maxzoom:13,attribution:"Elevation: Terrain Tiles (AWS)"});
+        const _ls=(cmap.getStyle().layers||[]), _sym=_ls.find(l=>l.type==="symbol");
+        cmap.addLayer({id:"hillshade",type:"hillshade",source:"dem-src",paint:{
+          "hillshade-exaggeration":0.4,
+          "hillshade-shadow-color":"#05080d",
+          "hillshade-accent-color":"#05080d",
+          "hillshade-highlight-color":"#4a5666",
+          "hillshade-illumination-direction":315}}, _sym?_sym.id:undefined);
         cmap.addSource("esri-src",{type:"raster",tiles:[ESRI_IMG],tileSize:256,maxzoom:19,attribution:"Imagery \u00A9 Esri"});
         cmap.addSource("esriref-src",{type:"raster",tiles:[ESRI_REF],tileSize:256,maxzoom:19});
         cmap.addSource("osm-src",{type:"raster",tiles:[OSM_RASTER],tileSize:256,maxzoom:19,attribution:"\u00A9 OpenStreetMap"});
@@ -2070,7 +2082,10 @@
       const smax=src.maxzoom||14, zHi=Math.min(smax,16);
       for(let zz=zLo; zz<=zHi; zz++){ for(const [tz,tx,ty] of tilesForBounds(b,zz)){ for(const tpl of src.tiles) tiles.push(fillTpl(tpl,tz,tx,ty)); } }
     }
-    return { chromeUrls, tiles:[...new Set(tiles)], zLo };
+    // terrain DEM tiles (drive hillshade now; feed line-of-sight later). Capped at z13.
+    const dem=[];
+    for(let zz=zLo; zz<=13; zz++){ for(const [tz,tx,ty] of tilesForBounds(b,zz)){ dem.push(fillTpl(DEM_TILE,tz,tx,ty)); } }
+    return { chromeUrls, tiles:[...new Set(tiles)], dem:[...new Set(dem)], zLo };
   }
   let dlBusy=false, dlCancel=false, dlPlan=null, dlBounds=null;
   function showDl(){ $("#dlOverlay").classList.remove("hidden"); }
@@ -2088,18 +2103,18 @@
     let style; try{ style=await fetch(MAP_STYLE,{mode:"cors"}).then(r=>r.json()); }catch(e){ hideDl(); toast("Couldn't reach the map server."); return; }
     const chrome=await gatherStyleResources(style);
     dlPlan=planOffline(dlBounds,zoom,chrome);
-    const total=dlPlan.tiles.length;
+    const nv=dlPlan.tiles.length, nd=dlPlan.dem.length, total=nv+nd;
     if(!total){ hideDl(); toast("Nothing to save for this view."); return; }
     if(total>MAX_OFFLINE_TILES){ hideDl(); toast("Area too large \u2014 zoom in or frame a smaller area."); return; }
-    const mb=Math.max(1,Math.round(total*0.045));
-    $("#dlSub").textContent="~"+total+" tiles \u00B7 about "+mb+" MB \u00B7 works with no signal";
+    const mb=Math.max(1,Math.round(nv*0.045 + nd*0.12));
+    $("#dlSub").textContent="~"+total+" tiles \u00B7 about "+mb+" MB \u00B7 basemap + terrain";
     $("#dlGo").classList.remove("hidden");
   }
   async function runSaveOffline(){
     if(dlBusy||!dlPlan) return;
     dlBusy=true; dlCancel=false;
     $("#dlGo").classList.add("hidden"); $("#dlBarWrap").classList.remove("hidden"); $("#dlCancel").textContent="Stop";
-    const all=dlPlan.chromeUrls.concat(dlPlan.tiles), total=all.length;
+    const all=dlPlan.chromeUrls.concat(dlPlan.tiles, dlPlan.dem), total=all.length;
     const save=$("#mSave"); if(save) save.classList.add("busy");
     let done=0, ok=0; const cache=await caches.open(MAPCACHE); const CONC=6;
     for(let i=0;i<all.length && !dlCancel;i+=CONC){
