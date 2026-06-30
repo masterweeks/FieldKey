@@ -135,7 +135,11 @@
   .mapcount{flex:1;font:600 13px var(--ui);color:var(--ink)}
   .mapbar-helpers{display:flex;gap:6px}
   .btn.sm{padding:7px 11px;font-size:13px;min-width:0;white-space:nowrap}
+  .btn.sm.on{background:var(--amber);color:#10141a;border-color:var(--amber)}
   .mapissue{width:100%}
+  .lasso{position:absolute;inset:0;z-index:5;touch-action:none}
+  .lasso svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  #lassoPath{fill:rgba(255,176,0,.14);stroke:var(--amber);stroke-width:2;stroke-dasharray:7 5;stroke-linejoin:round}
   /* save-offline button + download overlay */
   .mapsave{position:absolute;top:calc(env(safe-area-inset-top) + 98px);left:10px;z-index:6;display:inline-flex;align-items:center;gap:4px;background:rgba(20,24,32,.92);border:1px solid #2A3340;color:var(--ink);border-radius:9px;padding:7px 11px;font:600 12px var(--ui);cursor:pointer}
   .mapsave:active{background:var(--raise)}
@@ -582,6 +586,7 @@
 <div class="scrim" id="mScrim"></div>
 <div class="mapfull" id="mSheet" role="dialog" aria-label="Map">
   <div id="custMap"></div>
+  <div class="lasso hidden" id="lassoLayer"><svg id="lassoSvg"><polygon id="lassoPath" points="" /></svg></div>
   <button class="mapx" id="mClose" type="button" aria-label="Close map">&#10005;</button>
   <div class="bmsw" id="mBasemaps">
     <button type="button" data-bm="Dark" class="on">Dark</button>
@@ -613,6 +618,7 @@
     <div class="mapbar-row">
       <span class="mapcount" id="mNote"></span>
       <span class="mapbar-helpers">
+        <button class="btn ghost sm" id="mLasso" type="button">Lasso</button>
         <button class="btn ghost sm" id="mSelVis" type="button">Select visible</button>
         <button class="btn ghost sm" id="mClear" type="button">Clear</button>
       </span>
@@ -2060,7 +2066,7 @@
     if(!window.maplibregl){ const note=$("#mNote"); if(note) note.textContent="No internet \u2014 the map needs a connection"; return; }
     setTimeout(()=>{ if($("#mSheet").classList.contains("show")&&!cmap) buildMap(); },80);
   }
-  function closeMapSheet(){ $("#mSheet").classList.remove("show"); if(cmap){ try{cmap.remove();}catch(e){} cmap=null; cMapReady=false; } renderCustomers(); }
+  function closeMapSheet(){ try{setLasso(false);}catch(e){} $("#mSheet").classList.remove("show"); if(cmap){ try{cmap.remove();}catch(e){} cmap=null; cMapReady=false; } renderCustomers(); }
   $("#mapBtn").addEventListener("click",openMapSheet);
   { const x=$("#mClose"); if(x) x.addEventListener("click",closeMapSheet); }
   { const sw=$("#mBasemaps"); if(sw) sw.addEventListener("click",ev=>{ const b=ev.target.closest("button"); if(b&&b.dataset.bm) applyBasemap(b.dataset.bm); }); }
@@ -2197,6 +2203,46 @@
   $("#sClearMaps") && $("#sClearMaps").addEventListener("click",()=>{ if(confirm("Clear all saved offline maps?")) clearOfflineMaps(); });
 
   $("#mClear").addEventListener("click",()=>{ cSel.clear(); refreshMarks(); });
+
+  /* ---------------- lasso select ---------------- */
+  let lassoOn=false, lassoPts=[], lassoDrawing=false, lassoRect=null;
+  function pointInPoly(x,y,poly){
+    let inside=false;
+    for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+      const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];
+      if(((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) inside=!inside;
+    }
+    return inside;
+  }
+  function drawLassoPath(){ const p=$("#lassoPath"); if(p) p.setAttribute("points",lassoPts.map(a=>a[0]+","+a[1]).join(" ")); }
+  function setLasso(on){
+    lassoOn=on; lassoDrawing=false; lassoPts=[];
+    const layer=$("#lassoLayer"); if(layer) layer.classList.toggle("hidden",!on);
+    const btn=$("#mLasso"); if(btn) btn.classList.toggle("on",on);
+    const p=$("#lassoPath"); if(p) p.setAttribute("points","");
+    if(on) toast("Draw a loop around the sites \u00B7 tap Lasso again to cancel");
+  }
+  function finishLasso(){
+    const pts=lassoPts.slice(); setLasso(false);
+    if(pts.length<8) return;   // a tap or stray touch, not a loop
+    let added=0;
+    if(cmap&&cMapReady){
+      cShown.forEach(c=>{ const la=parseFloat(c.lat),lo=parseFloat(c.lng); if(isNaN(la)||isNaN(lo))return;
+        let pt; try{ pt=cmap.project([lo,la]); }catch(e){ return; }
+        if(pointInPoly(pt.x,pt.y,pts) && !cSel.has(c.id)){ cSel.add(c.id); added++; } });
+    }
+    refreshMarks();
+    toast(added?("Added "+added+" site"+(added===1?"":"s")):"No sites in that loop");
+  }
+  { const layer=$("#lassoLayer");
+    if(layer){
+      layer.addEventListener("pointerdown",e=>{ if(!lassoOn)return; e.preventDefault(); lassoDrawing=true; lassoRect=layer.getBoundingClientRect(); lassoPts=[[e.clientX-lassoRect.left,e.clientY-lassoRect.top]]; drawLassoPath(); });
+      layer.addEventListener("pointermove",e=>{ if(!lassoOn||!lassoDrawing)return; e.preventDefault(); lassoPts.push([e.clientX-lassoRect.left,e.clientY-lassoRect.top]); drawLassoPath(); });
+      layer.addEventListener("pointerup",e=>{ if(!lassoOn||!lassoDrawing)return; e.preventDefault(); finishLasso(); });
+      layer.addEventListener("pointercancel",()=>{ if(lassoOn) setLasso(false); });
+    }
+  }
+  { const lb=$("#mLasso"); if(lb) lb.addEventListener("click",()=>setLasso(!lassoOn)); }
   $("#mExport").addEventListener("click",()=>{
     const sel=customers.filter(c=>cSel.has(c.id));
     const list=sel.length?sel:mapList();

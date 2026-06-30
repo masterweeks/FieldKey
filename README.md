@@ -99,8 +99,13 @@ clearing the database all live in **Settings → Data** — see below.)
   Location stops automatically when you close the map, to save battery. Tap a pin for
   a popup with the site name, access, and **Apple Maps / Google Maps** directions
   buttons. The action bar along the bottom is where you turn a selection into work:
-  tap pins to refine a selection, or pan/zoom to an area and hit *Select
-  visible*, then **Export KML** — of the pins you tapped, or, if you haven't tapped
+  tap pins to add them one at a time, or hit **Lasso** and draw a freehand loop right
+  on the map to grab every site inside it at once (drag to draw, lift to select — tap
+  **Lasso** again to cancel; it adds to whatever's already selected, so **Clear**
+  first if you want a fresh set). **Select visible** is the quick "grab everything on
+  screen" shortcut. Lasso works even when sites are bunched into clusters, since it
+  selects by location, not by visible pin. Then hit **Export KML** — of the pins you
+  picked, or, if you haven't picked
   any, of everything shown on the map. Or tap **Build request email** to generate
   the access-request text (Requestor details from Settings + each site's SAP and
   address) for that same set, ready to copy or share/email. The exported KML
