@@ -150,6 +150,9 @@
   .dlbarfill{height:100%;width:0;background:var(--amber);transition:width .15s}
   .dlrow{display:flex;gap:10px}
   .dlrow>.btn{flex:1}
+  .dlopt{display:flex;align-items:center;gap:8px;font:600 13px var(--ui);color:var(--ink);margin-bottom:14px;cursor:pointer}
+  .dlopt input{width:18px;height:18px;accent-color:var(--amber);flex:none}
+  .dlopthint{color:var(--muted);font-weight:500}
 
   /* ---- mapping selects ---- */
   .grid3{display:grid;grid-template-columns:1fr;gap:10px}
@@ -591,6 +594,7 @@
     <div class="dlcard">
       <div class="dltitle" id="dlTitle">Save this area offline</div>
       <div class="dlsub" id="dlSub">Preparing\u2026</div>
+      <label class="dlopt hidden" id="dlOpt"><input type="checkbox" id="dlAerial" checked /> Include aerial imagery <span class="dlopthint">(larger)</span></label>
       <div class="dlbarwrap hidden" id="dlBarWrap"><div class="dlbarfill" id="dlBar"></div></div>
       <div class="dlrow">
         <button class="btn ghost" id="dlCancel" type="button">Cancel</button>
@@ -1948,14 +1952,18 @@
   function applyBasemap(choice){
     if(!cmap||!cMapReady)return;
     const aerial=choice==="Aerial", streets=choice==="Streets";
+    const useUSGS = aerial && !navigator.onLine;   // offline aerial falls back to cacheable USGS imagery
     try{
-      cmap.setLayoutProperty("esri","visibility",aerial?"visible":"none");
-      cmap.setLayoutProperty("esri-ref","visibility",aerial?"visible":"none");
+      cmap.setLayoutProperty("esri","visibility",(aerial&&!useUSGS)?"visible":"none");
+      cmap.setLayoutProperty("esri-ref","visibility",(aerial&&!useUSGS)?"visible":"none");
+      cmap.setLayoutProperty("usgs","visibility",useUSGS?"visible":"none");
       cmap.setLayoutProperty("osm","visibility",streets?"visible":"none");
     }catch(e){}
     store.set("fk_basemap",choice);
     const sw=$("#mBasemaps"); if(sw) sw.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.bm===choice));
   }
+  window.addEventListener("online",()=>{ if(cmap&&cMapReady&&store.get("fk_basemap","Dark")==="Aerial") applyBasemap("Aerial"); });
+  window.addEventListener("offline",()=>{ if(cmap&&cMapReady&&store.get("fk_basemap","Dark")==="Aerial") applyBasemap("Aerial"); });
   let terrainOn=store.get("fk_terrain","1")!=="0";
   function applyTerrain(){
     if(cmap&&cMapReady){ try{ cmap.setTerrain(terrainOn?{source:"dem-src",exaggeration:1.5}:null); }catch(e){} }
@@ -1972,6 +1980,7 @@
   const ESRI_IMG="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
   const ESRI_REF="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
   const OSM_RASTER="https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+  const USGS_IMG="https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}";
   const DEM_TILE="https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
   function buildMap(){
     try{ cmap=new maplibregl.Map({container:"custMap",style:MAP_STYLE,center:[-120.5,40.5],zoom:5,attributionControl:false}); }
@@ -2000,6 +2009,8 @@
         cmap.addLayer({id:"esri",type:"raster",source:"esri-src",layout:{visibility:"none"}});
         cmap.addLayer({id:"esri-ref",type:"raster",source:"esriref-src",layout:{visibility:"none"}});
         cmap.addLayer({id:"osm",type:"raster",source:"osm-src",layout:{visibility:"none"}});
+        cmap.addSource("usgs-src",{type:"raster",tiles:[USGS_IMG],tileSize:256,maxzoom:16,attribution:"Imagery: USGS"});
+        cmap.addLayer({id:"usgs",type:"raster",source:"usgs-src",layout:{visibility:"none"}});
         cmap.addSource("sites",{type:"geojson",data:sitesGeo(cShown),cluster:true,clusterRadius:48,clusterMaxZoom:14});
         cmap.addLayer({id:"clusters",type:"circle",source:"sites",filter:["has","point_count"],paint:{
           "circle-color":["step",["get","point_count"],"#46566b",10,"#5d7392",50,"#9a7b35"],
@@ -2095,12 +2106,25 @@
     // terrain DEM tiles (drive hillshade now; feed line-of-sight later). Capped at z13.
     const dem=[];
     for(let zz=zLo; zz<=13; zz++){ for(const [tz,tx,ty] of tilesForBounds(b,zz)){ dem.push(fillTpl(DEM_TILE,tz,tx,ty)); } }
-    return { chromeUrls, tiles:[...new Set(tiles)], dem:[...new Set(dem)], zLo };
+    // USGS aerial imagery (cacheable; shown offline in place of Esri). Up to z16.
+    const aerial=[];
+    for(let zz=zLo; zz<=16; zz++){ for(const [tz,tx,ty] of tilesForBounds(b,zz)){ aerial.push(fillTpl(USGS_IMG,tz,tx,ty)); } }
+    return { chromeUrls, tiles:[...new Set(tiles)], dem:[...new Set(dem)], aerial:[...new Set(aerial)], zLo };
   }
   let dlBusy=false, dlCancel=false, dlPlan=null, dlBounds=null;
   function showDl(){ $("#dlOverlay").classList.remove("hidden"); }
   function hideDl(){ $("#dlOverlay").classList.add("hidden"); }
   function setDlBar(done,total){ const f=$("#dlBar"); if(f) f.style.width=(total?Math.round(done/total*100):0)+"%"; }
+  function wantAerial(){ const c=$("#dlAerial"); return !!(c&&c.checked); }
+  function updateDlEstimate(){
+    if(!dlPlan) return;
+    const nv=dlPlan.tiles.length, nd=dlPlan.dem.length, na=wantAerial()?dlPlan.aerial.length:0, total=nv+nd+na;
+    if(!total){ $("#dlSub").textContent="Nothing to save for this view."; $("#dlGo").classList.add("hidden"); return; }
+    if(total>MAX_OFFLINE_TILES){ $("#dlSub").textContent="Too large ("+total+" tiles) \u2014 zoom in"+(na?" or turn off aerial":"")+"."; $("#dlGo").classList.add("hidden"); return; }
+    const mb=Math.max(1,Math.round(nv*0.045 + nd*0.12 + na*0.03));
+    $("#dlSub").textContent="~"+total+" tiles \u00B7 about "+mb+" MB \u00B7 basemap + terrain"+(na?" + aerial":"");
+    $("#dlGo").classList.remove("hidden");
+  }
   async function beginSaveOffline(){
     if(dlBusy) return;
     if(!cmap||!cMapReady){ toast("Open the map first."); return; }
@@ -2108,33 +2132,47 @@
     const bb=cmap.getBounds(); dlBounds={w:bb.getWest(),s:bb.getSouth(),e:bb.getEast(),n:bb.getNorth()};
     const zoom=Math.floor(cmap.getZoom());
     $("#dlTitle").textContent="Save this area offline"; $("#dlSub").textContent="Preparing\u2026";
-    $("#dlGo").classList.add("hidden"); $("#dlBarWrap").classList.add("hidden"); setDlBar(0,1);
+    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlBarWrap").classList.add("hidden"); setDlBar(0,1);
     $("#dlCancel").textContent="Cancel"; showDl();
     let style; try{ style=await fetch(MAP_STYLE,{mode:"cors"}).then(r=>r.json()); }catch(e){ hideDl(); toast("Couldn't reach the map server."); return; }
     const chrome=await gatherStyleResources(style);
     dlPlan=planOffline(dlBounds,zoom,chrome);
-    const nv=dlPlan.tiles.length, nd=dlPlan.dem.length, total=nv+nd;
-    if(!total){ hideDl(); toast("Nothing to save for this view."); return; }
-    if(total>MAX_OFFLINE_TILES){ hideDl(); toast("Area too large \u2014 zoom in or frame a smaller area."); return; }
-    const mb=Math.max(1,Math.round(nv*0.045 + nd*0.12));
-    $("#dlSub").textContent="~"+total+" tiles \u00B7 about "+mb+" MB \u00B7 basemap + terrain";
-    $("#dlGo").classList.remove("hidden");
+    if(!dlPlan.tiles.length && !dlPlan.dem.length){ hideDl(); toast("Nothing to save for this view."); return; }
+    $("#dlOpt").classList.remove("hidden");
+    updateDlEstimate();
   }
   async function runSaveOffline(){
     if(dlBusy||!dlPlan) return;
     dlBusy=true; dlCancel=false;
-    $("#dlGo").classList.add("hidden"); $("#dlBarWrap").classList.remove("hidden"); $("#dlCancel").textContent="Stop";
-    const all=dlPlan.chromeUrls.concat(dlPlan.tiles, dlPlan.dem), total=all.length;
+    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlBarWrap").classList.remove("hidden"); $("#dlCancel").textContent="Stop";
+    const items=[];
+    dlPlan.chromeUrls.forEach(u=>items.push([u,false]));
+    dlPlan.tiles.forEach(u=>items.push([u,false]));
+    dlPlan.dem.forEach(u=>items.push([u,false]));
+    const withAerial=wantAerial();
+    if(withAerial) dlPlan.aerial.forEach(u=>items.push([u,true]));   // raster imagery
+    const total=items.length;
     const save=$("#mSave"); if(save) save.classList.add("busy");
     let done=0, ok=0; const cache=await caches.open(MAPCACHE); const CONC=6;
-    for(let i=0;i<all.length && !dlCancel;i+=CONC){
-      const batch=all.slice(i,i+CONC);
-      await Promise.all(batch.map(async u=>{ try{ const r=await fetch(u,{mode:"cors"}); if(r&&r.ok){ await cache.put(u,r.clone()); ok++; } }catch(e){} done++; }));
+    for(let i=0;i<items.length && !dlCancel;i+=CONC){
+      const batch=items.slice(i,i+CONC);
+      await Promise.all(batch.map(async pair=>{
+        const u=pair[0], raster=pair[1];
+        try{
+          // CORS first (normal-sized cache entry); for raster imagery fall back to opaque if CORS is unavailable
+          let r=await fetch(u,{mode:"cors"});
+          if(!(r&&r.ok)&&raster){ try{ r=await fetch(u,{mode:"no-cors"}); }catch(e2){ r=null; } }
+          if(r&&(r.ok||r.type==="opaque")){ await cache.put(u,r.clone()); ok++; }
+        }catch(e){
+          if(raster){ try{ const r2=await fetch(u,{mode:"no-cors"}); if(r2&&(r2.type==="opaque"||r2.ok)){ await cache.put(u,r2.clone()); ok++; } }catch(e3){} }
+        }
+        done++;
+      }));
       setDlBar(done,total); $("#dlSub").textContent=done+" / "+total+" tiles";
     }
     dlBusy=false; if(save) save.classList.remove("busy"); hideDl();
     if(dlCancel){ toast("Stopped \u2014 partial area saved ("+ok+" tiles)"); }
-    else { toast("Saved "+ok+" tiles for offline"); }
+    else { toast("Saved "+ok+" tiles for offline"+(withAerial?" (with aerial)":"")); }
     try{ const regions=JSON.parse(store.get("fk_offline_regions","[]")||"[]");
       regions.push({date:Date.now(), w:dlBounds.w,s:dlBounds.s,e:dlBounds.e,n:dlBounds.n, tiles:ok}); 
       store.set("fk_offline_regions",JSON.stringify(regions)); }catch(e){}
@@ -2142,6 +2180,7 @@
   }
   $("#mSave") && $("#mSave").addEventListener("click",beginSaveOffline);
   $("#dlGo") && $("#dlGo").addEventListener("click",runSaveOffline);
+  $("#dlAerial") && $("#dlAerial").addEventListener("change",updateDlEstimate);
   $("#dlCancel") && $("#dlCancel").addEventListener("click",()=>{ if(dlBusy){ dlCancel=true; } else { hideDl(); } });
   async function refreshOfflineStat(){
     const el=$("#offlineStat"); if(!el) return;
