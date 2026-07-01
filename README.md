@@ -150,15 +150,17 @@ clearing the database all live in **Settings → Data** — see below.)
   the panel to a peek** so you can see the map and sightlines, then tap again to bring
   the full results back — the **X** exits line-of-sight entirely.
 
-  **Include tree canopy (measured):** the panel has an opt-in toggle that folds in
-  measured tree-canopy heights, so a sightline crossing a tree line reads as blocked
-  even where the bare ground is clear. The canopy data comes from the Meta/WRI 1-meter
-  global canopy map (free, and it covers California), read on the fly. It needs a
-  signal and isn't stored offline, so it's online-only and experimental — if it can't
-  be reached (no signal, no coverage, or the data host blocks the request) the panel
-  says so and falls back to bare terrain. Buildings and other structures aren't in the
-  canopy data, so even with it on, treat the result as planning guidance rather than a
-  guarantee — always keep your own eyes on the aircraft.
+  **Include tree canopy:** an opt-in toggle that folds tree height into the sightline,
+  so a line crossing a tree stand reads as blocked even where the bare ground is clear.
+  It tries to use the measured Meta/WRI 1-meter canopy map first, but that data is
+  served from a store that (at least right now) doesn't allow a browser to read it
+  directly — so in practice FieldKey falls back to a **typical tree height** you set
+  (default 50 ft) and applies it along each sightline. Set it to match your territory's
+  tree lines; a taller value is more conservative. This works offline and needs no
+  signal. If measured 1-meter data is ever made reachable (e.g. through a small proxy),
+  the toggle uses it automatically and the panel says "measured." Either way, buildings
+  and structures aren't included, so treat the result as planning guidance and keep
+  your own eyes on the aircraft.
 - **Select & export** — every row has a circle on the left; tap it to pick
   specific assets (a bar shows how many are selected). This is the same selection
   you build by tapping pins on the **Map**, and the **Selected** filter shows it.

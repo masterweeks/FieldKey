@@ -1,0 +1,6 @@
+# Merge this block into your project's existing supabase/config.toml.
+# It lets the canopy function be called without a login token (the map has none).
+# Alternatively, skip this and just deploy with:  supabase functions deploy canopy --no-verify-jwt
+
+[functions.canopy]
+verify_jwt = false

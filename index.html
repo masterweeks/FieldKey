@@ -680,7 +680,11 @@
       <input type="number" id="losFt" min="1" step="1" inputmode="numeric" />
     </div>
   </div>
-  <label class="rtopt"><input type="checkbox" id="losCanopy" /> <span>Include tree canopy <span style="color:var(--faint);font-weight:500">(measured, needs signal)</span></span></label>
+  <label class="rtopt"><input type="checkbox" id="losCanopy" /> <span>Include tree canopy</span></label>
+  <div class="losheight hidden" id="losCanopyRow" style="margin:2px 0 4px">
+    <span class="label" style="flex:0 0 auto">Typical tree height (ft)</span>
+    <input type="number" id="losCanopyFt" min="0" step="5" inputmode="numeric" style="max-width:90px" />
+  </div>
   <ol class="rtlist" id="losList"></ol>
   <div class="mapbar-row main">
     <button class="btn ghost" id="losMove" type="button">Move parking point</button>
@@ -834,6 +838,7 @@
   <div class="sgroup"><label class="label">Average driving speed (mph)</label><input type="number" id="sSpeed" min="1" step="1" inputmode="numeric" /></div>
   <div class="sgroup"><label class="label">Vehicle weight (lbs)</label><input type="number" id="sVeh" min="500" step="100" inputmode="numeric" /><p class="note">Used to estimate the extra fuel from climbing on hilly routes.</p></div>
   <div class="sgroup"><label class="label">Your height (ft) — for line of sight</label><input type="number" id="sObs" min="3" max="8" step="0.1" inputmode="decimal" /><p class="note">Your standing eye height, used when checking which assets you can see over the terrain from a parking point. E.g. 6.3 for about 6'4".</p></div>
+  <div class="sgroup"><label class="label">Canopy proxy URL (optional)</label><input type="url" id="sCanopyProxy" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://….supabase.co/functions/v1/canopy" /><p class="note">Unlocks measured 1&#8209;meter tree-canopy data in line-of-sight. Paste your canopy proxy endpoint here. Leave blank to use the manual typical-height estimate.</p></div>
   <p class="note" style="text-align:center;margin-top:14px">FieldKey · v1 · runs offline once added to your Home Screen</p>
 </div>
 
@@ -862,7 +867,7 @@
     name:"Obii weeks", lan:"OXWC", phone:"3052196892",
     issue:"need code/contact info", work:"Drone inspection",
     provider:"osm", email:"", gkey:"", delay:"1100",
-    mpg:"22", fuelprice:"4.75", avgspeed:"40", vehweight:"4800", obsft:"6.33",
+    mpg:"22", fuelprice:"4.75", avgspeed:"40", vehweight:"4800", obsft:"6.33", canopyproxy:"",
     latestKml:"",
     smsTemplate:"Hey [Customer name] this is Cyberhawk with PGE, I need to complete an aerial inspection at [customer address]. Let me know what time during business hours works for you."
   };
@@ -1305,7 +1310,7 @@
     $("#sName").value=cfg.name; $("#sLan").value=cfg.lan; $("#sPhone").value=cfg.phone;
     $("#sIssue").value=cfg.issue; $("#sWork").value=cfg.work;
     $("#sEmail").value=cfg.email; $("#sGkey").value=cfg.gkey; $("#sDelay").value=cfg.delay;
-    $("#sMpg").value=cfg.mpg; $("#sFuel").value=cfg.fuelprice; $("#sSpeed").value=cfg.avgspeed; $("#sVeh").value=cfg.vehweight; $("#sObs").value=cfg.obsft;
+    $("#sMpg").value=cfg.mpg; $("#sFuel").value=cfg.fuelprice; $("#sSpeed").value=cfg.avgspeed; $("#sVeh").value=cfg.vehweight; $("#sObs").value=cfg.obsft; $("#sCanopyProxy").value=cfg.canopyproxy;
     setProviderUI(cfg.provider);
     setSeg("segPinShape", store.get("fk_pin_shape","pin"));
     setSeg("segPinSize", store.get("fk_pin_size","medium"));
@@ -1329,9 +1334,9 @@
     cfg.issue=$("#sIssue").value.trim(); cfg.work=$("#sWork").value.trim();
     cfg.email=$("#sEmail").value.trim(); cfg.gkey=$("#sGkey").value.trim();
     cfg.delay=String(parseInt($("#sDelay").value,10)||0);
-    cfg.mpg=String(parseFloat($("#sMpg").value)||22); cfg.fuelprice=String(parseFloat($("#sFuel").value)||0); cfg.avgspeed=String(parseFloat($("#sSpeed").value)||40); cfg.vehweight=String(parseFloat($("#sVeh").value)||4800); cfg.obsft=String(parseFloat($("#sObs").value)||6.33);
+    cfg.mpg=String(parseFloat($("#sMpg").value)||22); cfg.fuelprice=String(parseFloat($("#sFuel").value)||0); cfg.avgspeed=String(parseFloat($("#sSpeed").value)||40); cfg.vehweight=String(parseFloat($("#sVeh").value)||4800); cfg.obsft=String(parseFloat($("#sObs").value)||6.33); cfg.canopyproxy=($("#sCanopyProxy").value||"").trim();
     cfg.provider=cfg._pendProvider||cfg.provider;
-    for(const k of ["name","lan","phone","issue","work","email","gkey","delay","mpg","fuelprice","avgspeed","vehweight","obsft","provider"]) store.set("fk_"+k,cfg[k]);
+    for(const k of ["name","lan","phone","issue","work","email","gkey","delay","mpg","fuelprice","avgspeed","vehweight","obsft","canopyproxy","provider"]) store.set("fk_"+k,cfg[k]);
     if(results.length) renderTickets();
     closeSheet(); toast("Settings saved");
   });
@@ -2695,12 +2700,12 @@
   /* ---------------- line of sight (Phase 6) ---------------- */
   const LOS_REFR=1.13, R_EARTH=6371000;
   let losMode=false, losPlacing=false, losObs=null, losAssetFt=null, losToken=0, losResults=[];
-  let losCanopy=false, losCanopyStatus="off";
+  let losCanopy=false, losCanopyStatus="off", losCanopyManualFt=50, _canopyProbeFailed=false;
 
   /* --- measured tree-canopy heights from Meta/WRI 1m COGs (Phase 7, opt-in, online) --- */
   const GEOTIFF_CDN="https://cdn.jsdelivr.net/npm/geotiff@3.0.5/dist-browser/geotiff.js";
   const CANOPY_QK_Z=9;
-  const CANOPY_URL=qk=>"https://dataforgood-fb-data.s3.amazonaws.com/forests/v1/alsgedi_global_v6_float/chm/"+qk+".tif";
+  const CANOPY_URL=qk=>{ const px=(store.get("fk_canopyproxy","")||"").trim(); return px ? (px.replace(/\/+$/,"")+"?qk="+qk) : ("https://dataforgood-fb-data.s3.amazonaws.com/forests/v1/alsgedi_global_v6_float/chm/"+qk+".tif"); };
   const _cogCache=new Map(); let _geotiffPromise=null;
   function loadGeoTIFF(){
     if(window.GeoTIFF) return Promise.resolve(window.GeoTIFF);
@@ -2731,7 +2736,7 @@
     catch(e){ return null; }
   }
   function obsHeightM(){ return (parseFloat(store.get("fk_obsft","6.33"))||6.33)*0.3048; }
-  async function lineOfSight(obs,obsGround,target,tgtGround,tgtH,canopyOn){
+  async function lineOfSight(obs,obsGround,target,tgtGround,tgtH,canopyMode,manualM){
     const D=haversineKm(obs,target)*1000;
     const obsE=obsGround+obsHeightM(), tgtE=tgtGround+tgtH, Reff=R_EARTH*LOS_REFR;
     if(D<1) return {ok:true,blocked:false,clearAglFt:tgtH/0.3048};
@@ -2740,7 +2745,8 @@
     for(let i=1;i<nSteps;i++){ const t=i/nSteps;
       const p=[obs[0]+(target[0]-obs[0])*t, obs[1]+(target[1]-obs[1])*t];
       let terr=await sampleElevation(p[0],p[1]); if(terr==null) return {ok:false};
-      if(canopyOn){ const cp=await sampleCanopyM(p[0],p[1]); if(cp!=null&&cp>0) terr+=cp; }
+      if(canopyMode==="measured"){ const cp=await sampleCanopyM(p[0],p[1]); if(cp!=null&&cp>0) terr+=cp; }
+      else if(canopyMode==="manual"){ terr+=manualM; }
       const di=D*t, drop=(di*(D-di))/(2*Reff), sight=obsE+(tgtE-obsE)*t;
       if(sight-drop<terr) blocked=true;
       const needE=obsE+(terr+drop-obsE)/t; if(needE>reqTgtE) reqTgtE=needE;
@@ -2754,14 +2760,21 @@
     const sel=customers.filter(c=>cSel.has(c.id));
     const assets=(sel.length?sel:mapList()).filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o);});
     const tgtH=(losAssetFt||40)*0.3048, noElev=(obsGround==null);
-    // decide whether measured canopy is usable for this area (one probe at the observer)
-    let canopyOn=false; losCanopyStatus = losCanopy ? "checking" : "off";
-    if(losCanopy && !noElev){ const probe=await sampleCanopyM(obs[0],obs[1]); if(losToken!==token) return; if(probe==null){ canopyOn=false; losCanopyStatus="unavailable"; } else { canopyOn=true; losCanopyStatus="on"; } }
+    // canopy: try measured (Meta COG); fall back to a manual typical height if it can't be read
+    let canopyMode=null; losCanopyStatus = losCanopy ? "checking" : "off";
+    if(losCanopy && !noElev){
+      let probe=null;
+      if(!_canopyProbeFailed){ probe=await sampleCanopyM(obs[0],obs[1]); if(losToken!==token) return; if(probe==null) _canopyProbeFailed=true; }
+      if(probe!=null){ canopyMode="measured"; losCanopyStatus="measured"; }
+      else if((losCanopyManualFt||0)>0){ canopyMode="manual"; losCanopyStatus="manual"; }
+      else { canopyMode=null; losCanopyStatus="unavailable"; }
+    }
+    const manualM=(losCanopyManualFt||0)*0.3048;
     const results=[], feats=[];
     for(const c of assets){ const T=[parseFloat(c.lat),parseFloat(c.lng)];
       let r;
       if(noElev) r={ok:false};
-      else { const tg=await sampleElevation(T[0],T[1]); if(losToken!==token) return; r=(tg==null)?{ok:false}:await lineOfSight(obs,obsGround,T,tg,tgtH,canopyOn); if(losToken!==token) return; }
+      else { const tg=await sampleElevation(T[0],T[1]); if(losToken!==token) return; r=(tg==null)?{ok:false}:await lineOfSight(obs,obsGround,T,tg,tgtH,canopyMode,manualM); if(losToken!==token) return; }
       const state=!r.ok?"unknown":(r.blocked?"blocked":"clear");
       results.push({c,state,clearAglFt:r.clearAglFt});
       feats.push({type:"Feature",properties:{state},geometry:{type:"LineString",coordinates:[[obs[1],obs[0]],[T[1],T[0]]]}});
@@ -2779,7 +2792,7 @@
     else if(r.length===0) sum="No located sites to check.";
     else if(unk===r.length) sum='Elevation data not available here<span class="rtsub">Save this area offline, or go online, to check line of sight.</span>';
     else{
-      const canopyTag = losCanopyStatus==="on" ? " · with tree canopy" : losCanopyStatus==="unavailable" ? " · canopy N/A here" : "";
+      const canopyTag = losCanopyStatus==="measured" ? " · with tree canopy (measured)" : losCanopyStatus==="manual" ? (" · with ~"+(losCanopyManualFt||0)+" ft canopy") : losCanopyStatus==="unavailable" ? " · canopy N/A here" : "";
       sum='<b style="color:var(--green)">'+clear+"</b> visible · <b style=\"color:var(--red)\">"+blocked+"</b> blocked"+(unk?(" · "+unk+" unknown"):"")+'<span class="rtsub">of '+r.length+" sites · your height "+store.get("fk_obsft","6.33")+" ft · asset "+(losAssetFt||40)+" ft"+canopyTag+"</span>";
     }
     $("#losSum").innerHTML=sum;
@@ -2793,10 +2806,12 @@
     $("#losFt").value=losAssetFt||40;
     { const t=$("#losCanopy"); if(t) t.checked=losCanopy; }
     $("#losNote").textContent = losCanopyStatus==="unavailable"
-      ? "Tree-canopy data couldn't be reached here (needs signal and coverage) — showing bare terrain."
-      : (losCanopyStatus==="on"
-        ? "Includes measured tree-canopy height. Green = clear, red = blocked; blocked sites show the drone height that clears it. Buildings aren't included."
-        : "Green = clear view, red = terrain blocks it. Blocked sites show the drone height that clears the terrain.");
+      ? "Tree-canopy data couldn't be reached and no typical height is set — showing bare terrain."
+      : losCanopyStatus==="manual"
+        ? ("Assumes ~"+(losCanopyManualFt||0)+" ft of tree canopy along each sightline (live 1 m data needs signal). Buildings aren't included — keep eyes on the aircraft.")
+        : (losCanopyStatus==="measured"
+          ? "Includes measured tree-canopy height. Green = clear, red = blocked; blocked sites show the drone height that clears it. Buildings aren't included."
+          : "Green = clear view, red = terrain blocks it. Blocked sites show the drone height that clears the terrain.");
   }
   function setObserver(lat,lng){
     losObs=[lat,lng]; losPlacing=false;
@@ -2809,9 +2824,10 @@
   }
   function openLos(){
     if(!cmap||!cMapReady){ toast("Open the map first"); return; }
-    losMode=true; losPlacing=true; losObs=null; losResults=[];
+    losMode=true; losPlacing=true; losObs=null; losResults=[]; _canopyProbeFailed=false;
     if(losAssetFt==null) losAssetFt=parseFloat(store.get("fk_los_ft","40"))||40;
-    losCanopy=store.get("fk_los_canopy","0")==="1"; { const t=$("#losCanopy"); if(t) t.checked=losCanopy; }
+    losCanopy=store.get("fk_los_canopy","0")==="1"; losCanopyManualFt=parseFloat(store.get("fk_los_canopy_ft","50")); if(isNaN(losCanopyManualFt))losCanopyManualFt=50;
+    { const t=$("#losCanopy"); if(t) t.checked=losCanopy; } { const f=$("#losCanopyFt"); if(f) f.value=losCanopyManualFt; } { const row=$("#losCanopyRow"); if(row) row.classList.toggle("hidden",!losCanopy); }
     clearLosOverlays();
     $("#losBanner").classList.remove("hidden");
     $("#mLos").classList.add("on");
@@ -2832,7 +2848,8 @@
   { const b=$("#losFt"); if(b) b.addEventListener("change",()=>losSetFt(parseFloat($("#losFt").value)||40)); }
   { const b=$("#losPreDist"); if(b) b.addEventListener("click",()=>losSetFt(40)); }
   { const b=$("#losPreTx"); if(b) b.addEventListener("click",()=>losSetFt(100)); }
-  { const b=$("#losCanopy"); if(b) b.addEventListener("change",()=>{ losCanopy=b.checked; store.set("fk_los_canopy",losCanopy?"1":"0"); if(losObs){ $("#losSum").textContent="Checking line of sight\u2026"; computeLos(); } }); }
+  { const b=$("#losCanopy"); if(b) b.addEventListener("change",()=>{ losCanopy=b.checked; store.set("fk_los_canopy",losCanopy?"1":"0"); { const row=$("#losCanopyRow"); if(row) row.classList.toggle("hidden",!losCanopy); } if(losObs){ $("#losSum").textContent="Checking line of sight\u2026"; computeLos(); } }); }
+  { const f=$("#losCanopyFt"); if(f) f.addEventListener("change",()=>{ let v=parseFloat(f.value); if(isNaN(v)||v<0)v=0; losCanopyManualFt=v; store.set("fk_los_canopy_ft",String(v)); if(losObs&&losCanopy){ $("#losSum").textContent="Checking line of sight\u2026"; computeLos(); } }); }
   function losToggleCollapse(){ $("#losSheet").classList.toggle("loscol"); }
   { const w=$("#losSumWrap"); if(w) w.addEventListener("click",losToggleCollapse); }
   { const g=$("#losSheet .grab"); if(g){ g.style.cursor="pointer"; g.addEventListener("click",losToggleCollapse); } }
