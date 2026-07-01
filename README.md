@@ -146,8 +146,19 @@ clearing the database all live in **Settings → Data** — see below.)
   **Settings → Route & fuel**. It accounts for earth curvature, and like the climb
   data it reads elevation online or from any area you've saved offline (outside a
   saved area with no signal it says so). Tap **Move parking point** to try another
-  spot, or **Done** to clear the lines. This is a terrain estimate — trees, buildings,
-  and structures aren't in the elevation data, so treat it as planning guidance.
+  spot, or **Done** to clear the lines. Tap the summary (or the handle) to **collapse
+  the panel to a peek** so you can see the map and sightlines, then tap again to bring
+  the full results back — the **X** exits line-of-sight entirely.
+
+  **Include tree canopy (measured):** the panel has an opt-in toggle that folds in
+  measured tree-canopy heights, so a sightline crossing a tree line reads as blocked
+  even where the bare ground is clear. The canopy data comes from the Meta/WRI 1-meter
+  global canopy map (free, and it covers California), read on the fly. It needs a
+  signal and isn't stored offline, so it's online-only and experimental — if it can't
+  be reached (no signal, no coverage, or the data host blocks the request) the panel
+  says so and falls back to bare terrain. Buildings and other structures aren't in the
+  canopy data, so even with it on, treat the result as planning guidance rather than a
+  guarantee — always keep your own eyes on the aircraft.
 - **Select & export** — every row has a circle on the left; tap it to pick
   specific assets (a bar shows how many are selected). This is the same selection
   you build by tapping pins on the **Map**, and the **Selected** filter shows it.

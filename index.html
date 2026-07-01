@@ -252,6 +252,13 @@
   .losbanx{appearance:none;border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:600;padding:2px 4px}
   .losheight{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .losheight input{flex:1;min-width:70px}
+  .losSumWrap{position:relative;cursor:pointer}
+  .losChev{position:absolute;top:50%;right:12px;transform:translateY(-50%);color:var(--muted);font-size:20px;line-height:1;pointer-events:none;transition:transform .22s}
+  .sheet.loscol .losChev{transform:translateY(-50%) rotate(180deg)}
+  .sheet.show.loscol{transform:translateY(calc(100% - 188px))}
+  .loshint{font-size:11px;color:var(--faint);text-align:center;margin:-4px 0 2px}
+  .sheet.loscol .loshint::after{content:"tap to show results"}
+  .sheet:not(.loscol) .loshint::after{content:"tap the summary to see the map"}
   .losline{display:flex;align-items:center;gap:8px}
 
   .empty{color:var(--faint);font-family:var(--mono);font-size:12.5px;text-align:center;padding:26px 10px;border:1px dashed var(--line);border-radius:12px}
@@ -660,7 +667,11 @@
 <div class="sheet" id="losSheet" role="dialog" aria-label="Line of sight">
   <div class="grab"></div>
   <h2>Line of sight</h2>
-  <div class="rtsum" id="losSum">Checking\u2026</div>
+  <div class="losSumWrap" id="losSumWrap">
+    <div class="rtsum" id="losSum">Checking\u2026</div>
+    <span class="losChev" aria-hidden="true">&#9662;</span>
+  </div>
+  <div class="loshint" id="losHint"></div>
   <div class="sgroup" style="margin-top:12px">
     <span class="label">Asset height (ft)</span>
     <div class="losheight">
@@ -669,6 +680,7 @@
       <input type="number" id="losFt" min="1" step="1" inputmode="numeric" />
     </div>
   </div>
+  <label class="rtopt"><input type="checkbox" id="losCanopy" /> <span>Include tree canopy <span style="color:var(--faint);font-weight:500">(measured, needs signal)</span></span></label>
   <ol class="rtlist" id="losList"></ol>
   <div class="mapbar-row main">
     <button class="btn ghost" id="losMove" type="button">Move parking point</button>
@@ -2683,8 +2695,43 @@
   /* ---------------- line of sight (Phase 6) ---------------- */
   const LOS_REFR=1.13, R_EARTH=6371000;
   let losMode=false, losPlacing=false, losObs=null, losAssetFt=null, losToken=0, losResults=[];
+  let losCanopy=false, losCanopyStatus="off";
+
+  /* --- measured tree-canopy heights from Meta/WRI 1m COGs (Phase 7, opt-in, online) --- */
+  const GEOTIFF_CDN="https://cdn.jsdelivr.net/npm/geotiff@3.0.5/dist-browser/geotiff.js";
+  const CANOPY_QK_Z=9;
+  const CANOPY_URL=qk=>"https://dataforgood-fb-data.s3.amazonaws.com/forests/v1/alsgedi_global_v6_float/chm/"+qk+".tif";
+  const _cogCache=new Map(); let _geotiffPromise=null;
+  function loadGeoTIFF(){
+    if(window.GeoTIFF) return Promise.resolve(window.GeoTIFF);
+    if(_geotiffPromise) return _geotiffPromise;
+    _geotiffPromise=new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=GEOTIFF_CDN; s.async=true; s.onload=()=>window.GeoTIFF?res(window.GeoTIFF):rej(new Error("no GeoTIFF")); s.onerror=()=>rej(new Error("geotiff load failed")); document.head.appendChild(s); });
+    return _geotiffPromise;
+  }
+  function _tileXY(lng,lat,z){ const n=Math.pow(2,z); const lr=lat*Math.PI/180; return [Math.floor((lng+180)/360*n), Math.floor((1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n)]; }
+  function _quadKey(x,y,z){ let qk=""; for(let i=z;i>0;i--){ let d=0; const m=1<<(i-1); if(x&m)d+=1; if(y&m)d+=2; qk+=""+d; } return qk; }
+  function _merc(lng,lat){ const R=20037508.342789244; const y=Math.log(Math.tan((90+lat)*Math.PI/360))/(Math.PI/180)*R/180; return [lng*R/180, y]; }
+  async function _getCog(qk){
+    if(_cogCache.has(qk)) return _cogCache.get(qk);
+    let out=null;
+    try{ const GT=await loadGeoTIFF(); const tiff=await GT.fromUrl(CANOPY_URL(qk)); const image=await tiff.getImage();
+      out={image, origin:image.getOrigin(), res:image.getResolution(), w:image.getWidth(), h:image.getHeight()}; }
+    catch(e){ out=null; }
+    _cogCache.set(qk,out); return out;
+  }
+  async function sampleCanopyM(lat,lng){
+    const [tx,ty]=_tileXY(lng,lat,CANOPY_QK_Z), qk=_quadKey(tx,ty,CANOPY_QK_Z);
+    const cog=await _getCog(qk); if(!cog) return null;
+    const [mx,my]=_merc(lng,lat);
+    const px=Math.floor((mx-cog.origin[0])/Math.abs(cog.res[0])), py=Math.floor((cog.origin[1]-my)/Math.abs(cog.res[1]));
+    if(px<0||py<0||px>=cog.w||py>=cog.h) return 0;
+    try{ const d=await cog.image.readRasters({window:[px,py,px+1,py+1]}); let v=d[0][0];
+      if(v==null||isNaN(v)||v<0||v>=250) return 0;   /* 255 = nodata (water/built-up/snow) */
+      return v; }
+    catch(e){ return null; }
+  }
   function obsHeightM(){ return (parseFloat(store.get("fk_obsft","6.33"))||6.33)*0.3048; }
-  async function lineOfSight(obs,obsGround,target,tgtGround,tgtH){
+  async function lineOfSight(obs,obsGround,target,tgtGround,tgtH,canopyOn){
     const D=haversineKm(obs,target)*1000;
     const obsE=obsGround+obsHeightM(), tgtE=tgtGround+tgtH, Reff=R_EARTH*LOS_REFR;
     if(D<1) return {ok:true,blocked:false,clearAglFt:tgtH/0.3048};
@@ -2692,7 +2739,8 @@
     let blocked=false, reqTgtE=tgtE;
     for(let i=1;i<nSteps;i++){ const t=i/nSteps;
       const p=[obs[0]+(target[0]-obs[0])*t, obs[1]+(target[1]-obs[1])*t];
-      const terr=await sampleElevation(p[0],p[1]); if(terr==null) return {ok:false};
+      let terr=await sampleElevation(p[0],p[1]); if(terr==null) return {ok:false};
+      if(canopyOn){ const cp=await sampleCanopyM(p[0],p[1]); if(cp!=null&&cp>0) terr+=cp; }
       const di=D*t, drop=(di*(D-di))/(2*Reff), sight=obsE+(tgtE-obsE)*t;
       if(sight-drop<terr) blocked=true;
       const needE=obsE+(terr+drop-obsE)/t; if(needE>reqTgtE) reqTgtE=needE;
@@ -2706,11 +2754,14 @@
     const sel=customers.filter(c=>cSel.has(c.id));
     const assets=(sel.length?sel:mapList()).filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o);});
     const tgtH=(losAssetFt||40)*0.3048, noElev=(obsGround==null);
+    // decide whether measured canopy is usable for this area (one probe at the observer)
+    let canopyOn=false; losCanopyStatus = losCanopy ? "checking" : "off";
+    if(losCanopy && !noElev){ const probe=await sampleCanopyM(obs[0],obs[1]); if(losToken!==token) return; if(probe==null){ canopyOn=false; losCanopyStatus="unavailable"; } else { canopyOn=true; losCanopyStatus="on"; } }
     const results=[], feats=[];
     for(const c of assets){ const T=[parseFloat(c.lat),parseFloat(c.lng)];
       let r;
       if(noElev) r={ok:false};
-      else { const tg=await sampleElevation(T[0],T[1]); if(losToken!==token) return; r=(tg==null)?{ok:false}:await lineOfSight(obs,obsGround,T,tg,tgtH); if(losToken!==token) return; }
+      else { const tg=await sampleElevation(T[0],T[1]); if(losToken!==token) return; r=(tg==null)?{ok:false}:await lineOfSight(obs,obsGround,T,tg,tgtH,canopyOn); if(losToken!==token) return; }
       const state=!r.ok?"unknown":(r.blocked?"blocked":"clear");
       results.push({c,state,clearAglFt:r.clearAglFt});
       feats.push({type:"Feature",properties:{state},geometry:{type:"LineString",coordinates:[[obs[1],obs[0]],[T[1],T[0]]]}});
@@ -2727,7 +2778,10 @@
     if(!losObs) sum="Tap the map to set your parking point.";
     else if(r.length===0) sum="No located sites to check.";
     else if(unk===r.length) sum='Elevation data not available here<span class="rtsub">Save this area offline, or go online, to check line of sight.</span>';
-    else sum='<b style="color:var(--green)">'+clear+"</b> visible · <b style=\"color:var(--red)\">"+blocked+"</b> blocked"+(unk?(" · "+unk+" unknown"):"")+'<span class="rtsub">of '+r.length+" sites · your height "+store.get("fk_obsft","6.33")+" ft · asset "+(losAssetFt||40)+" ft</span>";
+    else{
+      const canopyTag = losCanopyStatus==="on" ? " · with tree canopy" : losCanopyStatus==="unavailable" ? " · canopy N/A here" : "";
+      sum='<b style="color:var(--green)">'+clear+"</b> visible · <b style=\"color:var(--red)\">"+blocked+"</b> blocked"+(unk?(" · "+unk+" unknown"):"")+'<span class="rtsub">of '+r.length+" sites · your height "+store.get("fk_obsft","6.33")+" ft · asset "+(losAssetFt||40)+" ft"+canopyTag+"</span>";
+    }
     $("#losSum").innerHTML=sum;
     let html="";
     r.forEach(x=>{
@@ -2737,13 +2791,19 @@
     });
     $("#losList").innerHTML=html;
     $("#losFt").value=losAssetFt||40;
-    $("#losNote").textContent="Green = clear view, red = terrain blocks it. Blocked sites show the drone height that clears the terrain.";
+    { const t=$("#losCanopy"); if(t) t.checked=losCanopy; }
+    $("#losNote").textContent = losCanopyStatus==="unavailable"
+      ? "Tree-canopy data couldn't be reached here (needs signal and coverage) — showing bare terrain."
+      : (losCanopyStatus==="on"
+        ? "Includes measured tree-canopy height. Green = clear, red = blocked; blocked sites show the drone height that clears it. Buildings aren't included."
+        : "Green = clear view, red = terrain blocks it. Blocked sites show the drone height that clears the terrain.");
   }
   function setObserver(lat,lng){
     losObs=[lat,lng]; losPlacing=false;
     $("#losBanner").classList.add("hidden");
     try{ cmap.getSource("los-observer").setData({type:"FeatureCollection",features:[{type:"Feature",properties:{},geometry:{type:"Point",coordinates:[lng,lat]}}]}); }catch(e){}
     $("#losSum").textContent="Checking line of sight\u2026"; $("#losList").innerHTML="";
+    $("#losSheet").classList.remove("loscol");
     $("#losScrim").classList.add("show"); $("#losSheet").classList.add("show");
     computeLos();
   }
@@ -2751,6 +2811,7 @@
     if(!cmap||!cMapReady){ toast("Open the map first"); return; }
     losMode=true; losPlacing=true; losObs=null; losResults=[];
     if(losAssetFt==null) losAssetFt=parseFloat(store.get("fk_los_ft","40"))||40;
+    losCanopy=store.get("fk_los_canopy","0")==="1"; { const t=$("#losCanopy"); if(t) t.checked=losCanopy; }
     clearLosOverlays();
     $("#losBanner").classList.remove("hidden");
     $("#mLos").classList.add("on");
@@ -2758,7 +2819,7 @@
   function closeLos(){
     losMode=false; losPlacing=false; losObs=null;
     $("#losBanner").classList.add("hidden");
-    $("#losScrim").classList.remove("show"); $("#losSheet").classList.remove("show");
+    $("#losScrim").classList.remove("show"); $("#losSheet").classList.remove("show","loscol");
     $("#mLos").classList.remove("on");
     clearLosOverlays();
   }
@@ -2771,6 +2832,10 @@
   { const b=$("#losFt"); if(b) b.addEventListener("change",()=>losSetFt(parseFloat($("#losFt").value)||40)); }
   { const b=$("#losPreDist"); if(b) b.addEventListener("click",()=>losSetFt(40)); }
   { const b=$("#losPreTx"); if(b) b.addEventListener("click",()=>losSetFt(100)); }
+  { const b=$("#losCanopy"); if(b) b.addEventListener("change",()=>{ losCanopy=b.checked; store.set("fk_los_canopy",losCanopy?"1":"0"); if(losObs){ $("#losSum").textContent="Checking line of sight\u2026"; computeLos(); } }); }
+  function losToggleCollapse(){ $("#losSheet").classList.toggle("loscol"); }
+  { const w=$("#losSumWrap"); if(w) w.addEventListener("click",losToggleCollapse); }
+  { const g=$("#losSheet .grab"); if(g){ g.style.cursor="pointer"; g.addEventListener("click",losToggleCollapse); } }
 
   /* init DB */
   (async function(){
