@@ -114,6 +114,20 @@ clearing the database all live in **Settings → Data** — see below.)
   address) for that same set, ready to copy or share/email. The exported KML
   carries the name, phone, access, and status in each placemark, and re-imports
   cleanly through **Import KML / CSV**.
+- **Optimize route** — with sites selected (or all shown if none), tap **Optimize
+  route** and FieldKey works out an efficient order to drive them, starting from your
+  current GPS location. The ordering runs entirely on the device — no signal, no API
+  key needed — so it works in the field the same as everything else. It shows the
+  ordered stop list with per-leg distances, plus a total distance, drive-time, and
+  fuel-cost estimate (set your vehicle **MPG**, **fuel price**, and **average speed**
+  under **Settings → Route & fuel**). A **Round trip** toggle re-optimizes as a loop
+  back to your start. **Open route in Google Maps** hands the whole ordered run to
+  Google Maps for real turn-by-turn driving (up to 10 stops per link — for a longer
+  day it opens the first 10 and you build a second route for the rest). Apple Maps
+  can't take a multi-stop route from a link, so on Apple Maps use the per-site
+  directions on each pin instead. The optimizer measures in straight-line distance
+  with a road-distance factor, which is why the mileage and fuel are estimates —
+  your maps app gives the exact drive; this is for sequencing and rough planning.
 - **Select & export** — every row has a circle on the left; tap it to pick
   specific assets (a bar shows how many are selected). This is the same selection
   you build by tapping pins on the **Map**, and the **Selected** filter shows it.
