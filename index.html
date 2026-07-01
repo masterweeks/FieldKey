@@ -2735,17 +2735,48 @@
       return v; }
     catch(e){ return null; }
   }
+  // Batched: read every point on a sightline in one windowed request per tile
+  // (instead of one request per point). Returns meters parallel to pts, 0 where
+  // nodata/outside/unreadable. Big speed win over per-point reads on mobile.
+  async function sampleCanopyLine(pts){
+    const out=new Array(pts.length).fill(0);
+    const groups=new Map();
+    for(let i=0;i<pts.length;i++){ const [tx,ty]=_tileXY(pts[i][1],pts[i][0],CANOPY_QK_Z); const qk=_quadKey(tx,ty,CANOPY_QK_Z); let a=groups.get(qk); if(!a){a=[];groups.set(qk,a);} a.push(i); }
+    for(const [qk,idxs] of groups){
+      const cog=await _getCog(qk); if(!cog) continue;
+      const pxs=idxs.map(i=>{ const [mx,my]=_merc(pts[i][1],pts[i][0]); return [(mx-cog.origin[0])/Math.abs(cog.res[0]), (cog.origin[1]-my)/Math.abs(cog.res[1])]; });
+      let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
+      for(const [px,py] of pxs){ if(px<minx)minx=px; if(px>maxx)maxx=px; if(py<miny)miny=py; if(py>maxy)maxy=py; }
+      minx=Math.max(0,Math.floor(minx)); miny=Math.max(0,Math.floor(miny)); maxx=Math.min(cog.w,Math.ceil(maxx)+1); maxy=Math.min(cog.h,Math.ceil(maxy)+1);
+      if(maxx<=minx||maxy<=miny) continue;
+      const wpx=maxx-minx, hpx=maxy-miny, CAP=2048;
+      const outW=Math.min(wpx,CAP), outH=Math.min(hpx,CAP), resample=(outW<wpx||outH<hpx);
+      let band;
+      try{ const d=await cog.image.readRasters(resample?{window:[minx,miny,maxx,maxy],width:outW,height:outH}:{window:[minx,miny,maxx,maxy]}); band=d[0]; }
+      catch(e){ continue; }
+      const sx=outW/wpx, sy=outH/hpx;
+      for(let k=0;k<idxs.length;k++){ const [px,py]=pxs[k];
+        let ax=Math.floor((px-minx)*sx), ay=Math.floor((py-miny)*sy);
+        ax=Math.max(0,Math.min(outW-1,ax)); ay=Math.max(0,Math.min(outH-1,ay));
+        let v=band[ay*outW+ax]; if(v==null||isNaN(v)||v<0||v>=250)v=0;
+        out[idxs[k]]=v;
+      }
+    }
+    return out;
+  }
   function obsHeightM(){ return (parseFloat(store.get("fk_obsft","6.33"))||6.33)*0.3048; }
   async function lineOfSight(obs,obsGround,target,tgtGround,tgtH,canopyMode,manualM){
     const D=haversineKm(obs,target)*1000;
     const obsE=obsGround+obsHeightM(), tgtE=tgtGround+tgtH, Reff=R_EARTH*LOS_REFR;
     if(D<1) return {ok:true,blocked:false,clearAglFt:tgtH/0.3048};
     const step=Math.max(15,D/160), nSteps=Math.max(2,Math.ceil(D/step));
+    const pts=[]; for(let i=1;i<nSteps;i++){ const t=i/nSteps; pts.push([obs[0]+(target[0]-obs[0])*t, obs[1]+(target[1]-obs[1])*t]); }
+    let canopyVals=null;
+    if(canopyMode==="measured") canopyVals=await sampleCanopyLine(pts);
     let blocked=false, reqTgtE=tgtE;
-    for(let i=1;i<nSteps;i++){ const t=i/nSteps;
-      const p=[obs[0]+(target[0]-obs[0])*t, obs[1]+(target[1]-obs[1])*t];
+    for(let i=1;i<nSteps;i++){ const t=i/nSteps; const p=pts[i-1];
       let terr=await sampleElevation(p[0],p[1]); if(terr==null) return {ok:false};
-      if(canopyMode==="measured"){ const cp=await sampleCanopyM(p[0],p[1]); if(cp!=null&&cp>0) terr+=cp; }
+      if(canopyMode==="measured"){ if(canopyVals){ const cp=canopyVals[i-1]; if(cp>0) terr+=cp; } }
       else if(canopyMode==="manual"){ terr+=manualM; }
       const di=D*t, drop=(di*(D-di))/(2*Reff), sight=obsE+(tgtE-obsE)*t;
       if(sight-drop<terr) blocked=true;
