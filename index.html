@@ -115,6 +115,10 @@
   .maplibregl-popup-anchor-right .maplibregl-popup-tip{border-left-color:#1B212B!important}
   .maplibregl-popup-content b{color:var(--amber)}
   .maplibregl-popup-close-button{color:var(--muted);font-size:17px;padding:0 7px}
+  .popmin{display:flex;align-items:center;gap:10px}
+  .popmin b{color:var(--amber)}
+  .popmore{appearance:none;border:1px solid var(--line2);background:var(--bg3);color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.03em;border-radius:7px;padding:3px 8px;white-space:nowrap;flex:0 0 auto;cursor:pointer}
+  .popmore:active{background:var(--amber);color:#10141a;border-color:var(--amber)}
   .maplibregl-ctrl-attrib.maplibregl-compact{background:rgba(20,24,32,.8)!important}
   .maplibregl-ctrl-attrib a{color:var(--muted)!important}
   /* close button */
@@ -231,6 +235,7 @@
   .sheet .hint{color:var(--muted);font-size:13px;margin:0 0 16px}
   .sgroup{margin-bottom:15px}
   .sgroup .label{display:block;margin-bottom:6px}
+  .lopt{color:var(--faint);letter-spacing:0;text-transform:none;font-size:10px;margin-left:6px}
   .seg{display:flex;border:1px solid var(--line2);border-radius:11px;overflow:hidden}
   .seg button{flex:1;appearance:none;border:0;background:var(--bg3);color:var(--muted);padding:12px;font-size:14px;font-weight:600;font-family:var(--ui)}
   .seg button.sel{background:var(--amber);color:#1a1300}
@@ -329,6 +334,9 @@
   .dphone a{color:var(--amber);text-decoration:none;font-weight:700;font-size:12px;border:1px solid var(--line2);border-radius:8px;padding:6px 10px}
   .dphone a+a{margin-left:6px}
   .dphone .pn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .dphone .phrm{appearance:none;border:0;background:transparent;color:var(--faint);font-size:19px;line-height:1;padding:0 2px;font-weight:400;cursor:pointer}
+  .addphone{display:flex;gap:8px;margin-top:2px}
+  .addphone input{flex:1;min-width:0}
   .codebox{background:#1c1605;border:1px solid #4a3a0a;color:var(--amber);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:13px;margin-top:6px;white-space:pre-wrap;line-height:1.5}
   .axsval{font-family:var(--mono);font-size:14px;color:var(--ink)}
   .dinfo{display:flex;flex-direction:column;gap:1px;border:1px solid var(--line);border-radius:11px;overflow:hidden}
@@ -494,6 +502,7 @@
       <input type="file" id="impFile" accept=".csv,.kml,text/csv,text/plain,application/vnd.google-earth.kml+xml" style="display:none" />
       <p class="note">Your file never leaves your phone — parsing happens on-device. Only the coordinates are sent to the map service to look up addresses.</p>
       <button class="btn ghost" id="pasteEmailBtn" style="margin-top:16px">Import email return</button>
+      <button class="btn ghost" id="addContactBtn" style="margin-top:10px">Add contact manually</button>
     </div>
     <div class="searchrow"><input type="text" id="custSearch" placeholder="Search name, address, SAP, or phone…" /></div>
     <div class="filters" id="custFilters">
@@ -544,8 +553,11 @@
   <div class="grab"></div>
   <h2 id="dName">—</h2>
   <p class="hint" id="dMeta"></p>
+  <div class="sgroup"><label class="label">Name</label><input type="text" id="dNameEdit" autocapitalize="words" autocomplete="off" placeholder="Add a name\u2026" /></div>
   <div class="sgroup hidden" id="dNavGroup"><span class="label">Directions</span><div id="dNav"></div></div>
-  <div class="sgroup"><span class="label">Phones</span><div id="dPhones"></div></div>
+  <div class="sgroup"><span class="label">Phones</span><div id="dPhones"></div>
+    <div class="addphone"><input type="tel" id="dAddPhone" inputmode="tel" autocomplete="off" placeholder="Add a phone number\u2026" /><button class="btn ghost sm" id="dAddPhoneBtn" type="button">Add</button></div>
+  </div>
   <div class="sgroup"><span class="label">Access</span><div id="dAccess"></div></div>
   <div class="sgroup"><span class="label">Access issue</span><div id="dIssue"></div></div>
   <div class="sgroup"><span class="label">Record</span><div id="dInfo" class="dinfo"></div></div>
@@ -731,6 +743,21 @@
 </div>
 
 <!-- email import sheet -->
+<!-- add contact manually -->
+<div class="scrim" id="addScrim"></div>
+<div class="sheet" id="addSheet" role="dialog" aria-label="Add contact">
+  <div class="grab"></div>
+  <h2>Add contact</h2>
+  <p class="hint">For customer info that comes in by phone, text, or word of mouth. A name or a phone number is enough. Adding the SAP ID lets it match up automatically if the site later arrives in a KML.</p>
+  <div class="sgroup"><label class="label">Name</label><input type="text" id="acName" autocapitalize="words" autocomplete="off" placeholder="e.g. Jane Doe" /></div>
+  <div class="sgroup"><label class="label">Phone</label><input type="tel" id="acPhone" inputmode="tel" autocomplete="off" placeholder="e.g. (530) 555-1234" /></div>
+  <div class="sgroup"><label class="label">SAP ID <span class="lopt">optional</span></label><input type="text" id="acSap" inputmode="numeric" autocomplete="off" placeholder="9-digit SAP / equipment ID" /></div>
+  <div class="sgroup"><label class="label">Address <span class="lopt">optional</span></label><input type="text" id="acAddr" autocapitalize="words" autocomplete="off" placeholder="Street, city" /></div>
+  <div class="sgroup"><label class="label">Notes <span class="lopt">optional</span></label><textarea id="acNotes" placeholder="Anything worth remembering\u2026"></textarea></div>
+  <p class="note" id="acStat"></p>
+  <button class="btn primary" id="acSave" style="margin-top:12px">Add contact</button>
+</div>
+
 <div class="scrim" id="eScrim"></div>
 <div class="sheet" id="eSheet" role="dialog" aria-label="Import email">
   <div class="grab"></div>
@@ -1737,6 +1764,30 @@
 
   /* ---- detail sheet ---- */
   let curId=null;
+  let detailDirty=false;
+  function renderDPhones(c){
+    $("#dPhones").innerHTML=(c.phones&&c.phones.length)
+      ? c.phones.map((p,i)=>'<div class="dphone"><span class="pn">'+escapeHtml(p.display)+'</span>'
+          +'<a href="tel:'+p.tel+'">Call</a>'
+          +'<a href="'+smsHref(p.tel,buildMsg(cfg.smsTemplate,c.name,c.address))+'" data-sms="'+c.id+'">Text</a>'
+          +'<button class="phrm" data-phrm="'+i+'" type="button" aria-label="Remove number">\u00D7</button></div>').join("")
+      : '<p class="note">No phone number on file.</p>';
+    $("#dPhones").querySelectorAll("[data-sms]").forEach(a=>a.addEventListener("click",()=>markTexted(a.dataset.sms)));
+    $("#dPhones").querySelectorAll("[data-phrm]").forEach(b=>b.addEventListener("click",()=>dRemovePhone(+b.dataset.phrm)));
+    $("#dTextBtn").classList.toggle("force-hide",!(c.phones&&c.phones.length));
+  }
+  function dAddPhone(){
+    const c=findById(curId); if(!c) return;
+    const raw=($("#dAddPhone").value||"").trim(); if(!raw) return;
+    const ph=extractPhones(raw); if(!ph.length){ toast("That doesn't look like a phone number."); return; }
+    c.phones=c.phones||[]; let added=0; ph.forEach(p=>{ if(!c.phones.some(x=>x.tel===p.tel)){ c.phones.push(p); added++; } });
+    $("#dAddPhone").value=""; detailDirty=true; persist(); renderDPhones(c);
+    toast(added>1?(added+" numbers added"):added?"Number added":"Already on file");
+  }
+  function dRemovePhone(i){
+    const c=findById(curId); if(!c||!c.phones) return;
+    c.phones.splice(i,1); detailDirty=true; persist(); renderDPhones(c);
+  }
   function pad2(n){ return String(n).padStart(2,"0"); }
   function localISO(d){ return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate())+"T"+pad2(d.getHours())+":"+pad2(d.getMinutes()); }
   function defaultSchedule(){ const d=new Date(); d.setDate(d.getDate()+1); d.setHours(9,0,0,0); return localISO(d); }
@@ -1783,11 +1834,8 @@
     const hasC=c.lat&&c.lng&&!isNaN(+c.lat)&&!isNaN(+c.lng);
     $("#dNavGroup").classList.toggle("hidden",!hasC);
     $("#dNav").innerHTML=hasC?navLinks(+c.lat,+c.lng):"";
-    $("#dPhones").innerHTML=(c.phones&&c.phones.length)
-      ? c.phones.map(p=>'<div class="dphone"><span class="pn">'+escapeHtml(p.display)+'</span>'+
-          '<a href="tel:'+p.tel+'">Call</a>'+
-          '<a href="'+smsHref(p.tel,buildMsg(cfg.smsTemplate,c.name,c.address))+'" data-sms="'+c.id+'">Text</a></div>').join("")
-      : '<p class="note">No phone number on file.</p>';
+    $("#dNameEdit").value=c.name||""; $("#dAddPhone").value="";
+    renderDPhones(c);
     let ax=c.access?'<div class="axsval">'+escapeHtml(c.access)+'</div>':'<div class="note">None given</div>';
     if(c.accessNotes) ax+='<div class="codebox">'+escapeHtml(c.accessNotes.replace(/ \| /g,"\n"))+'</div>';
     $("#dAccess").innerHTML=ax;
@@ -1805,11 +1853,44 @@
     $("#dCount").textContent=c.textCount||0;
     $("#dNotes").value=c.notes||"";
     renderIssueSection(c);
-    $("#dTextBtn").classList.toggle("force-hide",!(c.phones&&c.phones.length));
-    $("#dPhones").querySelectorAll("[data-sms]").forEach(a=>a.addEventListener("click",()=>markTexted(a.dataset.sms)));
     $("#dScrim").classList.add("show"); $("#dSheet").classList.add("show");
   }
-  function closeDetail(){ $("#dScrim").classList.remove("show"); $("#dSheet").classList.remove("show"); curId=null; }
+  function closeDetail(){ $("#dScrim").classList.remove("show"); $("#dSheet").classList.remove("show"); curId=null; if(detailDirty){ detailDirty=false; renderCustomers(); } }
+
+  /* ---- add contact manually ---- */
+  function openAdd(){
+    ["acName","acPhone","acSap","acAddr","acNotes"].forEach(id=>{ const e=$("#"+id); if(e) e.value=""; });
+    $("#acStat").textContent="";
+    $("#addScrim").classList.add("show"); $("#addSheet").classList.add("show");
+    setTimeout(()=>{ const n=$("#acName"); if(n) n.focus(); },80);
+  }
+  function closeAdd(){ $("#addScrim").classList.remove("show"); $("#addSheet").classList.remove("show"); }
+  function saveAdd(){
+    const name=$("#acName").value.trim();
+    const phoneRaw=$("#acPhone").value.trim();
+    const sap=$("#acSap").value.replace(/\s+/g,"").trim();
+    const addr=$("#acAddr").value.trim();
+    const notes=$("#acNotes").value.trim();
+    const phones=phoneRaw?extractPhones(phoneRaw):[];
+    if(!name && !phones.length){ $("#acStat").textContent="Enter at least a name or a phone number."; return; }
+    if(phoneRaw && !phones.length){ $("#acStat").textContent="That phone number doesn't look right \u2014 check the digits."; return; }
+    if(sap && !/^\d{6,12}$/.test(sap)){ $("#acStat").textContent="A SAP ID should be 6\u201312 digits (or leave it blank)."; return; }
+    if(sap){
+      const existing=findById("sap_"+sap);
+      if(existing){
+        if(name) existing.name=name;
+        if(addr) existing.address=addr;
+        if(notes) existing.notes=(existing.notes?existing.notes+"\n":"")+notes;
+        (existing.phones=existing.phones||[]); phones.forEach(p=>{ if(!existing.phones.some(x=>x.tel===p.tel)) existing.phones.push(p); });
+        persist().then(()=>renderCustomers());
+        closeAdd(); toast("Updated existing SAP "+sap); return;
+      }
+    }
+    const c={id:newId(sap),sapId:sap,name:name,address:addr,lat:"",lng:"",phones:phones,access:"",accessNotes:"",extra:{},status:"new",textCount:0,lastTexted:"",notes:notes,assignment:"Manual entry"};
+    customers.push(c);
+    persist().then(()=>renderCustomers());
+    closeAdd(); toast(name?("Added "+name):"Contact added");
+  }
 
   /* ---- email + export sheets ---- */
   function openEmail(){ $("#eText").value=""; $("#eStat").textContent=""; $("#eScrim").classList.add("show"); $("#eSheet").classList.add("show"); }
@@ -1851,6 +1932,10 @@
   $("#tabbar").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>switchTab(b.dataset.tab)));
   $("#saveCustBtn").addEventListener("click",openSaveSheet);
   $("#pasteEmailBtn").addEventListener("click",openEmail);
+  { const b=$("#addContactBtn"); if(b) b.addEventListener("click",openAdd); }
+  { const b=$("#acSave"); if(b) b.addEventListener("click",saveAdd); }
+  { const s=$("#addScrim"); if(s) s.addEventListener("click",closeAdd); }
+  ["acName","acPhone","acSap","acAddr"].forEach(id=>{ const e=$("#"+id); if(e) e.addEventListener("keydown",ev=>{ if(ev.key==="Enter"){ ev.preventDefault(); saveAdd(); } }); });
   $("#eParse").addEventListener("click",parseAndMerge);
   $("#eScrim").addEventListener("click",closeEmail);
   $("#exportCustBtn").addEventListener("click",openExport);
@@ -1940,6 +2025,9 @@
   $("#dPlus").addEventListener("click",()=>{ const c=findById(curId); if(!c)return; c.textCount=(c.textCount||0)+1; $("#dCount").textContent=c.textCount; persist(); renderCustomers(); updateBadge(); });
   $("#dMinus").addEventListener("click",()=>{ const c=findById(curId); if(!c)return; c.textCount=Math.max(0,(c.textCount||0)-1); $("#dCount").textContent=c.textCount; persist(); renderCustomers(); updateBadge(); });
   $("#dNotes").addEventListener("input",e=>{ const c=findById(curId); if(c){ c.notes=e.target.value; persist(); } });
+  $("#dNameEdit").addEventListener("input",e=>{ const c=findById(curId); if(!c)return; c.name=e.target.value; detailDirty=true; persist(); $("#dName").textContent=assetTitle(c); $("#dMeta").textContent=[(c.sapId&&c.name)?c.name:"",stripUSA(c.address)].filter(Boolean).join("  \u00B7  "); });
+  { const b=$("#dAddPhoneBtn"); if(b) b.addEventListener("click",dAddPhone); }
+  { const e=$("#dAddPhone"); if(e) e.addEventListener("keydown",ev=>{ if(ev.key==="Enter"){ ev.preventDefault(); dAddPhone(); } }); }
   $("#dTextBtn").addEventListener("click",()=>{ if(curId) textCustomer(curId); });
   $("#dDelete").addEventListener("click",async()=>{
     const c=findById(curId); if(!c)return;
@@ -2052,7 +2140,7 @@
   });
 
   /* ---- customer map + KML export ---- */
-  let cmap=null, cMapReady=false, cShown=[], geoCtrl=null;
+  let cmap=null, cMapReady=false, cShown=[], geoCtrl=null, mapPopup=null;
   function withCoords(){ return customers.filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o)&&a>=-90&&a<=90&&o>=-180&&o<=180;}); }
   function mapList(){ return exportList().filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o)&&a>=-90&&a<=90&&o>=-180&&o<=180;}); }
   function siteFeature(c){ const la=parseFloat(c.lat),lo=parseFloat(c.lng); return {type:"Feature",geometry:{type:"Point",coordinates:[lo,la]},properties:{
@@ -2068,6 +2156,13 @@
   }
   function updateMCount(){ const e=$("#mNote"); if(e) e.textContent=mapCountLine(); const ex=$("#mExport"); if(ex) ex.textContent="Export KML"; updateBulkButtons(); }
   function refreshMarks(){ if(cmap&&cMapReady&&cmap.getSource("sites")) cmap.getSource("sites").setData(sitesGeo(cShown)); updateMCount(); updateSelBar(); }
+  function closeMapPopup(){ if(mapPopup){ try{mapPopup.remove();}catch(e){} mapPopup=null; } }
+  function popupFullHTML(p){ return "<b>"+escapeHtml(p.title)+"</b>"+(p.sub?"<br>"+escapeHtml(p.sub):"")+(p.axs?"<br>"+escapeHtml(p.axs):"")+(p.issue?'<br><span class="popissue">\u26A0\uFE0E '+escapeHtml(p.issue)+'</span>':"")+navLinks(p.lat,p.lng); }
+  function showPinPopup(coords,p){
+    closeMapPopup();
+    mapPopup=new maplibregl.Popup({offset:12}).setLngLat(coords).setHTML('<div class="popmin"><b>'+escapeHtml(p.title)+'</b><button class="popmore" type="button" aria-label="Show details">details \u25B8</button></div>').addTo(cmap);
+    const el=mapPopup.getElement(); if(el){ const btn=el.querySelector(".popmore"); if(btn) btn.addEventListener("click",()=>{ if(mapPopup) mapPopup.setHTML(popupFullHTML(p)); }); }
+  }
   function applyBasemap(choice){
     if(!cmap||!cMapReady)return;
     const aerial=choice==="Aerial", streets=choice==="Streets";
@@ -2255,11 +2350,9 @@
         cmap.on("click","sites-pts",ev=>{
           if(losMode) return;
           const f=ev.features[0], id=f.properties.id;
-          if(cSel.has(id))cSel.delete(id); else cSel.add(id);
-          refreshMarks();
-          const p=f.properties;
-          const html="<b>"+escapeHtml(p.title)+"</b>"+(p.sub?"<br>"+escapeHtml(p.sub):"")+(p.axs?"<br>"+escapeHtml(p.axs):"")+(p.issue?'<br><span class="popissue">\u26A0\uFE0E '+escapeHtml(p.issue)+'</span>':"")+navLinks(p.lat,p.lng);
-          new maplibregl.Popup({offset:12}).setLngLat(f.geometry.coordinates).setHTML(html).addTo(cmap);
+          if(cSel.has(id)){ cSel.delete(id); refreshMarks(); closeMapPopup(); return; }
+          cSel.add(id); refreshMarks();
+          showPinPopup(f.geometry.coordinates, f.properties);
         });
         ["clusters","sites-pts"].forEach(L=>{ cmap.on("mouseenter",L,()=>{cmap.getCanvas().style.cursor="pointer";}); cmap.on("mouseleave",L,()=>{cmap.getCanvas().style.cursor="";}); });
         cMapReady=true;
@@ -2559,7 +2652,7 @@
   $("#impCancel").addEventListener("click",reqCloseImport);
 
   (function addSheetCloseButtons(){
-    const closers={ dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, rtSheet:closeRoute, losSheet:closeLos };
+    const closers={ dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, rtSheet:closeRoute, losSheet:closeLos, addSheet:closeAdd };
     Object.keys(closers).forEach(id=>{
       const sh=document.getElementById(id); if(!sh)return;
       const bar=document.createElement("div"); bar.className="sheettop";
