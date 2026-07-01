@@ -59,7 +59,7 @@ clearing the database all live in **Settings → Data** — see below.)
   SAP ID is matched **by its structure** — a standalone 9-digit number — so it's
   found whether the sender labels it "SAP Equipment ID", "SAP ID", "Equipment ID",
   or doesn't label it at all. Phone numbers are pulled out **wherever they appear**
-  — even mid-line (e.g. `Mobile Primary  (541) 591-3438`) — and odd dash
+  — even mid-line (e.g. `Mobile Primary  (541) 000-0000`) — and odd dash
   characters that email programs sometimes substitute (en-dashes, etc.) are handled.
   The email's address, name, and phones are taken as authoritative; coordinates you
   already have are kept. (This is for email replies only — site files go through
@@ -77,7 +77,7 @@ clearing the database all live in **Settings → Data** — see below.)
   and a directions link. Filter chips (including **Latest KML** and **Selected**,
   which shows whatever you've picked in the list or on the map) and a search box
   that matches name, address, SAP ID, or **phone number** — phone matching ignores
-  formatting, so `5303398783`, `530-339-8783`, or even just the last few digits
+  formatting, so `5300000000`, `530-000-0000`, or even just the last few digits
   all find the right customer.
 - **Map & export KML** — the **Map** button opens a **full-screen** map of the
   customers you're currently working with: whatever the filter/search is showing,
