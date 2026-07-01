@@ -119,8 +119,13 @@ clearing the database all live in **Settings → Data** — see below.)
   current GPS location. The ordering runs entirely on the device — no signal, no API
   key needed — so it works in the field the same as everything else. It shows the
   ordered stop list with per-leg distances, plus a total distance, drive-time, and
-  fuel-cost estimate (set your vehicle **MPG**, **fuel price**, and **average speed**
-  under **Settings → Route & fuel**). A **Round trip** toggle re-optimizes as a loop
+  fuel-cost estimate (set your vehicle **MPG**, **fuel price**, **average speed**, and
+  **weight** under **Settings → Route & fuel**). The fuel estimate is **climb-aware**:
+  FieldKey reads the elevation along the route from the same terrain tiles the map
+  uses and adds the extra gas burned climbing, showing the total **feet of climb** in
+  the summary. Elevation works online, or offline for any area you've saved with
+  **Save offline** — outside a saved area with no signal it just notes the elevation
+  isn't available and gives the flat estimate. A **Round trip** toggle re-optimizes as a loop
   back to your start. **Open route in Google Maps** hands the whole ordered run to
   Google Maps for real turn-by-turn driving (up to 10 stops per link — for a longer
   day it opens the first 10 and you build a second route for the rest). Apple Maps
@@ -128,6 +133,21 @@ clearing the database all live in **Settings → Data** — see below.)
   directions on each pin instead. The optimizer measures in straight-line distance
   with a road-distance factor, which is why the mileage and fuel are estimates —
   your maps app gives the exact drive; this is for sequencing and rough planning.
+- **Line of sight** — tap **Line of sight**, then tap the map to drop your
+  parking/launch point. FieldKey walks the terrain between that point and each
+  selected asset (or all shown) and tells you which ones you can actually **see** over
+  the landscape — useful for judging whether you'll hold visual line of sight while
+  flying. It draws a **green** line to each asset you can see and a **red** line to
+  each one the terrain blocks, and lists them with a count. For blocked assets it
+  reports the **altitude the drone clears at** ("clears above ~X ft"), so you know how
+  high you'd need to fly to keep it in view. Asset height is adjustable right in the
+  panel — a **Distribution** preset (~40 ft), a **Transmission** preset for taller
+  lattice towers, or type any height; your own eye height is set once under
+  **Settings → Route & fuel**. It accounts for earth curvature, and like the climb
+  data it reads elevation online or from any area you've saved offline (outside a
+  saved area with no signal it says so). Tap **Move parking point** to try another
+  spot, or **Done** to clear the lines. This is a terrain estimate — trees, buildings,
+  and structures aren't in the elevation data, so treat it as planning guidance.
 - **Select & export** — every row has a circle on the left; tap it to pick
   specific assets (a bar shows how many are selected). This is the same selection
   you build by tapping pins on the **Map**, and the **Selected** filter shows it.

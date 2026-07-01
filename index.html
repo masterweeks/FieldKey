@@ -247,6 +247,12 @@
   .rtlist li .rtmain{flex:1;min-width:0}
   .rtlist li .rttitle{font-size:14px;color:var(--ink);font-weight:600}
   .rtlist li .rtmeta{font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:2px}
+  .losbanner{position:absolute;top:calc(env(safe-area-inset-top) + 76px);left:50%;transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:10px;background:rgba(20,24,31,.96);border:1px solid var(--amber);border-radius:12px;padding:9px 12px;max-width:88%;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+  .losbanner #losBannerText{font-size:13.5px;color:var(--ink);font-weight:600}
+  .losbanx{appearance:none;border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:600;padding:2px 4px}
+  .losheight{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .losheight input{flex:1;min-width:70px}
+  .losline{display:flex;align-items:center;gap:8px}
 
   .empty{color:var(--faint);font-family:var(--mono);font-size:12.5px;text-align:center;padding:26px 10px;border:1px dashed var(--line);border-radius:12px}
   .note{color:var(--muted);font-size:12px;margin-top:8px;line-height:1.5}
@@ -608,6 +614,7 @@
   </div>
   <button class="mapsave" id="mSave" type="button" aria-label="Save this area offline">&#8675; Save offline</button>
   <button class="mapsave mapterr" id="mTerr" type="button" aria-label="Toggle 3D terrain">&#9968; 3D</button>
+  <div class="losbanner hidden" id="losBanner"><span id="losBannerText">Tap the map to set your parking point</span><button class="losbanx" id="losCancel" type="button">Cancel</button></div>
   <div class="dloverlay hidden" id="dlOverlay">
     <div class="dlcard">
       <div class="dltitle" id="dlTitle">Save this area offline</div>
@@ -636,13 +643,38 @@
         <button class="btn ghost sm" id="mClear" type="button">Clear</button>
       </span>
     </div>
-    <button class="btn primary mapissue" id="mRoute" type="button">Optimize route</button>
+    <div class="mapbar-row main">
+      <button class="btn primary" id="mRoute" type="button">Optimize route</button>
+      <button class="btn ghost" id="mLos" type="button">Line of sight</button>
+    </div>
     <div class="mapbar-row main">
       <button class="btn primary" id="mReq" type="button">Build request</button>
       <button class="btn ghost" id="mExport" type="button">Export KML</button>
     </div>
     <button class="btn ghost issue mapissue" id="mFlag" type="button">Mark access issue</button>
   </div>
+</div>
+
+<!-- line-of-sight results sheet -->
+<div class="scrim" id="losScrim"></div>
+<div class="sheet" id="losSheet" role="dialog" aria-label="Line of sight">
+  <div class="grab"></div>
+  <h2>Line of sight</h2>
+  <div class="rtsum" id="losSum">Checking\u2026</div>
+  <div class="sgroup" style="margin-top:12px">
+    <span class="label">Asset height (ft)</span>
+    <div class="losheight">
+      <button class="btn ghost sm" data-ft="40" id="losPreDist" type="button">Distribution 40</button>
+      <button class="btn ghost sm" data-ft="100" id="losPreTx" type="button">Transmission 100</button>
+      <input type="number" id="losFt" min="1" step="1" inputmode="numeric" />
+    </div>
+  </div>
+  <ol class="rtlist" id="losList"></ol>
+  <div class="mapbar-row main">
+    <button class="btn ghost" id="losMove" type="button">Move parking point</button>
+    <button class="btn primary" id="losDone" type="button">Done</button>
+  </div>
+  <p class="note" id="losNote"></p>
 </div>
 
 <!-- optimized route sheet -->
@@ -788,6 +820,8 @@
   <div class="sgroup"><label class="label">Vehicle fuel economy (MPG)</label><input type="number" id="sMpg" min="1" step="1" inputmode="numeric" /></div>
   <div class="sgroup"><label class="label">Fuel price ($ / gallon)</label><input type="number" id="sFuel" min="0" step="0.01" inputmode="decimal" /></div>
   <div class="sgroup"><label class="label">Average driving speed (mph)</label><input type="number" id="sSpeed" min="1" step="1" inputmode="numeric" /></div>
+  <div class="sgroup"><label class="label">Vehicle weight (lbs)</label><input type="number" id="sVeh" min="500" step="100" inputmode="numeric" /><p class="note">Used to estimate the extra fuel from climbing on hilly routes.</p></div>
+  <div class="sgroup"><label class="label">Your height (ft) — for line of sight</label><input type="number" id="sObs" min="3" max="8" step="0.1" inputmode="decimal" /><p class="note">Your standing eye height, used when checking which assets you can see over the terrain from a parking point. E.g. 6.3 for about 6'4".</p></div>
   <p class="note" style="text-align:center;margin-top:14px">FieldKey · v1 · runs offline once added to your Home Screen</p>
 </div>
 
@@ -816,7 +850,7 @@
     name:"Obii weeks", lan:"OXWC", phone:"3052196892",
     issue:"need code/contact info", work:"Drone inspection",
     provider:"osm", email:"", gkey:"", delay:"1100",
-    mpg:"22", fuelprice:"4.75", avgspeed:"40",
+    mpg:"22", fuelprice:"4.75", avgspeed:"40", vehweight:"4800", obsft:"6.33",
     latestKml:"",
     smsTemplate:"Hey [Customer name] this is Cyberhawk with PGE, I need to complete an aerial inspection at [customer address]. Let me know what time during business hours works for you."
   };
@@ -1259,7 +1293,7 @@
     $("#sName").value=cfg.name; $("#sLan").value=cfg.lan; $("#sPhone").value=cfg.phone;
     $("#sIssue").value=cfg.issue; $("#sWork").value=cfg.work;
     $("#sEmail").value=cfg.email; $("#sGkey").value=cfg.gkey; $("#sDelay").value=cfg.delay;
-    $("#sMpg").value=cfg.mpg; $("#sFuel").value=cfg.fuelprice; $("#sSpeed").value=cfg.avgspeed;
+    $("#sMpg").value=cfg.mpg; $("#sFuel").value=cfg.fuelprice; $("#sSpeed").value=cfg.avgspeed; $("#sVeh").value=cfg.vehweight; $("#sObs").value=cfg.obsft;
     setProviderUI(cfg.provider);
     setSeg("segPinShape", store.get("fk_pin_shape","pin"));
     setSeg("segPinSize", store.get("fk_pin_size","medium"));
@@ -1283,9 +1317,9 @@
     cfg.issue=$("#sIssue").value.trim(); cfg.work=$("#sWork").value.trim();
     cfg.email=$("#sEmail").value.trim(); cfg.gkey=$("#sGkey").value.trim();
     cfg.delay=String(parseInt($("#sDelay").value,10)||0);
-    cfg.mpg=String(parseFloat($("#sMpg").value)||22); cfg.fuelprice=String(parseFloat($("#sFuel").value)||0); cfg.avgspeed=String(parseFloat($("#sSpeed").value)||40);
+    cfg.mpg=String(parseFloat($("#sMpg").value)||22); cfg.fuelprice=String(parseFloat($("#sFuel").value)||0); cfg.avgspeed=String(parseFloat($("#sSpeed").value)||40); cfg.vehweight=String(parseFloat($("#sVeh").value)||4800); cfg.obsft=String(parseFloat($("#sObs").value)||6.33);
     cfg.provider=cfg._pendProvider||cfg.provider;
-    for(const k of ["name","lan","phone","issue","work","email","gkey","delay","mpg","fuelprice","avgspeed","provider"]) store.set("fk_"+k,cfg[k]);
+    for(const k of ["name","lan","phone","issue","work","email","gkey","delay","mpg","fuelprice","avgspeed","vehweight","obsft","provider"]) store.set("fk_"+k,cfg[k]);
     if(results.length) renderTickets();
     closeSheet(); toast("Settings saved");
   });
@@ -2172,6 +2206,10 @@
         cmap.addSource("usgs-src",{type:"raster",tiles:[USGS_IMG],tileSize:256,maxzoom:16,attribution:"Imagery: USGS"});
         cmap.addLayer({id:"usgs",type:"raster",source:"usgs-src",layout:{visibility:"none"}});
         cmap.addSource("sites",{type:"geojson",data:sitesGeo(cShown),cluster:true,clusterRadius:48,clusterMaxZoom:14});
+        cmap.addSource("los-lines",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
+        cmap.addLayer({id:"los-lines",type:"line",source:"los-lines",layout:{"line-cap":"round"},paint:{
+          "line-color":["case",["==",["get","state"],"clear"],"#41D88B",["==",["get","state"],"blocked"],"#FF4D4D","#8a94a3"],
+          "line-width":3,"line-opacity":0.92}});
         cmap.addLayer({id:"clusters",type:"circle",source:"sites",filter:["has","point_count"],paint:{
           "circle-color":["step",["get","point_count"],"#46566b",10,"#5d7392",50,"#9a7b35"],
           "circle-radius":["step",["get","point_count"],15,10,19,50,25],
@@ -2192,8 +2230,13 @@
             "icon-image":["concat","pin_",pinColorKey,["case",["==",["get","sel"],1],"_sel",""]],
             "icon-size":1,"icon-anchor":pinAnchor,
             "icon-allow-overlap":true,"icon-ignore-placement":true}});
+        cmap.addSource("los-observer",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
+        cmap.addLayer({id:"los-observer-ring",type:"circle",source:"los-observer",paint:{"circle-radius":11,"circle-color":"#1E63FF","circle-opacity":0.25}});
+        cmap.addLayer({id:"los-observer",type:"circle",source:"los-observer",paint:{"circle-radius":6,"circle-color":"#1E63FF","circle-stroke-width":2.5,"circle-stroke-color":"#FFFFFF"}});
         cmap.on("click","clusters",ev=>{ const f=ev.features[0]; cmap.getSource("sites").getClusterExpansionZoom(f.properties.cluster_id).then(z=>cmap.easeTo({center:f.geometry.coordinates,zoom:z})).catch(()=>{}); });
+        cmap.on("click",ev=>{ if(losPlacing){ ev.preventDefault&&ev.preventDefault(); setObserver(ev.lngLat.lat,ev.lngLat.lng); } });
         cmap.on("click","sites-pts",ev=>{
+          if(losMode) return;
           const f=ev.features[0], id=f.properties.id;
           if(cSel.has(id))cSel.delete(id); else cSel.add(id);
           refreshMarks();
@@ -2499,7 +2542,7 @@
   $("#impCancel").addEventListener("click",reqCloseImport);
 
   (function addSheetCloseButtons(){
-    const closers={ dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, rtSheet:closeRoute };
+    const closers={ dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, rtSheet:closeRoute, losSheet:closeLos };
     Object.keys(closers).forEach(id=>{
       const sh=document.getElementById(id); if(!sh)return;
       const bar=document.createElement("div"); bar.className="sheettop";
@@ -2524,7 +2567,51 @@
 
   /* ---------------- route optimizer + hand-off (Phase 5) ---------------- */
   const ROAD_FACTOR=1.3;
-  let rtState=null;
+  let rtState=null, rtToken=0;
+  /* --- elevation sampling from cached/online DEM (terrarium) --- */
+  const ELEV_Z=13, ELEV_STEP_KM=3;
+  const _elevCv=document.createElement("canvas"); _elevCv.width=256; _elevCv.height=256;
+  const _tileCache=new Map();
+  function _demTile(lat,lng,z){ const n=Math.pow(2,z); const lr=lat*Math.PI/180;
+    const xt=Math.floor((lng+180)/360*n);
+    const yt=Math.floor((1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n);
+    const xf=((lng+180)/360*n-xt)*256, yf=((1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n-yt)*256;
+    return {xt,yt,px:Math.min(255,Math.max(0,Math.floor(xf))),py:Math.min(255,Math.max(0,Math.floor(yf)))}; }
+  function _loadImg(url){ return new Promise(res=>{ const img=new Image(); img.crossOrigin="anonymous"; img.onload=()=>res(img); img.onerror=()=>res(null); img.src=url; }); }
+  async function sampleElevation(lat,lng){
+    const t=_demTile(lat,lng,ELEV_Z), key=ELEV_Z+"/"+t.xt+"/"+t.yt;
+    let data=_tileCache.get(key);
+    if(data===undefined){
+      if(_tileCache.size>240) _tileCache.clear();
+      const url=DEM_TILE.replace("{z}",ELEV_Z).replace("{x}",t.xt).replace("{y}",t.yt);
+      const img=await _loadImg(url);
+      if(!img){ data=null; }
+      else{ const ctx=_elevCv.getContext("2d",{willReadFrequently:true}); ctx.clearRect(0,0,256,256); ctx.drawImage(img,0,0,256,256);
+        try{ data=ctx.getImageData(0,0,256,256).data; }catch(e){ data=null; } }
+      _tileCache.set(key,data);
+    }
+    if(!data) return null;
+    const o=(t.py*256+t.px)*4;
+    return (data[o]*256+data[o+1]+data[o+2]/256)-32768;
+  }
+  function routeSamplePoints(ordered,start,closed){
+    const path=[]; if(start)path.push(start);
+    ordered.forEach(s=>path.push([parseFloat(s.lat),parseFloat(s.lng)]));
+    if(closed&&start&&ordered.length)path.push(start);
+    let total=0; for(let i=0;i<path.length-1;i++)total+=haversineKm(path[i],path[i+1]);
+    const step=Math.max(ELEV_STEP_KM, total/280);
+    const pts=[];
+    for(let i=0;i<path.length-1;i++){ const A=path[i],B=path[i+1]; const legKm=haversineKm(A,B); const steps=Math.max(1,Math.ceil(legKm/step));
+      for(let j=(i===0?0:1);j<=steps;j++){ const t=j/steps; pts.push([A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t]); } }
+    return pts;
+  }
+  async function computeAscent(samples){
+    const el=[]; for(const [la,lo] of samples){ const e=await sampleElevation(la,lo); if(e==null) return null; el.push(e); }
+    let ascent=0; for(let i=1;i<el.length;i++){ if(el[i]>el[i-1]) ascent+=el[i]-el[i-1]; }
+    return {ascent};
+  }
+  function climbFuelGal(ascentM){ const kg=(parseFloat(store.get("fk_vehweight","4800"))||4800)*0.453592; return (kg*9.81*ascentM)/(1.32e8*0.22); }
+  function fmtFt(m){ const ft=Math.round(m*3.28084/10)*10; return ft.toLocaleString("en-US")+" ft"; }
   function haversineKm(a,b){ const R=6371,toR=x=>x*Math.PI/180; const dLa=toR(b[0]-a[0]),dLo=toR(b[1]-a[1]); const s=Math.sin(dLa/2)**2+Math.cos(toR(a[0]))*Math.cos(toR(b[0]))*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.min(1,Math.sqrt(s))); }
   function rtPathLen(order,pts,start,closed){ let d=0,prev=start; for(const i of order){ if(prev)d+=haversineKm(prev,pts[i]); prev=pts[i]; } if(closed&&start&&order.length)d+=haversineKm(pts[order[order.length-1]],start); return d; }
   function rtNearest(pts,start){ const n=pts.length,used=new Array(n).fill(false),order=[]; let cur=start; if(!cur){ order.push(0); used[0]=true; cur=pts[0]; } while(order.length<n){ let best=-1,bd=Infinity; for(let i=0;i<n;i++){ if(used[i])continue; const d=haversineKm(cur,pts[i]); if(d<bd){bd=d;best=i;} } order.push(best); used[best]=true; cur=pts[best]; } return order; }
@@ -2532,6 +2619,24 @@
   function optimizeStops(stops,start,closed){ const pts=stops.map(s=>[parseFloat(s.lat),parseFloat(s.lng)]); let order=rtNearest(pts,start); order=rtTwoOpt(order,pts,start,closed); return order.map(i=>stops[i]); }
   function getPos(timeoutMs){ return new Promise(res=>{ if(!navigator.geolocation){res(null);return;} let done=false; const fin=v=>{ if(!done){done=true;res(v);} }; try{ navigator.geolocation.getCurrentPosition(p=>fin([p.coords.latitude,p.coords.longitude]),()=>fin(null),{enableHighAccuracy:true,timeout:timeoutMs||6000,maximumAge:60000}); }catch(e){ fin(null); } setTimeout(()=>fin(null),(timeoutMs||6000)+600); }); }
   function fmtDur(h){ const m=Math.max(0,Math.round(h*60)); if(m<60)return m+" min"; return Math.floor(m/60)+"h "+String(m%60).padStart(2,"0")+"m"; }
+  function routeSummaryHTML(climb){
+    const c=rtState.calc; let gal=c.baseGal, extra="";
+    if(climb&&climb.ascentM!=null){ gal+=climbFuelGal(climb.ascentM); extra=" · +"+fmtFt(climb.ascentM)+" climb"; }
+    const cost=gal*c.price, costStr=c.price>0?(" · ~$"+cost.toFixed(2)+" fuel"):"";
+    let sub=rtState.ordered.length+" stops"+(rtState.start?" · from your location":"")+(rtState.closed?" · round trip":"");
+    if(climb==null) sub+=" · checking elevation\u2026";
+    else if(climb.unavailable) sub+=" · elevation data not saved for this area";
+    else sub+=extra;
+    sub+=" · road distance estimated";
+    return "~"+c.roadMi.toFixed(c.roadMi<10?1:0)+" mi · ~"+fmtDur(c.hrs)+costStr+'<span class="rtsub">'+sub+'</span>';
+  }
+  async function updateRouteElevation(){
+    const token=++rtToken, snap=rtState;
+    const samples=routeSamplePoints(snap.ordered,snap.start,snap.closed);
+    let info=null; try{ info=await computeAscent(samples); }catch(e){ info=null; }
+    if(rtToken!==token||rtState!==snap) return;   // a newer route superseded this
+    $("#rtSum").innerHTML=routeSummaryHTML(info?{ascentM:info.ascent}:{unavailable:true});
+  }
   function renderRoute(){
     if(!rtState)return;
     const {ordered,start,closed}=rtState;
@@ -2540,10 +2645,9 @@
     ordered.forEach((s,i)=>{ const d=prev?haversineKm(prev,pts[i]):0; legs.push(d); straightKm+=d; prev=pts[i]; });
     if(closed&&start&&ordered.length) straightKm+=haversineKm(pts[pts.length-1],start);
     const mpg=parseFloat(store.get("fk_mpg","22"))||22, price=parseFloat(store.get("fk_fuelprice","4.75"))||0, mph=parseFloat(store.get("fk_avgspeed","40"))||40;
-    const roadMi=straightKm*ROAD_FACTOR*0.621371, hrs=roadMi/mph, gal=roadMi/mpg, cost=gal*price;
-    const costStr=price>0?(" · ~$"+cost.toFixed(2)+" fuel"):"";
-    $("#rtSum").innerHTML="~"+roadMi.toFixed(roadMi<10?1:0)+" mi · ~"+fmtDur(hrs)+costStr+
-      '<span class="rtsub">'+ordered.length+" stops"+(start?" · from your location":"")+(closed?" · round trip":"")+" · road distance estimated</span>";
+    const roadMi=straightKm*ROAD_FACTOR*0.621371;
+    rtState.calc={roadMi,hrs:roadMi/mph,baseGal:roadMi/mpg,price};
+    $("#rtSum").innerHTML=routeSummaryHTML(null);
     let html="";
     if(start) html+='<li class="rtstart"><span class="rtn">\u25CE</span><div class="rtmain"><div class="rttitle">Your location</div><div class="rtmeta">start</div></div></li>';
     ordered.forEach((c,i)=>{ const miLeg=legs[i]*ROAD_FACTOR*0.621371;
@@ -2557,6 +2661,7 @@
     const dest=coords[coords.length-1], wp=coords.slice(0,coords.length-1);
     rtState.gurl="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination="+encodeURIComponent(dest)+(wp.length?"&waypoints="+encodeURIComponent(wp.join("|")):"");
     $("#rtNote").textContent=note;
+    updateRouteElevation();
   }
   async function openRoute(){
     const sel=customers.filter(c=>cSel.has(c.id));
@@ -2574,6 +2679,98 @@
   { const s=$("#rtScrim"); if(s) s.addEventListener("click",closeRoute); }
   { const r=$("#rtRound"); if(r) r.addEventListener("change",()=>{ if(!rtState)return; rtState.closed=r.checked; rtState.ordered=optimizeStops(rtState.src,rtState.start,rtState.closed); renderRoute(); }); }
   { const g=$("#rtGoogle"); if(g) g.addEventListener("click",()=>{ if(rtState&&rtState.gurl) window.open(rtState.gurl,"_blank","noopener"); }); }
+
+  /* ---------------- line of sight (Phase 6) ---------------- */
+  const LOS_REFR=1.13, R_EARTH=6371000;
+  let losMode=false, losPlacing=false, losObs=null, losAssetFt=null, losToken=0, losResults=[];
+  function obsHeightM(){ return (parseFloat(store.get("fk_obsft","6.33"))||6.33)*0.3048; }
+  async function lineOfSight(obs,obsGround,target,tgtGround,tgtH){
+    const D=haversineKm(obs,target)*1000;
+    const obsE=obsGround+obsHeightM(), tgtE=tgtGround+tgtH, Reff=R_EARTH*LOS_REFR;
+    if(D<1) return {ok:true,blocked:false,clearAglFt:tgtH/0.3048};
+    const step=Math.max(15,D/160), nSteps=Math.max(2,Math.ceil(D/step));
+    let blocked=false, reqTgtE=tgtE;
+    for(let i=1;i<nSteps;i++){ const t=i/nSteps;
+      const p=[obs[0]+(target[0]-obs[0])*t, obs[1]+(target[1]-obs[1])*t];
+      const terr=await sampleElevation(p[0],p[1]); if(terr==null) return {ok:false};
+      const di=D*t, drop=(di*(D-di))/(2*Reff), sight=obsE+(tgtE-obsE)*t;
+      if(sight-drop<terr) blocked=true;
+      const needE=obsE+(terr+drop-obsE)/t; if(needE>reqTgtE) reqTgtE=needE;
+    }
+    return {ok:true, blocked, clearAglFt:Math.max(0,reqTgtE-tgtGround)/0.3048};
+  }
+  function clearLosOverlays(){ if(cmap){ try{cmap.getSource("los-lines").setData({type:"FeatureCollection",features:[]});}catch(e){} try{cmap.getSource("los-observer").setData({type:"FeatureCollection",features:[]});}catch(e){} } }
+  async function computeLos(){
+    const token=++losToken, obs=losObs; if(!obs) return;
+    const obsGround=await sampleElevation(obs[0],obs[1]); if(losToken!==token) return;
+    const sel=customers.filter(c=>cSel.has(c.id));
+    const assets=(sel.length?sel:mapList()).filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o);});
+    const tgtH=(losAssetFt||40)*0.3048, noElev=(obsGround==null);
+    const results=[], feats=[];
+    for(const c of assets){ const T=[parseFloat(c.lat),parseFloat(c.lng)];
+      let r;
+      if(noElev) r={ok:false};
+      else { const tg=await sampleElevation(T[0],T[1]); if(losToken!==token) return; r=(tg==null)?{ok:false}:await lineOfSight(obs,obsGround,T,tg,tgtH); if(losToken!==token) return; }
+      const state=!r.ok?"unknown":(r.blocked?"blocked":"clear");
+      results.push({c,state,clearAglFt:r.clearAglFt});
+      feats.push({type:"Feature",properties:{state},geometry:{type:"LineString",coordinates:[[obs[1],obs[0]],[T[1],T[0]]]}});
+    }
+    if(losToken!==token) return;
+    losResults=results;
+    try{ cmap.getSource("los-lines").setData({type:"FeatureCollection",features:feats}); }catch(e){}
+    renderLosResults();
+  }
+  function renderLosResults(){
+    const r=losResults||[];
+    const clear=r.filter(x=>x.state==="clear").length, blocked=r.filter(x=>x.state==="blocked").length, unk=r.filter(x=>x.state==="unknown").length;
+    let sum;
+    if(!losObs) sum="Tap the map to set your parking point.";
+    else if(r.length===0) sum="No located sites to check.";
+    else if(unk===r.length) sum='Elevation data not available here<span class="rtsub">Save this area offline, or go online, to check line of sight.</span>';
+    else sum='<b style="color:var(--green)">'+clear+"</b> visible · <b style=\"color:var(--red)\">"+blocked+"</b> blocked"+(unk?(" · "+unk+" unknown"):"")+'<span class="rtsub">of '+r.length+" sites · your height "+store.get("fk_obsft","6.33")+" ft · asset "+(losAssetFt||40)+" ft</span>";
+    $("#losSum").innerHTML=sum;
+    let html="";
+    r.forEach(x=>{
+      const badge=x.state==="clear"?'<span class="rtn" style="background:var(--green);color:#0b2417">\u2713</span>':x.state==="blocked"?'<span class="rtn" style="background:var(--red);color:#fff">\u2715</span>':'<span class="rtn" style="background:var(--line2);color:var(--muted)">?</span>';
+      const meta=x.state==="clear"?"visible":x.state==="blocked"?("blocked · clears above ~"+(Math.round((x.clearAglFt||0)/5)*5).toLocaleString("en-US")+" ft"):"no elevation data";
+      html+='<li>'+badge+'<div class="rtmain"><div class="rttitle">'+escapeHtml(assetTitle(x.c))+'</div><div class="rtmeta">'+meta+'</div></div></li>';
+    });
+    $("#losList").innerHTML=html;
+    $("#losFt").value=losAssetFt||40;
+    $("#losNote").textContent="Green = clear view, red = terrain blocks it. Blocked sites show the drone height that clears the terrain.";
+  }
+  function setObserver(lat,lng){
+    losObs=[lat,lng]; losPlacing=false;
+    $("#losBanner").classList.add("hidden");
+    try{ cmap.getSource("los-observer").setData({type:"FeatureCollection",features:[{type:"Feature",properties:{},geometry:{type:"Point",coordinates:[lng,lat]}}]}); }catch(e){}
+    $("#losSum").textContent="Checking line of sight\u2026"; $("#losList").innerHTML="";
+    $("#losScrim").classList.add("show"); $("#losSheet").classList.add("show");
+    computeLos();
+  }
+  function openLos(){
+    if(!cmap||!cMapReady){ toast("Open the map first"); return; }
+    losMode=true; losPlacing=true; losObs=null; losResults=[];
+    if(losAssetFt==null) losAssetFt=parseFloat(store.get("fk_los_ft","40"))||40;
+    clearLosOverlays();
+    $("#losBanner").classList.remove("hidden");
+    $("#mLos").classList.add("on");
+  }
+  function closeLos(){
+    losMode=false; losPlacing=false; losObs=null;
+    $("#losBanner").classList.add("hidden");
+    $("#losScrim").classList.remove("show"); $("#losSheet").classList.remove("show");
+    $("#mLos").classList.remove("on");
+    clearLosOverlays();
+  }
+  function losSetFt(ft){ losAssetFt=ft; store.set("fk_los_ft",String(ft)); $("#losFt").value=ft; if(losObs) computeLos(); }
+  { const b=$("#mLos"); if(b) b.addEventListener("click",openLos); }
+  { const b=$("#losCancel"); if(b) b.addEventListener("click",closeLos); }
+  { const b=$("#losDone"); if(b) b.addEventListener("click",closeLos); }
+  { const b=$("#losScrim"); if(b) b.addEventListener("click",closeLos); }
+  { const b=$("#losMove"); if(b) b.addEventListener("click",()=>{ losPlacing=true; $("#losScrim").classList.remove("show"); $("#losSheet").classList.remove("show"); $("#losBanner").classList.remove("hidden"); }); }
+  { const b=$("#losFt"); if(b) b.addEventListener("change",()=>losSetFt(parseFloat($("#losFt").value)||40)); }
+  { const b=$("#losPreDist"); if(b) b.addEventListener("click",()=>losSetFt(40)); }
+  { const b=$("#losPreTx"); if(b) b.addEventListener("click",()=>losSetFt(100)); }
 
   /* init DB */
   (async function(){
