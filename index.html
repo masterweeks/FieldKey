@@ -234,6 +234,8 @@
   .seg{display:flex;border:1px solid var(--line2);border-radius:11px;overflow:hidden}
   .seg button{flex:1;appearance:none;border:0;background:var(--bg3);color:var(--muted);padding:12px;font-size:14px;font-weight:600;font-family:var(--ui)}
   .seg button.sel{background:var(--amber);color:#1a1300}
+  .pinprev{display:flex;justify-content:center;background:var(--bg3);border:1px solid var(--line2);border-radius:11px;padding:10px}
+  #pinPreview{width:252px;height:120px;max-width:100%}
 
   .empty{color:var(--faint);font-family:var(--mono);font-size:12.5px;text-align:center;padding:26px 10px;border:1px dashed var(--line);border-radius:12px}
   .note{color:var(--muted);font-size:12px;margin-top:8px;line-height:1.5}
@@ -735,6 +737,27 @@
   <p class="hint">Open the map, frame your work area, and tap <b>Save offline</b> to store it for use with no signal. Saved tiles stay on this device until you clear them.</p>
   <div class="sgroup"><div class="note" id="offlineStat">No offline maps saved yet.</div></div>
   <div class="sgroup"><button class="btn ghost danger" id="sClearMaps">Clear offline maps</button></div>
+
+  <h2 style="margin-top:22px">Map pins</h2>
+  <p class="hint">How site pins look on the map. Pins are colored by status; this sets their shape and size. Changes show next time you open the map.</p>
+  <div class="sgroup">
+    <span class="label">Shape</span>
+    <div class="seg" id="segPinShape">
+      <button data-v="pin" class="sel">Pin</button>
+      <button data-v="dot">Dot</button>
+      <button data-v="square">Square</button>
+      <button data-v="diamond">Diamond</button>
+    </div>
+  </div>
+  <div class="sgroup">
+    <span class="label">Size</span>
+    <div class="seg" id="segPinSize">
+      <button data-v="small">Small</button>
+      <button data-v="medium" class="sel">Medium</button>
+      <button data-v="large">Large</button>
+    </div>
+  </div>
+  <div class="sgroup pinprev"><canvas id="pinPreview" width="252" height="120"></canvas></div>
   <p class="note" style="text-align:center;margin-top:14px">FieldKey · v1 · runs offline once added to your Home Screen</p>
 </div>
 
@@ -1206,6 +1229,9 @@
     $("#sIssue").value=cfg.issue; $("#sWork").value=cfg.work;
     $("#sEmail").value=cfg.email; $("#sGkey").value=cfg.gkey; $("#sDelay").value=cfg.delay;
     setProviderUI(cfg.provider);
+    setSeg("segPinShape", store.get("fk_pin_shape","pin"));
+    setSeg("segPinSize", store.get("fk_pin_size","medium"));
+    drawPinPreview();
     refreshOfflineStat();
     els.scrim.classList.add("show"); els.sheet.classList.add("show");
   }
@@ -1217,6 +1243,9 @@
     cfg._pendProvider=p;
   }
   document.querySelectorAll("#segProvider button").forEach(b=>b.addEventListener("click",()=>setProviderUI(b.dataset.v)));
+  function setSeg(id,val){ document.querySelectorAll("#"+id+" button").forEach(b=>b.classList.toggle("sel",b.dataset.v===val)); }
+  { const sh=$("#segPinShape"); if(sh) sh.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; store.set("fk_pin_shape",b.dataset.v); setSeg("segPinShape",b.dataset.v); drawPinPreview(); }); }
+  { const sz=$("#segPinSize"); if(sz) sz.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; store.set("fk_pin_size",b.dataset.v); setSeg("segPinSize",b.dataset.v); drawPinPreview(); }); }
   $("#saveSettings").addEventListener("click",()=>{
     cfg.name=$("#sName").value.trim(); cfg.lan=$("#sLan").value.trim(); cfg.phone=$("#sPhone").value.trim();
     cfg.issue=$("#sIssue").value.trim(); cfg.work=$("#sWork").value.trim();
@@ -1988,6 +2017,98 @@
   const OSM_RASTER="https://tile.openstreetmap.org/{z}/{x}/{y}.png";
   const USGS_IMG="https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}";
   const DEM_TILE="https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
+
+  /* ---------------- 3D map pin icons ---------------- */
+  const PIN_COLORS={new:"#9aa4b0",texted:"#FFB000",replied:"#5AA9FF",scheduled:"#41D88B",done:"#7a8693",issue:"#FF4D4D"};
+  const PIN_SIZES={small:27,medium:35,large:46};
+  const PIN_GOLD="#FFD24D";
+  function pinShape(){ return store.get("fk_pin_shape","pin"); }
+  function pinSizePx(){ return PIN_SIZES[store.get("fk_pin_size","medium")]||35; }
+  function _rgb(h){ h=h.replace("#",""); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+  function _shade(hex,amt){ const c=_rgb(hex), f=x=>Math.max(0,Math.min(255,Math.round(x+amt))); return "rgb("+f(c[0])+","+f(c[1])+","+f(c[2])+")"; }
+  function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  function pinGeom(shape,D){
+    const P=Math.round(D*0.34);
+    if(shape==="pin"){ const r=D*0.42, bottomPad=D*0.12, cyHead=P+r, tipY=cyHead+r+D*0.6;
+      return {w:Math.ceil(2*r+2*P), h:Math.ceil(tipY+bottomPad), anchor:"bottom"}; }
+    return {w:D+2*P, h:D+2*P, anchor:"center"};
+  }
+  function paintPin(ctx,shape,base,D,sel){
+    const P=Math.round(D*0.34), lite=_shade(base,72), mid=base, dark=_shade(base,-52), edge=_shade(base,-95);
+    ctx.lineJoin="round"; ctx.lineCap="round";
+    ctx.save();
+    ctx.shadowColor="rgba(0,0,0,0.45)"; ctx.shadowBlur=D*0.16; ctx.shadowOffsetY=D*0.10;
+    if(shape==="pin"){
+      const r=D*0.42, w=2*r+2*P, cx=w/2, cyHead=P+r, tipY=cyHead+r+D*0.6;
+      const body=()=>{ ctx.beginPath(); ctx.moveTo(cx,tipY); ctx.quadraticCurveTo(cx-r*1.04,cyHead+r*0.55,cx-r,cyHead); ctx.arc(cx,cyHead,r,Math.PI,0,false); ctx.quadraticCurveTo(cx+r*1.04,cyHead+r*0.55,cx,tipY); ctx.closePath(); };
+      body();
+      const g=ctx.createLinearGradient(cx-r,cyHead-r,cx+r*0.4,tipY); g.addColorStop(0,lite); g.addColorStop(0.45,mid); g.addColorStop(1,dark);
+      ctx.fillStyle=g; ctx.fill(); ctx.restore();
+      body(); ctx.lineWidth=Math.max(1,D*0.05); ctx.strokeStyle=edge; ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx,cyHead,r*0.42,0,Math.PI*2); ctx.fillStyle="rgba(255,255,255,0.92)"; ctx.fill();
+      ctx.lineWidth=Math.max(1,D*0.03); ctx.strokeStyle=_shade(base,-28); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx-r*0.34,cyHead-r*0.42,r*0.34,r*0.2,-0.5,0,Math.PI*2); ctx.fillStyle="rgba(255,255,255,0.30)"; ctx.fill();
+      if(sel){ body(); ctx.lineWidth=D*0.1; ctx.strokeStyle=PIN_GOLD; ctx.stroke(); }
+      return;
+    }
+    const cx=(D+2*P)/2, cy=(D+2*P)/2, R=D*0.46;
+    if(shape==="dot"){
+      ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2);
+      const g=ctx.createRadialGradient(cx-R*0.35,cy-R*0.35,R*0.1,cx,cy,R); g.addColorStop(0,_shade(base,98)); g.addColorStop(0.5,mid); g.addColorStop(1,dark);
+      ctx.fillStyle=g; ctx.fill(); ctx.restore();
+      ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.lineWidth=Math.max(1,D*0.04); ctx.strokeStyle=edge; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx-R*0.33,cy-R*0.38,R*0.3,R*0.2,-0.5,0,Math.PI*2); ctx.fillStyle="rgba(255,255,255,0.45)"; ctx.fill();
+      if(sel){ ctx.beginPath(); ctx.arc(cx,cy,R+D*0.05,0,Math.PI*2); ctx.lineWidth=D*0.09; ctx.strokeStyle=PIN_GOLD; ctx.stroke(); }
+      return;
+    }
+    if(shape==="square"){
+      const s=D*0.86, x=cx-s/2, y=cy-s/2, rad=s*0.22;
+      rr(ctx,x,y,s,s,rad);
+      const g=ctx.createLinearGradient(x,y,x,y+s); g.addColorStop(0,lite); g.addColorStop(0.5,mid); g.addColorStop(1,dark);
+      ctx.fillStyle=g; ctx.fill(); ctx.restore();
+      rr(ctx,x,y,s,s,rad); ctx.lineWidth=Math.max(1,D*0.04); ctx.strokeStyle=edge; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx,y+s*0.24,s*0.34,s*0.13,0,0,Math.PI*2); ctx.fillStyle="rgba(255,255,255,0.30)"; ctx.fill();
+      if(sel){ rr(ctx,x-D*0.045,y-D*0.045,s+D*0.09,s+D*0.09,rad+D*0.04); ctx.lineWidth=D*0.09; ctx.strokeStyle=PIN_GOLD; ctx.stroke(); }
+      return;
+    }
+    if(shape==="diamond"){
+      const hw=D*0.5, hh=D*0.56;
+      const dia=(g)=>{ ctx.beginPath(); ctx.moveTo(cx,cy-hh*g); ctx.lineTo(cx+hw*g,cy); ctx.lineTo(cx,cy+hh*g); ctx.lineTo(cx-hw*g,cy); ctx.closePath(); };
+      dia(1);
+      const g=ctx.createLinearGradient(cx,cy-hh,cx,cy+hh); g.addColorStop(0,lite); g.addColorStop(0.5,mid); g.addColorStop(1,dark);
+      ctx.fillStyle=g; ctx.fill(); ctx.restore();
+      dia(1); ctx.lineWidth=Math.max(1,D*0.04); ctx.strokeStyle=edge; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx,cy-hh*0.62); ctx.lineTo(cx+hw*0.4,cy-hh*0.1); ctx.lineTo(cx,cy); ctx.lineTo(cx-hw*0.4,cy-hh*0.1); ctx.closePath(); ctx.fillStyle="rgba(255,255,255,0.20)"; ctx.fill();
+      if(sel){ dia(1.12); ctx.lineWidth=D*0.09; ctx.strokeStyle=PIN_GOLD; ctx.stroke(); }
+      return;
+    }
+    ctx.restore();
+  }
+  function makePinImageData(shape,base,D,sel){
+    const g=pinGeom(shape,D), s=2, cv=document.createElement("canvas");
+    cv.width=g.w*s; cv.height=g.h*s;
+    const ctx=cv.getContext("2d"); ctx.scale(s,s);
+    paintPin(ctx,shape,base,D,sel);
+    return ctx.getImageData(0,0,cv.width,cv.height);
+  }
+  function ensurePinImages(map){
+    const shape=pinShape(), D=pinSizePx();
+    Object.keys(PIN_COLORS).forEach(k=>{ [false,true].forEach(sel=>{
+      const name="pin_"+k+(sel?"_sel":"");
+      const img=makePinImageData(shape,PIN_COLORS[k],D,sel);
+      try{ if(map.hasImage(name)) map.removeImage(name); }catch(e){}
+      try{ map.addImage(name,img,{pixelRatio:2}); }catch(e){}
+    }); });
+    return pinGeom(shape,D).anchor;
+  }
+  function drawPinPreview(){
+    const cv=$("#pinPreview"); if(!cv)return; const ctx=cv.getContext("2d");
+    ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height);
+    const shape=pinShape(), D=Math.round(pinSizePx()*1.5);
+    const keys=["new","texted","issue"], g=pinGeom(shape,D), gap=cv.width/keys.length;
+    keys.forEach((k,i)=>{ ctx.save(); ctx.translate(gap*i+(gap-g.w)/2, (cv.height-g.h)/2); paintPin(ctx,shape,PIN_COLORS[k],D,false); ctx.restore(); });
+  }
+
   function buildMap(){
     try{ cmap=new maplibregl.Map({container:"custMap",style:MAP_STYLE,center:[-120.5,40.5],zoom:5,attributionControl:false}); }
     catch(e){ const note=$("#mNote"); if(note) note.textContent="Map couldn't start on this device."; return; }
@@ -2025,17 +2146,19 @@
         cmap.addLayer({id:"cluster-count",type:"symbol",source:"sites",filter:["has","point_count"],
           layout:{"text-field":["get","point_count_abbreviated"],"text-font":["Noto Sans Regular"],"text-size":13},
           paint:{"text-color":"#F2F5F9","text-halo-color":"#0E1116","text-halo-width":1.2}});
-        cmap.addLayer({id:"sites-pts",type:"circle",source:"sites",filter:["!",["has","point_count"]],paint:{
-          "circle-color":["case",
-            ["==",["get","flag"],1],"#FF4D4D",
-            ["==",["get","st"],"replied"],"#5AA9FF",
-            ["==",["get","st"],"scheduled"],"#41D88B",
-            ["==",["get","st"],"texted"],"#FFB000",
-            ["==",["get","st"],"done"],"#7a8693",
-            "#9aa4b0"],
-          "circle-radius":["case",["==",["get","sel"],1],9,["==",["get","flag"],1],8,6.5],
-          "circle-stroke-width":["case",["==",["get","sel"],1],3,2],
-          "circle-stroke-color":["case",["==",["get","sel"],1],"#FFD24D","#0E1116"]}});
+        const pinAnchor=ensurePinImages(cmap);
+        const pinColorKey=["case",
+          ["==",["get","flag"],1],"issue",
+          ["==",["get","st"],"replied"],"replied",
+          ["==",["get","st"],"scheduled"],"scheduled",
+          ["==",["get","st"],"texted"],"texted",
+          ["==",["get","st"],"done"],"done",
+          "new"];
+        cmap.addLayer({id:"sites-pts",type:"symbol",source:"sites",filter:["!",["has","point_count"]],
+          layout:{
+            "icon-image":["concat","pin_",pinColorKey,["case",["==",["get","sel"],1],"_sel",""]],
+            "icon-size":1,"icon-anchor":pinAnchor,
+            "icon-allow-overlap":true,"icon-ignore-placement":true}});
         cmap.on("click","clusters",ev=>{ const f=ev.features[0]; cmap.getSource("sites").getClusterExpansionZoom(f.properties.cluster_id).then(z=>cmap.easeTo({center:f.geometry.coordinates,zoom:z})).catch(()=>{}); });
         cmap.on("click","sites-pts",ev=>{
           const f=ev.features[0], id=f.properties.id;

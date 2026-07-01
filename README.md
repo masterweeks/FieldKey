@@ -92,7 +92,10 @@ clearing the database all live in **Settings → Data** — see below.)
   **cluster** into a single numbered circle — tap it to zoom in and split it apart.
   Individual pins are **colored by status** (grey = new, amber = texted, blue =
   replied, green = scheduled, red = access issue), with a legend along the bottom; a
-  selected pin gets a bright gold ring. The location button (top-right, under the
+  selected pin gets a bright gold ring. Pins are drawn as **3-D markers**, and under
+  **Settings → Map pins** you can change their **shape** (Pin, Dot, Square, or
+  Diamond) and **size** (Small, Medium, Large) — a live preview shows the look, and
+  the change takes effect the next time you open the map. The location button (top-right, under the
   zoom controls) drops a live dot showing **your current location** with an accuracy
   ring and heading, and tracks it as you move — handy for seeing which site you're
   closest to. Tap it once to start; the browser will ask permission the first time.
