@@ -255,6 +255,10 @@
   .losbanner{position:absolute;top:calc(env(safe-area-inset-top) + 76px);left:50%;transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:10px;background:rgba(20,24,31,.96);border:1px solid var(--amber);border-radius:12px;padding:9px 12px;max-width:88%;box-shadow:0 6px 20px rgba(0,0,0,.5)}
   .losbanner #losBannerText{font-size:13.5px;color:var(--ink);font-weight:600}
   .losbanx{appearance:none;border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:600;padding:2px 4px}
+  .losbanscan{appearance:none;background:transparent;color:var(--amber);border:1px solid var(--amber);border-radius:8px;padding:4px 9px;font-size:12px;font-weight:700;white-space:nowrap}
+  #losScanList li{cursor:pointer}
+  #losScanList li.candon .rttitle{color:var(--amber)}
+  .poprow{display:flex;gap:6px;margin-top:8px}
   .losheight{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .losheight input{flex:1;min-width:70px}
   .losSumWrap{position:relative;cursor:pointer}
@@ -629,11 +633,13 @@
   <div class="bmsw" id="mBasemaps">
     <button type="button" data-bm="Dark" class="on">Dark</button>
     <button type="button" data-bm="Aerial">Aerial</button>
+    <button type="button" data-bm="Hybrid">Hybrid</button>
     <button type="button" data-bm="Streets">Streets</button>
   </div>
   <button class="mapsave" id="mSave" type="button" aria-label="Save this area offline">&#8675; Save offline</button>
   <button class="mapsave mapterr" id="mTerr" type="button" aria-label="Toggle 3D terrain">&#9968; 3D</button>
-  <div class="losbanner hidden" id="losBanner"><span id="losBannerText">Tap the map to set your parking point</span><button class="losbanx" id="losCancel" type="button">Cancel</button></div>
+  <div class="losbanner hidden" id="losBanner"><span id="losBannerText">Tap the map to set your parking point</span><button class="losbanscan" id="losScanBtn" type="button">Scan a road</button><button class="losbanx" id="losCancel" type="button">Cancel</button></div>
+  <div class="losbanner hidden" id="pinBanner"><span>Tap the map to place a pin</span><button class="losbanx" id="pinCancel" type="button">Cancel</button></div>
   <div class="dloverlay hidden" id="dlOverlay">
     <div class="dlcard">
       <div class="dltitle" id="dlTitle">Save this area offline</div>
@@ -670,7 +676,10 @@
       <button class="btn primary" id="mReq" type="button">Build request</button>
       <button class="btn ghost" id="mExport" type="button">Export KML</button>
     </div>
-    <button class="btn ghost issue mapissue" id="mFlag" type="button">Mark access issue</button>
+    <div class="mapbar-row main">
+      <button class="btn ghost issue" id="mFlag" type="button">Mark access issue</button>
+      <button class="btn ghost" id="mPin" type="button">Drop pin</button>
+    </div>
   </div>
 </div>
 
@@ -684,6 +693,10 @@
     <span class="losChev" aria-hidden="true">&#9662;</span>
   </div>
   <div class="loshint" id="losHint"></div>
+  <div id="losScanWrap" class="hidden" style="margin-top:12px">
+    <span class="label">Best parking spots</span>
+    <ol class="rtlist" id="losScanList" style="margin-top:8px"></ol>
+  </div>
   <div class="sgroup" style="margin-top:12px">
     <span class="label">Asset height (ft)</span>
     <div class="losheight">
@@ -691,6 +704,11 @@
       <button class="btn ghost sm" data-ft="100" id="losPreTx" type="button">Transmission 100</button>
       <input type="number" id="losFt" min="1" step="1" inputmode="numeric" />
     </div>
+  </div>
+  <div class="sgroup">
+    <span class="label">Max distance to asset (ft)</span>
+    <div class="losheight"><input type="number" id="losMaxFt" min="100" step="100" inputmode="numeric" /></div>
+    <p class="note" style="margin:5px 0 0">Used by the road scan: a site only counts for a spot if it's within this range.</p>
   </div>
   <label class="rtopt"><input type="checkbox" id="losCanopy" /> <span>Include tree canopy</span></label>
   <div class="losheight hidden" id="losCanopyRow" style="margin:2px 0 4px">
@@ -743,6 +761,20 @@
 </div>
 
 <!-- email import sheet -->
+<!-- custom map pin -->
+<div class="scrim" id="pinScrim"></div>
+<div class="sheet" id="pinSheet" role="dialog" aria-label="Map pin">
+  <div class="grab"></div>
+  <h2 id="pinTitle">New pin</h2>
+  <div class="sgroup"><label class="label">Label</label><input type="text" id="pLabel" autocapitalize="words" autocomplete="off" placeholder="e.g. Off-road path entrance" /></div>
+  <div class="sgroup"><span class="label">Type</span><div class="losheight" id="pTypes" style="margin-top:6px"></div></div>
+  <div class="sgroup"><label class="label">Notes <span class="lopt">optional</span></label><textarea id="pNotes" placeholder="Gate code, conditions\u2026"></textarea></div>
+  <div class="mapbar-row main">
+    <button class="btn ghost hidden" id="pDelete" type="button">Delete</button>
+    <button class="btn primary" id="pSave" type="button">Save pin</button>
+  </div>
+</div>
+
 <!-- add contact manually -->
 <div class="scrim" id="addScrim"></div>
 <div class="sheet" id="addSheet" role="dialog" aria-label="Add contact">
@@ -1962,7 +1994,7 @@
     }catch(e){}
   }
   function backupData(){
-    const data={app:"FieldKey", kind:"backup", exportedAt:new Date().toISOString(), count:customers.length, settings:{}, customers:customers};
+    const data={app:"FieldKey", kind:"backup", exportedAt:new Date().toISOString(), count:customers.length, settings:{}, customers:customers, pins:userPins};
     ["name","lan","phone","issue","work","provider","email","gkey","delay","smsTemplate","latestKml"].forEach(k=>data.settings[k]=cfg[k]);
     download("fieldkey-backup-"+todayStr()+".json", JSON.stringify(data,null,2), "application/json"); toast("Backup downloaded");
   }
@@ -1975,6 +2007,7 @@
       if(!list){ toast("No customer data found in that file."); return; }
       if(!confirm("Replace the current database ("+customers.length+") with "+list.length+" customers from this backup?")) return;
       customers=list.map(c=>sanitizeRecord(Object.assign({status:"new",textCount:0,phones:[],extra:{}},c))); cSel.clear();
+      if(data&&Array.isArray(data.pins)){ userPins=data.pins.filter(p=>p&&isFinite(+p.lat)&&isFinite(+p.lng)); savePinsStore(); refreshUserPins(); }
       if(dbOk){ try{ await dbClear(); await dbBulk(customers); }catch(e){} }
       renderCustomers(); updateBadge(); closeSheet(); toast("Restored "+customers.length+" customers");
     };
@@ -2165,19 +2198,20 @@
   }
   function applyBasemap(choice){
     if(!cmap||!cMapReady)return;
-    const aerial=choice==="Aerial", streets=choice==="Streets";
-    const useUSGS = aerial && !navigator.onLine;   // offline aerial falls back to cacheable USGS imagery
+    const hybrid=choice==="Hybrid", air=choice==="Aerial"||hybrid, streets=choice==="Streets";
+    const useUSGS = air && !navigator.onLine;   // offline aerial/hybrid falls back to cacheable USGS imagery
     try{
-      cmap.setLayoutProperty("esri","visibility",(aerial&&!useUSGS)?"visible":"none");
-      cmap.setLayoutProperty("esri-ref","visibility",(aerial&&!useUSGS)?"visible":"none");
+      cmap.setLayoutProperty("esri","visibility",(air&&!useUSGS)?"visible":"none");
+      cmap.setLayoutProperty("esri-rd","visibility",(hybrid&&!useUSGS)?"visible":"none");
+      cmap.setLayoutProperty("esri-ref","visibility",(air&&!useUSGS)?"visible":"none");
       cmap.setLayoutProperty("usgs","visibility",useUSGS?"visible":"none");
       cmap.setLayoutProperty("osm","visibility",streets?"visible":"none");
     }catch(e){}
     store.set("fk_basemap",choice);
     const sw=$("#mBasemaps"); if(sw) sw.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.bm===choice));
   }
-  window.addEventListener("online",()=>{ if(cmap&&cMapReady&&store.get("fk_basemap","Dark")==="Aerial") applyBasemap("Aerial"); });
-  window.addEventListener("offline",()=>{ if(cmap&&cMapReady&&store.get("fk_basemap","Dark")==="Aerial") applyBasemap("Aerial"); });
+  window.addEventListener("online",()=>{ const bm=store.get("fk_basemap","Dark"); if(cmap&&cMapReady&&(bm==="Aerial"||bm==="Hybrid")) applyBasemap(bm); });
+  window.addEventListener("offline",()=>{ const bm=store.get("fk_basemap","Dark"); if(cmap&&cMapReady&&(bm==="Aerial"||bm==="Hybrid")) applyBasemap(bm); });
   let terrainOn=store.get("fk_terrain","1")!=="0";
   function applyTerrain(){
     if(cmap&&cMapReady){ try{ cmap.setTerrain(terrainOn?{source:"dem-src",exaggeration:1.5}:null); }catch(e){} }
@@ -2193,6 +2227,7 @@
   const MAP_STYLE="https://tiles.openfreemap.org/styles/dark";
   const ESRI_IMG="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
   const ESRI_REF="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
+  const ESRI_ROADS="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}";
   const OSM_RASTER="https://tile.openstreetmap.org/{z}/{x}/{y}.png";
   const USGS_IMG="https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}";
   const DEM_TILE="https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
@@ -2311,8 +2346,10 @@
           "hillshade-illumination-direction":315}}, _sym?_sym.id:undefined);
         cmap.addSource("esri-src",{type:"raster",tiles:[ESRI_IMG],tileSize:256,maxzoom:19,attribution:"Imagery \u00A9 Esri"});
         cmap.addSource("esriref-src",{type:"raster",tiles:[ESRI_REF],tileSize:256,maxzoom:19});
+        cmap.addSource("esrird-src",{type:"raster",tiles:[ESRI_ROADS],tileSize:256,maxzoom:19});
         cmap.addSource("osm-src",{type:"raster",tiles:[OSM_RASTER],tileSize:256,maxzoom:19,attribution:"\u00A9 OpenStreetMap"});
         cmap.addLayer({id:"esri",type:"raster",source:"esri-src",layout:{visibility:"none"}});
+        cmap.addLayer({id:"esri-rd",type:"raster",source:"esrird-src",layout:{visibility:"none"},paint:{"raster-opacity":0.9}});
         cmap.addLayer({id:"esri-ref",type:"raster",source:"esriref-src",layout:{visibility:"none"}});
         cmap.addLayer({id:"osm",type:"raster",source:"osm-src",layout:{visibility:"none"}});
         cmap.addSource("usgs-src",{type:"raster",tiles:[USGS_IMG],tileSize:256,maxzoom:16,attribution:"Imagery: USGS"});
@@ -2345,10 +2382,37 @@
         cmap.addSource("los-observer",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
         cmap.addLayer({id:"los-observer-ring",type:"circle",source:"los-observer",paint:{"circle-radius":11,"circle-color":"#1E63FF","circle-opacity":0.25}});
         cmap.addLayer({id:"los-observer",type:"circle",source:"los-observer",paint:{"circle-radius":6,"circle-color":"#1E63FF","circle-stroke-width":2.5,"circle-stroke-color":"#FFFFFF"}});
+        cmap.addSource("los-cands",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
+        cmap.addLayer({id:"los-seg",type:"line",source:"los-cands",filter:["==",["geometry-type"],"LineString"],paint:{"line-color":"#8a94a3","line-width":2,"line-dasharray":[2,2]}});
+        cmap.addLayer({id:"los-cands",type:"circle",source:"los-cands",filter:["==",["get","kind"],"cand"],paint:{
+          "circle-radius":["case",["==",["get","best"],1],11,8],
+          "circle-color":["case",["==",["get","best"],1],"#FFB000","#5d7392"],
+          "circle-stroke-width":2,"circle-stroke-color":"#FFFFFF"}});
+        cmap.addLayer({id:"los-cands-num",type:"symbol",source:"los-cands",filter:["==",["get","kind"],"cand"],layout:{"text-field":["get","rank"],"text-size":11,"text-font":["Noto Sans Regular"],"text-allow-overlap":true},paint:{"text-color":["case",["==",["get","best"],1],"#10141a","#E7ECF3"]}});
+        cmap.addSource("userpins",{type:"geojson",data:pinsGeo()});
+        cmap.addLayer({id:"user-pins",type:"circle",source:"userpins",paint:{"circle-radius":10,"circle-color":["get","c"],"circle-stroke-width":2.5,"circle-stroke-color":"#FFFFFF"}});
+        cmap.addLayer({id:"user-pins-l",type:"symbol",source:"userpins",layout:{"text-field":["get","L"],"text-size":12,"text-font":["Noto Sans Regular"],"text-allow-overlap":true},paint:{"text-color":"#FFFFFF","text-halo-color":"rgba(0,0,0,.5)","text-halo-width":1}});
+        cmap.on("click","los-cands",ev=>{ if(losScanActive&&!losPlacing&&!pinPlacing){ const r=parseInt(ev.features[0].properties.rank); if(r>=1) previewCand(r-1); } });
+        cmap.on("click","user-pins",ev=>{
+          if(losMode||pinPlacing) return;
+          const f=ev.features[0]; const p=userPins.find(x=>x.id===f.properties.id); if(p) showUserPinPopup(p);
+        });
+        ["los-cands","user-pins"].forEach(L=>{ cmap.on("mouseenter",L,()=>{cmap.getCanvas().style.cursor="pointer";}); cmap.on("mouseleave",L,()=>{cmap.getCanvas().style.cursor="";}); });
         cmap.on("click","clusters",ev=>{ const f=ev.features[0]; cmap.getSource("sites").getClusterExpansionZoom(f.properties.cluster_id).then(z=>cmap.easeTo({center:f.geometry.coordinates,zoom:z})).catch(()=>{}); });
-        cmap.on("click",ev=>{ if(losPlacing){ ev.preventDefault&&ev.preventDefault(); setObserver(ev.lngLat.lat,ev.lngLat.lng); } });
+        cmap.on("click",ev=>{
+          const la=ev.lngLat.lat, lo=ev.lngLat.lng;
+          if(losPlacing){ setObserver(la,lo); return; }
+          if(losScanStage===1){
+            losScanA=[la,lo]; losScanStage=2;
+            $("#losBannerText").textContent="Now tap the END of the segment";
+            try{ cmap.getSource("los-cands").setData({type:"FeatureCollection",features:[{type:"Feature",properties:{kind:"cand",rank:"A",best:0},geometry:{type:"Point",coordinates:[lo,la]}}]}); }catch(e){}
+            return;
+          }
+          if(losScanStage===2){ losScanB=[la,lo]; losScanStage=0; $("#losBanner").classList.add("hidden"); runScan(); return; }
+          if(pinPlacing){ pinPlacing=false; $("#pinBanner").classList.add("hidden"); openPinSheet(null,la,lo); return; }
+        });
         cmap.on("click","sites-pts",ev=>{
-          if(losMode) return;
+          if(losMode||pinPlacing) return;
           const f=ev.features[0], id=f.properties.id;
           if(cSel.has(id)){ cSel.delete(id); refreshMarks(); closeMapPopup(); return; }
           cSel.add(id); refreshMarks();
@@ -2652,7 +2716,7 @@
   $("#impCancel").addEventListener("click",reqCloseImport);
 
   (function addSheetCloseButtons(){
-    const closers={ dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, rtSheet:closeRoute, losSheet:closeLos, addSheet:closeAdd };
+    const closers={ dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, rtSheet:closeRoute, losSheet:closeLos, addSheet:closeAdd, pinSheet:closePinSheet };
     Object.keys(closers).forEach(id=>{
       const sh=document.getElementById(id); if(!sh)return;
       const bar=document.createElement("div"); bar.className="sheettop";
@@ -2790,9 +2854,64 @@
   { const r=$("#rtRound"); if(r) r.addEventListener("change",()=>{ if(!rtState)return; rtState.closed=r.checked; rtState.ordered=optimizeStops(rtState.src,rtState.start,rtState.closed); renderRoute(); }); }
   { const g=$("#rtGoogle"); if(g) g.addEventListener("click",()=>{ if(rtState&&rtState.gurl) window.open(rtState.gurl,"_blank","noopener"); }); }
 
+  /* ---------------- custom map pins (non-asset) ---------------- */
+  const PIN_TYPES=[
+    {k:"entrance",n:"Entrance / path",L:"E",c:"#C084FC"},
+    {k:"parking",n:"Parking",L:"P",c:"#1E63FF"},
+    {k:"hazard",n:"Hazard",L:"!",c:"#FF4D4D"},
+    {k:"note",n:"Note",L:"N",c:"#3FB6A8"}];
+  let userPins=[]; try{ userPins=JSON.parse(store.get("fk_userpins","[]"))||[]; }catch(e){ userPins=[]; }
+  let pinPlacing=false, editPinId=null, pinDraft=null;
+  function savePinsStore(){ store.set("fk_userpins",JSON.stringify(userPins)); }
+  function pinType(k){ return PIN_TYPES.find(t=>t.k===k)||PIN_TYPES[3]; }
+  function pinsGeo(){ return {type:"FeatureCollection",features:userPins.map(p=>({type:"Feature",properties:{id:p.id,L:pinType(p.type).L,c:pinType(p.type).c},geometry:{type:"Point",coordinates:[p.lng,p.lat]}}))}; }
+  function refreshUserPins(){ if(cmap&&cMapReady&&cmap.getSource("userpins")) cmap.getSource("userpins").setData(pinsGeo()); }
+  function showUserPinPopup(p){
+    closeMapPopup();
+    const t=pinType(p.type);
+    const html='<b>'+escapeHtml(p.label||t.n)+'</b><br><span style="color:'+t.c+'">\u25CF</span> '+escapeHtml(t.n)
+      +(p.notes?'<br>'+escapeHtml(p.notes):'')+navLinks(p.lat,p.lng)
+      +'<div class="poprow"><button class="popmore" data-pact="edit" type="button">edit</button><button class="popmore" data-pact="del" type="button">delete</button></div>';
+    mapPopup=new maplibregl.Popup({offset:12}).setLngLat([p.lng,p.lat]).setHTML(html).addTo(cmap);
+    const el=mapPopup.getElement();
+    if(el) el.querySelectorAll("[data-pact]").forEach(b=>b.addEventListener("click",()=>{
+      if(b.dataset.pact==="edit"){ closeMapPopup(); openPinSheet(p); }
+      else if(confirm("Delete this pin?")){ userPins=userPins.filter(x=>x.id!==p.id); savePinsStore(); refreshUserPins(); closeMapPopup(); toast("Pin deleted"); }
+    }));
+  }
+  function openPinSheet(p,lat,lng){
+    editPinId=p?p.id:null; pinDraft=p?null:{lat,lng};
+    $("#pinTitle").textContent=p?"Edit pin":"New pin";
+    $("#pLabel").value=p?(p.label||""):""; $("#pNotes").value=p?(p.notes||""):"";
+    const cur=p?p.type:"entrance";
+    $("#pTypes").innerHTML=PIN_TYPES.map(t=>'<button type="button" class="btn ghost sm'+(t.k===cur?" on":"")+'" data-t="'+t.k+'">'+t.L+' \u00B7 '+t.n+'</button>').join("");
+    $("#pTypes").querySelectorAll("[data-t]").forEach(b=>b.addEventListener("click",()=>{ $("#pTypes").querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); }));
+    $("#pDelete").classList.toggle("hidden",!p);
+    $("#pinScrim").classList.add("show"); $("#pinSheet").classList.add("show");
+    if(!p) setTimeout(()=>{ const e=$("#pLabel"); if(e) e.focus(); },80);
+  }
+  function closePinSheet(){ $("#pinScrim").classList.remove("show"); $("#pinSheet").classList.remove("show"); editPinId=null; pinDraft=null; }
+  function savePinSheet(){
+    const label=$("#pLabel").value.trim(), notes=$("#pNotes").value.trim();
+    const tb=$("#pTypes").querySelector("button.on"); const type=tb?tb.dataset.t:"note";
+    if(editPinId){ const p=userPins.find(x=>x.id===editPinId); if(p){ p.label=label; p.notes=notes; p.type=type; } }
+    else if(pinDraft){ userPins.push({id:"pin_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), lat:pinDraft.lat, lng:pinDraft.lng, label:label, notes:notes, type:type, created:new Date().toISOString()}); }
+    savePinsStore(); refreshUserPins(); closePinSheet(); toast("Pin saved");
+  }
+  { const b=$("#mPin"); if(b) b.addEventListener("click",()=>{
+      if(!cmap||!cMapReady){ toast("Open the map first"); return; }
+      if(losMode){ toast("Finish line of sight first"); return; }
+      pinPlacing=true; $("#pinBanner").classList.remove("hidden"); closeMapPopup();
+  }); }
+  { const b=$("#pinCancel"); if(b) b.addEventListener("click",()=>{ pinPlacing=false; $("#pinBanner").classList.add("hidden"); }); }
+  { const b=$("#pSave"); if(b) b.addEventListener("click",savePinSheet); }
+  { const b=$("#pDelete"); if(b) b.addEventListener("click",()=>{ if(editPinId&&confirm("Delete this pin?")){ userPins=userPins.filter(x=>x.id!==editPinId); savePinsStore(); refreshUserPins(); closePinSheet(); toast("Pin deleted"); } }); }
+  { const s=$("#pinScrim"); if(s) s.addEventListener("click",closePinSheet); }
+
   /* ---------------- line of sight (Phase 6) ---------------- */
   const LOS_REFR=1.13, R_EARTH=6371000;
   let losMode=false, losPlacing=false, losObs=null, losAssetFt=null, losToken=0, losResults=[];
+  let losScanStage=0, losScanA=null, losScanB=null, losScanActive=false, losScanCands=[], losMaxFt=1500;
   let losCanopy=false, losCanopyStatus="off", losCanopyManualFt=50, _canopyProbeFailed=false;
 
   /* --- measured tree-canopy heights from Meta/WRI 1m COGs (Phase 7, opt-in, online) --- */
@@ -2858,18 +2977,47 @@
     return out;
   }
   function obsHeightM(){ return (parseFloat(store.get("fk_obsft","6.33"))||6.33)*0.3048; }
-  async function lineOfSight(obs,obsGround,target,tgtGround,tgtH,canopyMode,manualM){
+  // Area sampler: one windowed read per canopy tile covering a bounding box; returns
+  // a synchronous (lat,lng)->meters function. Used by the road scan so hundreds of
+  // sightlines don't each fire their own network reads.
+  async function makeCanopyBoxSampler(latMin,latMax,lngMin,lngMax){
+    const [xa,ya]=_tileXY(lngMin,latMax,CANOPY_QK_Z), [xb,yb]=_tileXY(lngMax,latMin,CANOPY_QK_Z);
+    const ent=new Map(); let any=false;
+    for(let x=Math.min(xa,xb);x<=Math.max(xa,xb);x++) for(let y=Math.min(ya,yb);y<=Math.max(ya,yb);y++){
+      const qk=_quadKey(x,y,CANOPY_QK_Z);
+      const cog=await _getCog(qk); if(!cog){ ent.set(qk,null); continue; }
+      const [mx0,my0]=_merc(lngMin,latMax), [mx1,my1]=_merc(lngMax,latMin);
+      let minx=Math.max(0,Math.floor((mx0-cog.origin[0])/Math.abs(cog.res[0]))), maxx=Math.min(cog.w,Math.ceil((mx1-cog.origin[0])/Math.abs(cog.res[0]))+1);
+      let miny=Math.max(0,Math.floor((cog.origin[1]-my0)/Math.abs(cog.res[1]))), maxy=Math.min(cog.h,Math.ceil((cog.origin[1]-my1)/Math.abs(cog.res[1]))+1);
+      if(maxx<=minx||maxy<=miny){ ent.set(qk,null); continue; }
+      const wpx=maxx-minx, hpx=maxy-miny, CAP=1024;
+      const outW=Math.min(wpx,CAP), outH=Math.min(hpx,CAP), rs=(outW<wpx||outH<hpx);
+      let band;
+      try{ const d=await cog.image.readRasters(rs?{window:[minx,miny,maxx,maxy],width:outW,height:outH}:{window:[minx,miny,maxx,maxy]}); band=d[0]; }
+      catch(e){ ent.set(qk,null); continue; }
+      ent.set(qk,{cog:cog,band:band,minx:minx,miny:miny,sx:outW/wpx,sy:outH/hpx,outW:outW,outH:outH}); any=true;
+    }
+    if(!any) return null;
+    return function(lat,lng){
+      const [tx,ty]=_tileXY(lng,lat,CANOPY_QK_Z), e=ent.get(_quadKey(tx,ty,CANOPY_QK_Z)); if(!e) return 0;
+      const [mx,my]=_merc(lng,lat);
+      let ax=Math.floor(((mx-e.cog.origin[0])/Math.abs(e.cog.res[0])-e.minx)*e.sx), ay=Math.floor(((e.cog.origin[1]-my)/Math.abs(e.cog.res[1])-e.miny)*e.sy);
+      if(ax<0||ay<0||ax>=e.outW||ay>=e.outH) return 0;
+      let v=e.band[ay*e.outW+ax]; if(v==null||isNaN(v)||v<0||v>=250)v=0; return v;
+    };
+  }
+  async function lineOfSight(obs,obsGround,target,tgtGround,tgtH,canopyMode,manualM,canSamp){
     const D=haversineKm(obs,target)*1000;
     const obsE=obsGround+obsHeightM(), tgtE=tgtGround+tgtH, Reff=R_EARTH*LOS_REFR;
     if(D<1) return {ok:true,blocked:false,clearAglFt:tgtH/0.3048};
     const step=Math.max(15,D/160), nSteps=Math.max(2,Math.ceil(D/step));
     const pts=[]; for(let i=1;i<nSteps;i++){ const t=i/nSteps; pts.push([obs[0]+(target[0]-obs[0])*t, obs[1]+(target[1]-obs[1])*t]); }
     let canopyVals=null;
-    if(canopyMode==="measured") canopyVals=await sampleCanopyLine(pts);
+    if(canopyMode==="measured" && !canSamp) canopyVals=await sampleCanopyLine(pts);
     let blocked=false, reqTgtE=tgtE;
     for(let i=1;i<nSteps;i++){ const t=i/nSteps; const p=pts[i-1];
       let terr=await sampleElevation(p[0],p[1]); if(terr==null) return {ok:false};
-      if(canopyMode==="measured"){ if(canopyVals){ const cp=canopyVals[i-1]; if(cp>0) terr+=cp; } }
+      if(canopyMode==="measured"){ const cp=canSamp?canSamp(p[0],p[1]):(canopyVals?canopyVals[i-1]:0); if(cp>0) terr+=cp; }
       else if(canopyMode==="manual"){ terr+=manualM; }
       const di=D*t, drop=(di*(D-di))/(2*Reff), sight=obsE+(tgtE-obsE)*t;
       if(sight-drop<terr) blocked=true;
@@ -2877,12 +3025,13 @@
     }
     return {ok:true, blocked, clearAglFt:Math.max(0,reqTgtE-tgtGround)/0.3048};
   }
-  function clearLosOverlays(){ if(cmap){ try{cmap.getSource("los-lines").setData({type:"FeatureCollection",features:[]});}catch(e){} try{cmap.getSource("los-observer").setData({type:"FeatureCollection",features:[]});}catch(e){} } }
+  function clearLosOverlays(){ if(cmap){ ["los-lines","los-observer","los-cands"].forEach(sr=>{ try{cmap.getSource(sr).setData({type:"FeatureCollection",features:[]});}catch(e){} }); } }
   async function computeLos(){
     const token=++losToken, obs=losObs; if(!obs) return;
     const obsGround=await sampleElevation(obs[0],obs[1]); if(losToken!==token) return;
     const sel=customers.filter(c=>cSel.has(c.id));
-    const assets=(sel.length?sel:mapList()).filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o);});
+    let assets=(sel.length?sel:mapList()).filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o);});
+    if(losScanActive){ const mm=(losMaxFt||1500)*0.3048; assets=assets.filter(c=>haversineKm(obs,[+c.lat,+c.lng])*1000<=mm); }
     const tgtH=(losAssetFt||40)*0.3048, noElev=(obsGround==null);
     // canopy: try measured (Meta COG); fall back to a manual typical height if it can't be read
     let canopyMode=null; losCanopyStatus = losCanopy ? "checking" : "off";
@@ -2908,6 +3057,99 @@
     try{ cmap.getSource("los-lines").setData({type:"FeatureCollection",features:feats}); }catch(e){}
     renderLosResults();
   }
+  /* ---- road scan: test candidate parking spots along a segment ---- */
+  async function runScan(){
+    const token=++losToken, A=losScanA, B=losScanB; if(!A||!B) return;
+    $("#losSum").textContent="Scanning the road\u2026"; $("#losList").innerHTML=""; $("#losScanList").innerHTML="";
+    $("#losScanWrap").classList.remove("hidden");
+    $("#losSheet").classList.remove("loscol");
+    $("#losScrim").classList.add("show"); $("#losSheet").classList.add("show");
+    const segM=haversineKm(A,B)*1000;
+    let N=Math.round(segM/30)+1; N=Math.max(6,Math.min(22,N));
+    const maxM=(losMaxFt||1500)*0.3048, tgtH=(losAssetFt||40)*0.3048;
+    // assets near the segment (corridor prefilter)
+    const sel=customers.filter(c=>cSel.has(c.id));
+    let assets=(sel.length?sel:mapList()).filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o);});
+    const corridor=[]; for(let i=0;i<=8;i++){ const t=i/8; corridor.push([A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t]); }
+    assets=assets.filter(c=>{const P=[+c.lat,+c.lng]; return corridor.some(q=>haversineKm(q,P)*1000<=maxM);});
+    if(!assets.length){
+      losScanActive=false; $("#losScanWrap").classList.add("hidden");
+      $("#losSum").innerHTML='No sites within '+(losMaxFt||1500)+' ft of that stretch<span class="rtsub">Raise the max distance or scan a road closer to the assets.</span>';
+      $("#losNote").textContent="";
+      return;
+    }
+    if(assets.length>40) assets=assets.slice(0,40);
+    // canopy mode for the scan (probe once at the midpoint; area sampler if measured)
+    const mid=corridor[4];
+    const midGround=await sampleElevation(mid[0],mid[1]); if(losToken!==token) return;
+    let canopyMode=null, sampler=null; losCanopyStatus=losCanopy?"checking":"off";
+    if(losCanopy && midGround!=null){
+      let probe=null;
+      if(!_canopyProbeFailed){ probe=await sampleCanopyM(mid[0],mid[1]); if(losToken!==token) return; if(probe==null) _canopyProbeFailed=true; }
+      if(probe!=null){
+        let laMin=Math.min(A[0],B[0]), laMax=Math.max(A[0],B[0]), loMin=Math.min(A[1],B[1]), loMax=Math.max(A[1],B[1]);
+        assets.forEach(c=>{ const la=+c.lat, lo=+c.lng; if(la<laMin)laMin=la; if(la>laMax)laMax=la; if(lo<loMin)loMin=lo; if(lo>loMax)loMax=lo; });
+        const pad=0.002;
+        sampler=await makeCanopyBoxSampler(laMin-pad,laMax+pad,loMin-pad,loMax+pad); if(losToken!==token) return;
+        if(sampler){ canopyMode="measured"; losCanopyStatus="measured"; }
+        else if((losCanopyManualFt||0)>0){ canopyMode="manual"; losCanopyStatus="manual"; }
+        else losCanopyStatus="unavailable";
+      }
+      else if((losCanopyManualFt||0)>0){ canopyMode="manual"; losCanopyStatus="manual"; }
+      else losCanopyStatus="unavailable";
+    }
+    const manualM=(losCanopyManualFt||0)*0.3048;
+    // asset ground elevations once
+    const ag=new Map();
+    for(const c of assets){ const g=await sampleElevation(+c.lat,+c.lng); if(losToken!==token) return; ag.set(c.id,g); }
+    // candidates along the segment
+    const cands=[];
+    for(let i=0;i<N;i++){
+      const t=(N===1)?0:i/(N-1), P=[A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t];
+      const g=await sampleElevation(P[0],P[1]); if(losToken!==token) return;
+      if(g==null) continue;
+      let vis=0, inR=0, sumD=0;
+      for(const c of assets){
+        const T=[+c.lat,+c.lng], d=haversineKm(P,T)*1000; if(d>maxM) continue;
+        inR++;
+        const tg=ag.get(c.id); if(tg==null) continue;
+        const r=await lineOfSight(P,g,T,tg,tgtH,canopyMode,manualM,sampler); if(losToken!==token) return;
+        if(r.ok&&!r.blocked){ vis++; sumD+=d; }
+      }
+      cands.push({pt:P, vis:vis, inR:inR, avgD:vis?sumD/vis:1e9});
+    }
+    if(!cands.length){
+      losScanActive=false; $("#losScanWrap").classList.add("hidden");
+      $("#losSum").textContent="No elevation data along that road \u2014 save this area offline, or go online.";
+      $("#losNote").textContent="";
+      return;
+    }
+    cands.sort((a,b)=> b.vis-a.vis || b.inR-a.inR || a.avgD-b.avgD);
+    const kept=[]; const minSep=Math.max(25, segM/N);
+    for(const cd of cands){ if(kept.length>=5) break; if(kept.every(k=>haversineKm(k.pt,cd.pt)*1000>=minSep)) kept.push(cd); }
+    losScanCands=kept; losScanActive=true;
+    const feats=[{type:"Feature",properties:{kind:"seg"},geometry:{type:"LineString",coordinates:[[A[1],A[0]],[B[1],B[0]]]}}];
+    kept.forEach((k,i)=>feats.push({type:"Feature",properties:{kind:"cand",rank:String(i+1),best:i===0?1:0},geometry:{type:"Point",coordinates:[k.pt[1],k.pt[0]]}}));
+    try{ cmap.getSource("los-cands").setData({type:"FeatureCollection",features:feats}); }catch(e){}
+    previewCand(0);
+  }
+  function fmtFtD(m){ const ft=m/0.3048; return ft>=1000?((ft/1000).toFixed(1).replace(/\.0$/,"")+"k ft"):(Math.round(ft/10)*10+" ft"); }
+  function renderScanList(activeIdx){
+    $("#losScanList").innerHTML=losScanCands.map((k,i)=>{
+      const badge='<span class="rtn" style="background:'+(i===0?"var(--amber)":"var(--line2)")+';color:'+(i===0?"#10141a":"var(--muted)")+'">'+(i+1)+'</span>';
+      const rec=i===0?' \u2605':'';
+      const meta=(i===activeIdx?"showing on map":"tap to preview")+(k.vis&&k.avgD<1e9?(" \u00B7 avg "+fmtFtD(k.avgD)+" out"):"");
+      return '<li data-cand="'+i+'" class="'+(i===activeIdx?"candon":"")+'">'+badge+'<div class="rtmain"><div class="rttitle">Sees '+k.vis+' of '+k.inR+' in range'+rec+'</div><div class="rtmeta">'+meta+'</div></div></li>';
+    }).join("");
+    $("#losScanList").querySelectorAll("[data-cand]").forEach(el=>el.addEventListener("click",()=>previewCand(+el.dataset.cand)));
+  }
+  function previewCand(i){
+    const k=losScanCands[i]; if(!k) return;
+    renderScanList(i);
+    losObs=k.pt;
+    try{ cmap.getSource("los-observer").setData({type:"FeatureCollection",features:[{type:"Feature",properties:{},geometry:{type:"Point",coordinates:[k.pt[1],k.pt[0]]}}]}); }catch(e){}
+    computeLos();
+  }
   function renderLosResults(){
     const r=losResults||[];
     const clear=r.filter(x=>x.state==="clear").length, blocked=r.filter(x=>x.state==="blocked").length, unk=r.filter(x=>x.state==="unknown").length;
@@ -2917,7 +3159,8 @@
     else if(unk===r.length) sum='Elevation data not available here<span class="rtsub">Save this area offline, or go online, to check line of sight.</span>';
     else{
       const canopyTag = losCanopyStatus==="measured" ? " · with tree canopy (measured)" : losCanopyStatus==="manual" ? (" · with ~"+(losCanopyManualFt||0)+" ft canopy") : losCanopyStatus==="unavailable" ? " · canopy N/A here" : "";
-      sum='<b style="color:var(--green)">'+clear+"</b> visible · <b style=\"color:var(--red)\">"+blocked+"</b> blocked"+(unk?(" · "+unk+" unknown"):"")+'<span class="rtsub">of '+r.length+" sites · your height "+store.get("fk_obsft","6.33")+" ft · asset "+(losAssetFt||40)+" ft"+canopyTag+"</span>";
+      const scanTag = losScanActive ? (" · within "+(losMaxFt||1500)+" ft") : "";
+      sum='<b style="color:var(--green)">'+clear+"</b> visible · <b style=\"color:var(--red)\">"+blocked+"</b> blocked"+(unk?(" · "+unk+" unknown"):"")+'<span class="rtsub">of '+r.length+" sites · your height "+store.get("fk_obsft","6.33")+" ft · asset "+(losAssetFt||40)+" ft"+canopyTag+scanTag+"</span>";
     }
     $("#losSum").innerHTML=sum;
     let html="";
@@ -2942,6 +3185,7 @@
     $("#losBanner").classList.add("hidden");
     try{ cmap.getSource("los-observer").setData({type:"FeatureCollection",features:[{type:"Feature",properties:{},geometry:{type:"Point",coordinates:[lng,lat]}}]}); }catch(e){}
     $("#losSum").textContent="Checking line of sight\u2026"; $("#losList").innerHTML="";
+    if(!losScanActive) $("#losScanWrap").classList.add("hidden");
     $("#losSheet").classList.remove("loscol");
     $("#losScrim").classList.add("show"); $("#losSheet").classList.add("show");
     computeLos();
@@ -2949,6 +3193,12 @@
   function openLos(){
     if(!cmap||!cMapReady){ toast("Open the map first"); return; }
     losMode=true; losPlacing=true; losObs=null; losResults=[]; _canopyProbeFailed=false;
+    losScanStage=0; losScanA=null; losScanB=null; losScanActive=false; losScanCands=[];
+    pinPlacing=false; $("#pinBanner").classList.add("hidden");
+    losMaxFt=parseFloat(store.get("fk_los_maxft","1500"))||1500; { const e=$("#losMaxFt"); if(e) e.value=losMaxFt; }
+    $("#losScanWrap").classList.add("hidden"); $("#losScanList").innerHTML="";
+    $("#losBannerText").textContent="Tap the map to set your parking point";
+    { const sb=$("#losScanBtn"); if(sb) sb.classList.remove("hidden"); }
     if(losAssetFt==null) losAssetFt=parseFloat(store.get("fk_los_ft","40"))||40;
     losCanopy=store.get("fk_los_canopy","0")==="1"; losCanopyManualFt=parseFloat(store.get("fk_los_canopy_ft","50")); if(isNaN(losCanopyManualFt))losCanopyManualFt=50;
     { const t=$("#losCanopy"); if(t) t.checked=losCanopy; } { const f=$("#losCanopyFt"); if(f) f.value=losCanopyManualFt; } { const row=$("#losCanopyRow"); if(row) row.classList.toggle("hidden",!losCanopy); }
@@ -2958,6 +3208,8 @@
   }
   function closeLos(){
     losMode=false; losPlacing=false; losObs=null;
+    losScanStage=0; losScanA=null; losScanB=null; losScanActive=false; losScanCands=[];
+    $("#losScanWrap").classList.add("hidden");
     $("#losBanner").classList.add("hidden");
     $("#losScrim").classList.remove("show"); $("#losSheet").classList.remove("show","loscol");
     $("#mLos").classList.remove("on");
@@ -2968,7 +3220,23 @@
   { const b=$("#losCancel"); if(b) b.addEventListener("click",closeLos); }
   { const b=$("#losDone"); if(b) b.addEventListener("click",closeLos); }
   { const b=$("#losScrim"); if(b) b.addEventListener("click",closeLos); }
-  { const b=$("#losMove"); if(b) b.addEventListener("click",()=>{ losPlacing=true; $("#losScrim").classList.remove("show"); $("#losSheet").classList.remove("show"); $("#losBanner").classList.remove("hidden"); }); }
+  { const b=$("#losMove"); if(b) b.addEventListener("click",()=>{
+      losScanStage=0; losScanA=null; losScanB=null; losScanActive=false; losScanCands=[];
+      $("#losScanWrap").classList.add("hidden");
+      try{ cmap.getSource("los-cands").setData({type:"FeatureCollection",features:[]}); }catch(e){}
+      $("#losBannerText").textContent="Tap the map to set your parking point";
+      { const sb=$("#losScanBtn"); if(sb) sb.classList.remove("hidden"); }
+      losPlacing=true; $("#losScrim").classList.remove("show"); $("#losSheet").classList.remove("show"); $("#losBanner").classList.remove("hidden");
+  }); }
+  { const b=$("#losScanBtn"); if(b) b.addEventListener("click",()=>{
+      losPlacing=false; losScanStage=1; losScanA=null; losScanB=null;
+      $("#losBannerText").textContent="Tap the START of the road segment";
+      b.classList.add("hidden");
+  }); }
+  { const e=$("#losMaxFt"); if(e) e.addEventListener("change",()=>{
+      let v=parseFloat(e.value); if(isNaN(v)||v<100) v=1500; losMaxFt=v; e.value=v; store.set("fk_los_maxft",String(v));
+      if(losScanActive&&losScanA&&losScanB) runScan();
+  }); }
   { const b=$("#losFt"); if(b) b.addEventListener("change",()=>losSetFt(parseFloat($("#losFt").value)||40)); }
   { const b=$("#losPreDist"); if(b) b.addEventListener("click",()=>losSetFt(40)); }
   { const b=$("#losPreTx"); if(b) b.addEventListener("click",()=>losSetFt(100)); }
