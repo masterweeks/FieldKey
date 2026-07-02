@@ -140,6 +140,8 @@
   .mapbar-helpers{display:flex;gap:6px}
   .btn.sm{padding:7px 11px;font-size:13px;min-width:0;white-space:nowrap}
   .btn.sm.on{background:var(--amber);color:#10141a;border-color:var(--amber)}
+  @keyframes btnp{0%{transform:scale(.955);filter:brightness(1.35)}100%{transform:scale(1);filter:none}}
+  button.btnp{animation:btnp .3s ease-out}
   .mapissue{width:100%}
   .lasso{position:absolute;inset:0;z-index:5;touch-action:none}
   .lasso svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
@@ -848,6 +850,11 @@
     <input type="number" id="sDelay" min="0" step="100" />
     <p class="note">OpenStreetMap asks for ~1 lookup per second. Keep this at 1100 or higher for OSM.</p>
   </div>
+  <div class="sgroup">
+    <label class="label">Weekly Google lookup limit</label>
+    <input type="number" id="sGeoLimit" min="1" step="100" />
+    <p class="note" id="sGeoNote" style="margin:5px 0 0"></p>
+  </div>
   <h2 style="margin-top:8px">Text message</h2>
   <p class="hint">Sent to customers. Use [Customer name] and [customer address] — they fill in automatically.</p>
   <div class="sgroup"><textarea id="sSms" style="min-height:120px"></textarea></div>
@@ -925,7 +932,7 @@
   const DEF = {
     name:"Obii weeks", lan:"OXWC", phone:"3052196892",
     issue:"need code/contact info", work:"Drone inspection",
-    provider:"osm", email:"", gkey:"", delay:"1100",
+    provider:"osm", email:"", gkey:"", delay:"1100", geolimit:"9999",
     mpg:"22", fuelprice:"4.75", avgspeed:"40", vehweight:"4800", obsft:"6.33", canopyproxy:"",
     latestKml:"",
     smsTemplate:"Hey [Customer name] this is Cyberhawk with PGE, I need to complete an aerial inspection at [customer address]. Let me know what time during business hours works for you."
@@ -1205,6 +1212,12 @@
     const addr=j.display_name||"";
     geoCache.set(key,addr); return addr;
   }
+  /* weekly Google lookup budget (resets Monday) */
+  function geoWeekKey(){ const d=new Date(); const day=(d.getDay()+6)%7; const m=new Date(d.getFullYear(),d.getMonth(),d.getDate()-day); return m.getFullYear()+"-"+String(m.getMonth()+1).padStart(2,"0")+"-"+String(m.getDate()).padStart(2,"0"); }
+  function geoBudget(){ return Math.max(1,parseInt(cfg.geolimit,10)||9999); }
+  function geoUsed(){ return store.get("fk_geoweek","")===geoWeekKey() ? (parseInt(store.get("fk_geocount","0"),10)||0) : 0; }
+  function geoAllowed(){ return geoUsed()<geoBudget(); }
+  function geoBump(){ const wk=geoWeekKey(); if(store.get("fk_geoweek","")!==wk){ store.set("fk_geoweek",wk); store.set("fk_geocount","0"); } store.set("fk_geocount",String(geoUsed()+1)); }
   let gReady=null;
   function loadGoogle(){
     if(gReady) return gReady;
@@ -1220,6 +1233,8 @@
   async function geocodeGoogle(lat,lng){
     const key=lat+","+lng;
     if(geoCache.has(key)) return geoCache.get(key);
+    if(!geoAllowed()) throw new Error("geo-limit");
+    geoBump();
     const g=await loadGoogle();
     const gc=new g.maps.Geocoder();
     const addr=await new Promise((res)=>{
@@ -1302,7 +1317,7 @@
           d.status = d.addr ? "done" : "failed";
           if(d.addr) ok++;
         }
-      }catch(e){ d.addr=""; d.status="failed"; }
+      }catch(e){ d.addr=""; d.status="failed"; if(String(e&&e.message)==="geo-limit"){ toast("Weekly Google lookup limit reached \u2014 raise it in Settings."); cancel=true; } }
       done++;
       updateTicket(i);
       plotPoints(false);
@@ -1369,6 +1384,8 @@
     $("#sName").value=cfg.name; $("#sLan").value=cfg.lan; $("#sPhone").value=cfg.phone;
     $("#sIssue").value=cfg.issue; $("#sWork").value=cfg.work;
     $("#sEmail").value=cfg.email; $("#sGkey").value=cfg.gkey; $("#sDelay").value=cfg.delay;
+    { const e=$("#sGeoLimit"); if(e) e.value=cfg.geolimit; }
+    { const n=$("#sGeoNote"); if(n) n.textContent="Used "+geoUsed()+" of "+geoBudget()+" Google lookups this week (resets Monday)."; }
     $("#sMpg").value=cfg.mpg; $("#sFuel").value=cfg.fuelprice; $("#sSpeed").value=cfg.avgspeed; $("#sVeh").value=cfg.vehweight; $("#sObs").value=cfg.obsft; $("#sCanopyProxy").value=cfg.canopyproxy;
     setProviderUI(cfg.provider);
     setSeg("segPinShape", store.get("fk_pin_shape","pin"));
@@ -1393,9 +1410,10 @@
     cfg.issue=$("#sIssue").value.trim(); cfg.work=$("#sWork").value.trim();
     cfg.email=$("#sEmail").value.trim(); cfg.gkey=$("#sGkey").value.trim();
     cfg.delay=String(parseInt($("#sDelay").value,10)||0);
+    cfg.geolimit=String(Math.max(1,parseInt($("#sGeoLimit").value,10)||9999));
     cfg.mpg=String(parseFloat($("#sMpg").value)||22); cfg.fuelprice=String(parseFloat($("#sFuel").value)||0); cfg.avgspeed=String(parseFloat($("#sSpeed").value)||40); cfg.vehweight=String(parseFloat($("#sVeh").value)||4800); cfg.obsft=String(parseFloat($("#sObs").value)||6.33); cfg.canopyproxy=($("#sCanopyProxy").value||"").trim();
     cfg.provider=cfg._pendProvider||cfg.provider;
-    for(const k of ["name","lan","phone","issue","work","email","gkey","delay","mpg","fuelprice","avgspeed","vehweight","obsft","canopyproxy","provider"]) store.set("fk_"+k,cfg[k]);
+    for(const k of ["name","lan","phone","issue","work","email","gkey","delay","geolimit","mpg","fuelprice","avgspeed","vehweight","obsft","canopyproxy","provider"]) store.set("fk_"+k,cfg[k]);
     if(results.length) renderTickets();
     closeSheet(); toast("Settings saved");
   });
@@ -2179,7 +2197,7 @@
   function siteFeature(c){ const la=parseFloat(c.lat),lo=parseFloat(c.lng); return {type:"Feature",geometry:{type:"Point",coordinates:[lo,la]},properties:{
     id:c.id, st:c.status||"new", flag:c.accessIssue?1:0, sel:cSel.has(c.id)?1:0,
     title:assetTitle(c), sub:(c.sapId&&c.name)?c.name:"", axs:c.access||"",
-    issue:c.accessIssue?(c.accessIssueReason||"Access issue"):"", lat:la, lng:lo }}; }
+    issue:c.accessIssue?(c.accessIssueReason||"Access issue"):"", los:(losMode&&losStateById.has(c.id))?losStateById.get(c.id):"", lat:la, lng:lo }}; }
   function sitesGeo(list){ return {type:"FeatureCollection",features:(list||[]).map(siteFeature)}; }
   function mapCountLine(){
     const scoped=cSel.size||custFilter!=="all"||custQuery.trim();
@@ -2368,6 +2386,8 @@
           paint:{"text-color":"#F2F5F9","text-halo-color":"#0E1116","text-halo-width":1.2}});
         const pinAnchor=ensurePinImages(cmap);
         const pinColorKey=["case",
+          ["==",["get","los"],"clear"],"scheduled",
+          ["==",["get","los"],"blocked"],"issue",
           ["==",["get","flag"],1],"issue",
           ["==",["get","st"],"replied"],"replied",
           ["==",["get","st"],"scheduled"],"scheduled",
@@ -2625,12 +2645,41 @@
   });
   const REQ_SEP="\n\n----------------------------------------\n\n";
   function requestsTextFor(list){ return list.map(c=>template({sap:c.sapId,addr:c.address||""})).join(REQ_SEP); }
-  function openReqSheet(list){
+  let rqToken=0;
+  async function resolveAddressesFor(list){
+    const missing=list.filter(c=>!c.address && c.lat!==""&&c.lng!==""&&!isNaN(parseFloat(c.lat))&&!isNaN(parseFloat(c.lng)));
+    if(!missing.length) return {resolved:0,total:0,limited:false};
+    const token=++rqToken;
+    const provider = cfg.provider==="google" && cfg.gkey ? geocodeGoogle : geocodeOSM;
+    const delay=Math.max(0,parseInt(cfg.delay,10)||0);
+    let ok=0, limited=false;
+    for(let i=0;i<missing.length;i++){
+      if(rqToken!==token) return null;
+      $("#rqInfo").textContent="Resolving addresses "+(i+1)+"/"+missing.length+"\u2026";
+      try{
+        const a=await provider(missing[i].lat,missing[i].lng);
+        if(rqToken!==token) return null;
+        if(a){ missing[i].address=cleanText(a); ok++; }
+      }catch(e){ if(String(e&&e.message)==="geo-limit"){ limited=true; break; } }
+      if(i<missing.length-1&&delay) await sleep(delay);
+    }
+    if(rqToken!==token) return null;
+    if(ok){ persist(); renderCustomers(); }
+    return {resolved:ok,total:missing.length,limited:limited};
+  }
+  async function openReqSheet(list){
     $("#rqText").value=requestsTextFor(list);
     $("#rqInfo").textContent=list.length+(list.length===1?" request":" requests")+" \u00B7 built from your Settings details. Copy or share to email.";
     $("#rqScrim").classList.add("show"); $("#rqSheet").classList.add("show");
+    const r=await resolveAddressesFor(list);
+    if(!r) return;
+    if(r.total){
+      $("#rqText").value=requestsTextFor(list);
+      $("#rqInfo").textContent=list.length+(list.length===1?" request":" requests")+" \u00B7 "+r.resolved+" of "+r.total+" addresses resolved"
+        +(r.limited?" \u00B7 weekly Google limit reached (raise it in Settings)":"")+". Copy or share to email.";
+    }
   }
-  function closeReqSheet(){ $("#rqScrim").classList.remove("show"); $("#rqSheet").classList.remove("show"); }
+  function closeReqSheet(){ rqToken++; $("#rqScrim").classList.remove("show"); $("#rqSheet").classList.remove("show"); }
   $("#rqScrim").addEventListener("click",closeReqSheet);
 
   /* ---- Build request from the database (selection-or-filter) ---- */
@@ -2680,25 +2729,12 @@
     const nameI=+$("#impNameC").value, phoneI=+$("#impPhone").value, accessI=+$("#impAccess").value;
     if(isNaN(latI)||latI<0||isNaN(lngI)||lngI<0){ toast("Pick the latitude and longitude columns."); return; }
     impBusy=true; impCancel=false;
-    $("#impGo").classList.add("hidden"); $("#impCols").classList.add("hidden"); $("#impProgWrap").classList.remove("hidden");
-    const provider = cfg.provider==="google" && cfg.gkey ? geocodeGoogle : geocodeOSM;
-    const delay = Math.max(0, parseInt(cfg.delay,10)||0);
-    const addrs=new Array(rows.length).fill(""); let ok=0;
-    for(let i=0;i<rows.length;i++){
-      if(impCancel) break;
-      const la=String(rows[i][latI]==null?"":rows[i][latI]).trim(), lo=String(rows[i][lngI]==null?"":rows[i][lngI]).trim();
-      try{ if(la&&lo&&!isNaN(parseFloat(la))&&!isNaN(parseFloat(lo))){ addrs[i]=await provider(la,lo); if(addrs[i])ok++; } }catch(e){}
-      const done=i+1;
-      $("#impBar").style.width=Math.round(done/rows.length*100)+"%";
-      $("#impProg").textContent="Resolving addresses "+done+"/"+rows.length+" \u00B7 "+ok+" found";
-      if(i<rows.length-1 && !impCancel && delay) await sleep(delay);
-    }
-    if(impCancel){ hideImport(); toast("Import canceled — nothing was saved."); return; }
+    $("#impGo").classList.add("hidden");
     const get=(r,i)=>(i>=0&&i<headers.length)?cleanText(String(r[i]==null?"":r[i])):"";
     const skip=[sapI,nameI,phoneI,accessI,latI,lngI];
     const recs=rows.map((r,ri)=>{
       const rec={sapId:get(r,sapI),name:get(r,nameI),lat:get(r,latI),lng:get(r,lngI),
-                 address:addrs[ri]?cleanText(addrs[ri]):"",phones:[],access:get(r,accessI),accessNotes:"",extra:{}};
+                 address:"",phones:[],access:get(r,accessI),accessNotes:"",extra:{}};
       const ph=get(r,phoneI); if(ph) extractPhones(ph).forEach(p=>rec.phones.push(p));
       headers.forEach((h,i)=>{ if(skip.indexOf(i)>=0)return; const v=get(r,i); if(v)rec.extra[h]=v; });
       return rec;
@@ -2725,6 +2761,7 @@
       bar.appendChild(b); sh.insertBefore(bar,sh.firstChild);
     });
   })();
+  document.addEventListener("click",e=>{ const b=e.target&&e.target.closest?e.target.closest("button"):null; if(!b) return; b.classList.remove("btnp"); void b.offsetWidth; b.classList.add("btnp"); setTimeout(()=>{ try{ b.classList.remove("btnp"); }catch(_e){} },340); },true);
   $("#mReq").addEventListener("click",()=>{
     const sel=customers.filter(c=>cSel.has(c.id));
     const list=sel.length?sel:mapList();
@@ -2912,6 +2949,7 @@
   const LOS_REFR=1.13, R_EARTH=6371000;
   let losMode=false, losPlacing=false, losObs=null, losAssetFt=null, losToken=0, losResults=[];
   let losScanStage=0, losScanA=null, losScanB=null, losScanActive=false, losScanCands=[], losMaxFt=1500;
+  let losStateById=new Map();
   let losCanopy=false, losCanopyStatus="off", losCanopyManualFt=50, _canopyProbeFailed=false;
 
   /* --- measured tree-canopy heights from Meta/WRI 1m COGs (Phase 7, opt-in, online) --- */
@@ -3025,7 +3063,7 @@
     }
     return {ok:true, blocked, clearAglFt:Math.max(0,reqTgtE-tgtGround)/0.3048};
   }
-  function clearLosOverlays(){ if(cmap){ ["los-lines","los-observer","los-cands"].forEach(sr=>{ try{cmap.getSource(sr).setData({type:"FeatureCollection",features:[]});}catch(e){} }); } }
+  function clearLosOverlays(){ if(losStateById.size){ losStateById=new Map(); refreshMarks(); } if(cmap){ ["los-lines","los-observer","los-cands"].forEach(sr=>{ try{cmap.getSource(sr).setData({type:"FeatureCollection",features:[]});}catch(e){} }); } }
   async function computeLos(){
     const token=++losToken, obs=losObs; if(!obs) return;
     const obsGround=await sampleElevation(obs[0],obs[1]); if(losToken!==token) return;
@@ -3054,6 +3092,7 @@
     }
     if(losToken!==token) return;
     losResults=results;
+    losStateById=new Map(results.map(x=>[x.c.id,x.state])); refreshMarks();
     try{ cmap.getSource("los-lines").setData({type:"FeatureCollection",features:feats}); }catch(e){}
     renderLosResults();
   }

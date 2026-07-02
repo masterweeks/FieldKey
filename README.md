@@ -24,19 +24,24 @@ to where you were.) You can also tap the dimmed area behind a panel to dismiss i
 **Import KML / CSV** takes your daily site file. It auto-detects the SAP ID,
 latitude, and longitude — for a CSV it shows those columns so you can confirm or fix
 them; a KML's coordinates are unambiguous, so it skips straight through — then shows
-**"N assets found."** Tap **Import** and it reverse-geocodes every point to a street
-address (with a progress bar) and saves the batch into the database in one step —
-there's no separate "save." It **merges** into what's already there: a point that
+**"N assets found."** Tap **Import** and the batch saves into the database
+**instantly** — no waiting, and no address lookups are spent at import time.
+Addresses resolve later, only for the assets you actually build requests for (see
+below). It **merges** into what's already there: a point that
 matches an existing customer (by SAP ID, then name, then address) updates that
 record and keeps the phone / access / status / text history you've collected;
 brand-new points are added; anything already in the database that isn't in this file
 is left untouched. The file is tagged and the view auto-filters to **Latest KML** so
 you immediately see just what you loaded — which is also the set you'll usually build
-requests for. (Import runs the geocode; if you pick the wrong file, **Cancel** stops
-it before anything is saved, and the daily snapshot is your undo otherwise.)
+requests for. (If you pick the wrong file, close the sheet before tapping Import,
+and the daily snapshot is your undo otherwise.)
 
-This is how a fresh daily KML both gets merged with everything you've built up and —
-because it geocodes — finally gets addresses.
+This is how a fresh daily KML merges with everything you've built up. **Addresses
+are resolved on demand:** when you tap **Build request** (list or map), FieldKey
+looks up street addresses just for the selected assets that don't have one yet —
+progress shows right in the request sheet — and saves them onto the records, so each
+site is only ever looked up once. This keeps lookups down to the assets you actually
+work, instead of burning quota on every imported point.
 
 **Add contact manually** is for customer info that arrives some other way — a phone
 call, a text, a note from a colleague. Tap it (under the import buttons), and enter a
@@ -83,7 +88,7 @@ manually** on the main screen creates a fresh record.)
   characters that email programs sometimes substitute (en-dashes, etc.) are handled.
   The email's address, name, and phones are taken as authoritative; coordinates you
   already have are kept. (This is for email replies only — site files go through
-  **Import KML / CSV** so they pick up addresses.)
+  **Import KML / CSV**.)
 - **Text customers** — each customer has a one-tap **Text** button that opens
   Messages pre-filled with your template (first name and address fill in
   automatically). The app counts each send and marks the customer *Texted*.
@@ -163,7 +168,10 @@ manually** on the main screen creates a fresh record.)
   selected asset (or all shown) and tells you which ones you can actually **see** over
   the landscape — useful for judging whether you'll hold visual line of sight while
   flying. It draws a **green** line to each asset you can see and a **red** line to
-  each one the terrain blocks, and lists them with a count. For blocked assets it
+  each one the terrain blocks, and — while the check is up — the asset **pins
+  themselves recolor** green/red to match, so visibility reads at a glance even when
+  the lines get dense; normal status colors return the moment you exit. It lists them
+  with a count. For blocked assets it
   reports the **altitude the drone clears at** ("clears above ~X ft"), so you know how
   high you'd need to fly to keep it in view. Asset height is adjustable right in the
   panel — a **Distribution** preset (~40 ft), a **Transmission** preset for taller
@@ -289,6 +297,9 @@ Edit the text-message template anytime in **Settings → Text message**.
 - Default address lookup is **OpenStreetMap** (free, no key). Keep the lookup
   delay at ~1100 ms to respect its 1-request-per-second policy.
 - For higher volume/precision, switch to **Google** in Settings and paste your
-  own Maps JavaScript API key.
+  own Maps JavaScript API key. Google lookups are capped by a **weekly limit**
+  (default 9,999, adjustable in Settings, resets Monday); Settings shows how much
+  of the week's budget you've used, and when the cap is hit FieldKey says so and
+  stops rather than silently burning quota.
 - Requestor name / LanID / phone / descriptions live in **Settings** and are
   saved on the device.
