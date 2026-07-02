@@ -939,7 +939,7 @@
   <div class="sgroup"><label class="label">Vehicle weight (lbs)</label><input type="number" id="sVeh" min="500" step="100" inputmode="numeric" /><p class="note">Used to estimate the extra fuel from climbing on hilly routes.</p></div>
   <div class="sgroup"><label class="label">Your height (ft) — for line of sight</label><input type="number" id="sObs" min="3" max="8" step="0.1" inputmode="decimal" /><p class="note">Your standing eye height, used when checking which assets you can see over the terrain from a parking point. E.g. 6.3 for about 6'4".</p></div>
   <div class="sgroup"><label class="label">Canopy proxy URL (optional)</label><input type="url" id="sCanopyProxy" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://….supabase.co/functions/v1/canopy" /><p class="note">Unlocks measured 1&#8209;meter tree-canopy data in line-of-sight. Paste your canopy proxy endpoint here. Leave blank to use the manual typical-height estimate.</p></div>
-  <p class="note" style="text-align:center;margin-top:14px">FieldKey · <span id="sAppVer">v49</span> · runs offline once added to your Home Screen</p>
+  <p class="note" style="text-align:center;margin-top:14px">FieldKey · <span id="sAppVer">v50</span> · runs offline once added to your Home Screen</p>
   <div class="sgroup"><button class="btn ghost sm" id="sCheckUpdate" type="button">Check for update</button></div>
 </div>
 
@@ -977,7 +977,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v49";
+  const APP_VER="v50";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -3013,20 +3013,37 @@
   { const b=$("#measModeBtn"); if(b) b.addEventListener("click",()=>{ measArea=!measArea; b.textContent=measArea?"Distance":"Area"; measPts=[]; measUpdate(); }); }
 
   /* ---------------- roads (OpenStreetMap via Overpass): fetch, graph, snap ---------------- */
-  const OVERPASS="https://overpass-api.de/api/interpreter";
+  const OVERPASS_ENDPOINTS=[
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter"
+  ];
   const _roadCache=new Map();
+  async function _overpassOnce(q,url){
+    const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"data="+encodeURIComponent(q)});
+    if(!r.ok) throw new Error("http "+r.status);
+    const j=await r.json();
+    // Overpass answers 200 with a "remark" when it rate-limits or times out server-side.
+    if(j && j.remark && /timed out|rate_limited|runtime error|error/i.test(j.remark)) throw new Error("overpass busy");
+    return (j.elements||[]).filter(el=>el.type==="way"&&el.geometry&&el.geometry.length>1)
+      .map(el=>({pts:el.geometry.map(g=>[g.lat,g.lon])}));
+  }
   async function fetchRoads(so,we,no,ea){
     const key=[so.toFixed(3),we.toFixed(3),no.toFixed(3),ea.toFixed(3)].join(",");
     if(_roadCache.has(key)) return _roadCache.get(key);
     const q='[out:json][timeout:25];way[highway~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|service|track|living_street|road)$"]('+so+','+we+','+no+','+ea+');out geom;';
-    const r=await fetch(OVERPASS,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"data="+encodeURIComponent(q)});
-    if(!r.ok) throw new Error("roads http "+r.status);
-    const j=await r.json();
-    const ways=(j.elements||[]).filter(el=>el.type==="way"&&el.geometry&&el.geometry.length>1)
-      .map(el=>({pts:el.geometry.map(g=>[g.lat,g.lon])}));
-    const out={ways:ways};
-    _roadCache.set(key,out); if(_roadCache.size>12) _roadCache.delete(_roadCache.keys().next().value);
-    return out;
+    // Try each mirror in turn; the public servers throttle independently, so if one is
+    // busy another usually answers. Short backoff between tries.
+    let lastErr=null;
+    for(let i=0;i<OVERPASS_ENDPOINTS.length;i++){
+      try{
+        const ways=await _overpassOnce(q,OVERPASS_ENDPOINTS[i]);
+        const out={ways:ways};
+        if(ways.length){ _roadCache.set(key,out); if(_roadCache.size>12) _roadCache.delete(_roadCache.keys().next().value); }
+        return out; // clean response (even if empty = genuinely no roads here)
+      }catch(e){ lastErr=e; if(i<OVERPASS_ENDPOINTS.length-1) await sleep(500*(i+1)); }
+    }
+    const err=new Error("roads unavailable"); err.roadsBusy=true; throw err;
   }
   function _rk(p){ return p[0].toFixed(6)+","+p[1].toFixed(6); }
   function buildRoadGraph(ways){
@@ -3503,10 +3520,11 @@
       const candR=Math.min(maxM, MIS_PARK_M);
       const padLa=candR/111000, padLo=candR/(111320*Math.cos(ctr[0]*Math.PI/180));
       prog("Zone "+(zi+1)+"/"+zn+" \u2014 loading roads\u2026");
-      let rd=null;
-      try{ rd=await fetchRoads(laMin-padLa, loMin-padLo, laMax+padLa, loMax+padLo); }catch(e){ rd=null; }
+      let rd=null, roadsBusy=false;
+      try{ rd=await fetchRoads(laMin-padLa, loMin-padLo, laMax+padLa, loMax+padLo); }catch(e){ rd=null; roadsBusy=!!(e&&e.roadsBusy); }
       if(misToken!==token) return;
-      if(!rd||!rd.ways.length){ z.note="no road data (offline?)"; continue; }
+      if(!rd){ z.note = roadsBusy ? "road service was busy \u2014 try Plan mission again" : "couldn't reach road service (offline?)"; continue; }
+      if(!rd.ways.length){ z.note="no mapped roads near this zone"; continue; }
       let cand=[];
       rd.ways.forEach(w=>{ cand=cand.concat(samplePath(w.pts,40)); });
       cand=cand.filter(P=>assets.some(c=>haversineKm(P,[+c.lat,+c.lng])*1000<=candR));
