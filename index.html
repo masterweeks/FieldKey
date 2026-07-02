@@ -939,7 +939,8 @@
   <div class="sgroup"><label class="label">Vehicle weight (lbs)</label><input type="number" id="sVeh" min="500" step="100" inputmode="numeric" /><p class="note">Used to estimate the extra fuel from climbing on hilly routes.</p></div>
   <div class="sgroup"><label class="label">Your height (ft) — for line of sight</label><input type="number" id="sObs" min="3" max="8" step="0.1" inputmode="decimal" /><p class="note">Your standing eye height, used when checking which assets you can see over the terrain from a parking point. E.g. 6.3 for about 6'4".</p></div>
   <div class="sgroup"><label class="label">Canopy proxy URL (optional)</label><input type="url" id="sCanopyProxy" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://….supabase.co/functions/v1/canopy" /><p class="note">Unlocks measured 1&#8209;meter tree-canopy data in line-of-sight. Paste your canopy proxy endpoint here. Leave blank to use the manual typical-height estimate.</p></div>
-  <p class="note" style="text-align:center;margin-top:14px">FieldKey · v1 · runs offline once added to your Home Screen</p>
+  <p class="note" style="text-align:center;margin-top:14px">FieldKey · <span id="sAppVer">v49</span> · runs offline once added to your Home Screen</p>
+  <div class="sgroup"><button class="btn ghost sm" id="sCheckUpdate" type="button">Check for update</button></div>
 </div>
 
 <!-- earlier versions (daily snapshots) sheet -->
@@ -976,6 +977,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
+  const APP_VER="v49";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -1451,6 +1453,7 @@
     if(results.length) renderTickets();
     closeSheet(); toast("Settings saved");
   });
+  { const v=$("#sAppVer"); if(v) v.textContent=APP_VER; }
   els.settingsBtn.addEventListener("click",openSheet);
   els.scrim.addEventListener("click",closeSheet);
 
@@ -2120,7 +2123,21 @@
   });
 
   /* settings: SMS template load + save */
-  els.settingsBtn.addEventListener("click",()=>{ $("#sSms").value=cfg.smsTemplate; });
+  els.settingsBtn.addEventListener("click",()=>{ $("#sSms").value=cfg.smsTemplate; { const v=$("#sAppVer"); if(v) v.textContent=APP_VER; } });
+  { const b=$("#sCheckUpdate"); if(b) b.addEventListener("click",async()=>{
+      if(!("serviceWorker" in navigator)){ toast("Updates run in the browser."); return; }
+      toast("Checking for update\u2026");
+      try{
+        const reg=await navigator.serviceWorker.getRegistration();
+        if(reg){ await reg.update(); }
+        // give the new worker a moment; if one is waiting, activate it now
+        setTimeout(async()=>{
+          const r=await navigator.serviceWorker.getRegistration();
+          if(r&&r.waiting){ r.waiting.postMessage({type:"SKIP_WAITING"}); toast("Updating\u2026"); }
+          else toast("You're on the latest ("+APP_VER+").");
+        },1200);
+      }catch(e){ toast("Couldn't check right now."); }
+  }); }
   $("#saveSettings").addEventListener("click",()=>{ cfg.smsTemplate=$("#sSms").value; store.set("fk_smsTemplate",cfg.smsTemplate); });
 
   /* ================= KML IMPORT / MERGE / EXPORT ================= */
@@ -3401,6 +3418,7 @@
   }
   /* ---------------- mission planner: zones -> best spots -> route ---------------- */
   let misMode=false, zoneDraw=false, misZones=[], misStops=[], misToken=0, misBusy=false, misRoadMi=0;
+  const MIS_PARK_M=915; /* ~3000 ft: how far mission will look for a parking spot from the assets */
   function misGeo(){
     const f=[];
     misZones.forEach(z=>{ const ring=z.poly.map(P=>[P[1],P[0]]); if(ring.length>2){ ring.push(ring[0]); f.push({type:"Feature",properties:{k:"zone"},geometry:{type:"Polygon",coordinates:[ring]}}); } });
@@ -3480,17 +3498,20 @@
       z.poly.forEach(P=>{ if(P[0]<laMin)laMin=P[0]; if(P[0]>laMax)laMax=P[0]; if(P[1]<loMin)loMin=P[1]; if(P[1]>loMax)loMax=P[1]; });
       const ctr=[(laMin+laMax)/2,(loMin+loMax)/2];
       if(assets.length>40){ assets.sort((a,b)=>haversineKm([+a.lat,+a.lng],ctr)-haversineKm([+b.lat,+b.lng],ctr)); assets=assets.slice(0,40); }
-      const padLa=maxM/111000, padLo=maxM/(111320*Math.cos(ctr[0]*Math.PI/180));
+      // You park NEAR the assets: cap the parking-search radius (regardless of the LOS
+      // max-distance, which may be very large just for counting what's visible from a spot).
+      const candR=Math.min(maxM, MIS_PARK_M);
+      const padLa=candR/111000, padLo=candR/(111320*Math.cos(ctr[0]*Math.PI/180));
       prog("Zone "+(zi+1)+"/"+zn+" \u2014 loading roads\u2026");
       let rd=null;
       try{ rd=await fetchRoads(laMin-padLa, loMin-padLo, laMax+padLa, loMax+padLo); }catch(e){ rd=null; }
       if(misToken!==token) return;
       if(!rd||!rd.ways.length){ z.note="no road data (offline?)"; continue; }
       let cand=[];
-      rd.ways.forEach(w=>{ cand=cand.concat(samplePath(w.pts,50)); });
-      cand=cand.filter(P=>assets.some(c=>haversineKm(P,[+c.lat,+c.lng])*1000<=maxM));
-      if(cand.length>120){ const stride=Math.ceil(cand.length/120); cand=cand.filter((_,i)=>i%stride===0); }
-      if(!cand.length){ z.note="no roads within "+losMaxFt+" ft of the assets"; continue; }
+      rd.ways.forEach(w=>{ cand=cand.concat(samplePath(w.pts,40)); });
+      cand=cand.filter(P=>assets.some(c=>haversineKm(P,[+c.lat,+c.lng])*1000<=candR));
+      if(cand.length>140){ const stride=Math.ceil(cand.length/140); cand=cand.filter((_,i)=>i%stride===0); }
+      if(!cand.length){ z.note="no roads within "+Math.round(candR/0.3048)+" ft of the assets"; continue; }
       let canopyMode=null, sampler=null;
       if(losCanopy){
         let probe=null;
@@ -3511,7 +3532,7 @@
         if(g==null) continue;
         let vis=0,inR=0,sumD=0;
         for(const c of assets){
-          const T=[+c.lat,+c.lng], d=haversineKm(P,T)*1000; if(d>maxM) continue;
+          const T=[+c.lat,+c.lng], d=haversineKm(P,T)*1000; if(d>candR) continue;
           inR++;
           const tg=ag.get(c.id); if(tg==null) continue;
           const r=await lineOfSight(P,g,T,tg,tgtH,canopyMode,manualM,sampler); if(misToken!==token) return;
@@ -3525,7 +3546,7 @@
       const g0=await sampleElevation(best.pt[0],best.pt[1]); if(misToken!==token) return;
       const lines=[];
       for(const c of assets){
-        const T=[+c.lat,+c.lng], d=haversineKm(best.pt,T)*1000; if(d>maxM) continue;
+        const T=[+c.lat,+c.lng], d=haversineKm(best.pt,T)*1000; if(d>candR) continue;
         const tg=ag.get(c.id);
         let st="unknown";
         if(g0!=null&&tg!=null){ const r=await lineOfSight(best.pt,g0,T,tg,tgtH,canopyMode,manualM,sampler); if(misToken!==token) return; st=!r.ok?"unknown":(r.blocked?"blocked":"clear"); }
@@ -3711,7 +3732,24 @@
 
   /* ---------------- service worker (offline) ---------------- */
   if("serviceWorker" in navigator){
-    window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+    let __swReloaded=false;
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{
+      if(__swReloaded) return; __swReloaded=true; window.location.reload();
+    });
+    window.addEventListener("load",()=>{
+      navigator.serviceWorker.register("sw.js").then(reg=>{
+        reg.update();
+        // a new worker finished installing while the app is open → activate it
+        reg.addEventListener("updatefound",()=>{
+          const nw=reg.installing; if(!nw) return;
+          nw.addEventListener("statechange",()=>{
+            if(nw.state==="installed" && navigator.serviceWorker.controller){ reg.waiting && reg.waiting.postMessage({type:"SKIP_WAITING"}); }
+          });
+        });
+        // re-check whenever the app returns to the foreground (covers iOS Home Screen)
+        document.addEventListener("visibilitychange",()=>{ if(!document.hidden) reg.update().catch(()=>{}); });
+      }).catch(()=>{});
+    });
   }
 })();
 </script>
