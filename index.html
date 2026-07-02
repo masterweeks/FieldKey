@@ -151,6 +151,9 @@
   .mapsave:active{background:var(--raise)}
   .mapsave.busy{color:var(--amber);border-color:var(--amber)}
   .mapterr{top:calc(env(safe-area-inset-top) + 138px)}
+  .mapmeas{top:calc(env(safe-area-inset-top) + 178px)}
+  #misList li,#losScanList li{cursor:pointer}
+  #misList li.misOn .rttitle{color:var(--amber)}
   .mapsave.on{color:var(--amber);border-color:var(--amber)}
   .dloverlay{position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;background:rgba(8,10,14,.55);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
   .dlcard{width:min(86%,340px);background:var(--bg2);border:1px solid var(--line2);border-radius:14px;padding:18px 18px 14px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
@@ -225,10 +228,11 @@
   .sheet{
     position:fixed;left:0;right:0;bottom:0;z-index:90;background:var(--bg2);
     border-top-left-radius:20px;border-top-right-radius:20px;border-top:1px solid var(--line2);
-    transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1);
+    transform:translateY(100%);visibility:hidden;pointer-events:none;
+    transition:transform .26s cubic-bezier(.2,.8,.2,1), visibility 0s linear .26s;
     max-height:90vh;overflow:auto;padding:8px 16px calc(env(safe-area-inset-bottom) + 20px);
   }
-  .sheet.show{transform:translateY(0)}
+  .sheet.show{transform:translateY(0);visibility:visible;pointer-events:auto;transition:transform .26s cubic-bezier(.2,.8,.2,1), visibility 0s}
   .sheettop{position:sticky;top:0;z-index:6;height:0;display:flex;justify-content:flex-end;pointer-events:none}
   .sheetclose{pointer-events:auto;width:34px;height:34px;margin-top:-2px;margin-right:-4px;border-radius:50%;border:1px solid var(--line2);background:var(--bg3);color:var(--ink);font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 8px rgba(0,0,0,.35)}
   .sheetclose:active{background:var(--raise)}
@@ -640,8 +644,11 @@
   </div>
   <button class="mapsave" id="mSave" type="button" aria-label="Save this area offline">&#8675; Save offline</button>
   <button class="mapsave mapterr" id="mTerr" type="button" aria-label="Toggle 3D terrain">&#9968; 3D</button>
+  <button class="mapsave mapmeas" id="mMeasure" type="button" aria-label="Measure distance or area">&#10231; Measure</button>
   <div class="losbanner hidden" id="losBanner"><span id="losBannerText">Tap the map to set your parking point</span><button class="losbanscan" id="losScanBtn" type="button">Scan a road</button><button class="losbanx" id="losCancel" type="button">Cancel</button></div>
   <div class="losbanner hidden" id="pinBanner"><span>Tap the map to place a pin</span><button class="losbanx" id="pinCancel" type="button">Cancel</button></div>
+  <div class="losbanner hidden" id="measBanner"><b id="measVal" style="font-family:var(--mono);font-size:13px">0 ft</b><span class="note" id="measHint" style="margin:0">tap points</span><button class="losbanscan" id="measModeBtn" type="button">Area</button><button class="losbanx" id="measUndo" type="button">Undo</button><button class="losbanx" id="measX" type="button">Done</button></div>
+  <div class="losbanner hidden" id="misBanner"><span id="misBannerText">Draw a loop around each work zone</span><button class="losbanscan" id="misDone" type="button">Done</button><button class="losbanx" id="misX" type="button">Cancel</button></div>
   <div class="dloverlay hidden" id="dlOverlay">
     <div class="dlcard">
       <div class="dltitle" id="dlTitle">Save this area offline</div>
@@ -675,6 +682,9 @@
       <button class="btn ghost" id="mLos" type="button">Line of sight</button>
     </div>
     <div class="mapbar-row main">
+      <button class="btn ghost" id="mMission" type="button">Plan mission &#183; zones &#8594; spots &#8594; route</button>
+    </div>
+    <div class="mapbar-row main">
       <button class="btn primary" id="mReq" type="button">Build request</button>
       <button class="btn ghost" id="mExport" type="button">Export KML</button>
     </div>
@@ -697,6 +707,7 @@
   <div class="loshint" id="losHint"></div>
   <div id="losScanWrap" class="hidden" style="margin-top:12px">
     <span class="label">Best parking spots</span>
+    <p class="note" id="losScanMeta" style="margin:4px 0 0"></p>
     <ol class="rtlist" id="losScanList" style="margin-top:8px"></ol>
   </div>
   <div class="sgroup" style="margin-top:12px">
@@ -763,6 +774,21 @@
 </div>
 
 <!-- email import sheet -->
+<!-- mission plan -->
+<div class="scrim" id="misScrim"></div>
+<div class="sheet" id="misSheet" role="dialog" aria-label="Mission plan">
+  <div class="grab"></div>
+  <h2>Mission plan</h2>
+  <div class="rtsum" id="misSum">Planning…</div>
+  <p class="note" id="misProg" style="margin:6px 0 0"></p>
+  <ol class="rtlist" id="misList" style="margin-top:10px"></ol>
+  <div class="mapbar-row main" style="margin-top:12px">
+    <button class="btn ghost" id="misClear" type="button">Clear mission</button>
+    <button class="btn primary" id="misOk" type="button">Done</button>
+  </div>
+  <p class="note" style="margin-top:10px">Parking spots come from OpenStreetMap roads near each zone. Drive distance is a straight-line estimate × 1.3. Tap a stop to preview its sightlines; Done keeps everything on the map, Clear removes it.</p>
+</div>
+
 <!-- custom map pin -->
 <div class="scrim" id="pinScrim"></div>
 <div class="sheet" id="pinSheet" role="dialog" aria-label="Map pin">
@@ -2414,25 +2440,45 @@
         cmap.addLayer({id:"user-pins-l",type:"symbol",source:"userpins",layout:{"text-field":["get","L"],"text-size":12,"text-font":["Noto Sans Regular"],"text-allow-overlap":true},paint:{"text-color":"#FFFFFF","text-halo-color":"rgba(0,0,0,.5)","text-halo-width":1}});
         cmap.on("click","los-cands",ev=>{ if(losScanActive&&!losPlacing&&!pinPlacing){ const r=parseInt(ev.features[0].properties.rank); if(r>=1) previewCand(r-1); } });
         cmap.on("click","user-pins",ev=>{
-          if(losMode||pinPlacing) return;
+          if(losMode||pinPlacing||measOn) return;
           const f=ev.features[0]; const p=userPins.find(x=>x.id===f.properties.id); if(p) showUserPinPopup(p);
         });
-        ["los-cands","user-pins"].forEach(L=>{ cmap.on("mouseenter",L,()=>{cmap.getCanvas().style.cursor="pointer";}); cmap.on("mouseleave",L,()=>{cmap.getCanvas().style.cursor="";}); });
+        cmap.addSource("meas",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
+        cmap.addLayer({id:"meas-fill",type:"fill",source:"meas",filter:["==",["get","k"],"f"],paint:{"fill-color":"#FFB000","fill-opacity":0.14}});
+        cmap.addLayer({id:"meas-line",type:"line",source:"meas",filter:["==",["get","k"],"l"],paint:{"line-color":"#FFB000","line-width":2.5,"line-dasharray":[2,1.5]}});
+        cmap.addLayer({id:"meas-pts",type:"circle",source:"meas",filter:["==",["get","k"],"p"],paint:{"circle-radius":4,"circle-color":"#FFB000","circle-stroke-width":1.5,"circle-stroke-color":"#FFFFFF"}});
+        cmap.addSource("mission",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
+        cmap.addLayer({id:"mis-zone-fill",type:"fill",source:"mission",filter:["==",["get","k"],"zone"],paint:{"fill-color":"#FFB000","fill-opacity":0.08}});
+        cmap.addLayer({id:"mis-zone-line",type:"line",source:"mission",filter:["==",["get","k"],"zone"],paint:{"line-color":"#FFD24D","line-width":1.5,"line-dasharray":[2,2]}});
+        cmap.addLayer({id:"mis-rt",type:"line",source:"mission",filter:["==",["get","k"],"rt"],layout:{"line-cap":"round","line-join":"round"},paint:{"line-color":"#FFB000","line-width":3,"line-opacity":0.9}});
+        cmap.addLayer({id:"mis-stops",type:"circle",source:"mission",filter:["==",["get","k"],"stop"],paint:{"circle-radius":11,"circle-color":"#41D88B","circle-stroke-width":2.5,"circle-stroke-color":"#FFFFFF"}});
+        cmap.addLayer({id:"mis-num",type:"symbol",source:"mission",filter:["==",["get","k"],"stop"],layout:{"text-field":["get","rank"],"text-size":12,"text-font":["Noto Sans Regular"],"text-allow-overlap":true},paint:{"text-color":"#0b0f15"}});
+        cmap.on("click","mis-stops",ev=>{ if(measOn||losMode||pinPlacing) return; const r=parseInt(ev.features[0].properties.rank); if(r>=1) previewMisStop(r-1,true); });
+        ["los-cands","user-pins","mis-stops"].forEach(L=>{ cmap.on("mouseenter",L,()=>{cmap.getCanvas().style.cursor="pointer";}); cmap.on("mouseleave",L,()=>{cmap.getCanvas().style.cursor="";}); });
         cmap.on("click","clusters",ev=>{ const f=ev.features[0]; cmap.getSource("sites").getClusterExpansionZoom(f.properties.cluster_id).then(z=>cmap.easeTo({center:f.geometry.coordinates,zoom:z})).catch(()=>{}); });
         cmap.on("click",ev=>{
           const la=ev.lngLat.lat, lo=ev.lngLat.lng;
+          if(measOn){ measPts.push([la,lo]); measUpdate(); return; }
           if(losPlacing){ setObserver(la,lo); return; }
           if(losScanStage===1){
-            losScanA=[la,lo]; losScanStage=2;
-            $("#losBannerText").textContent="Now tap the END of the segment";
-            try{ cmap.getSource("los-cands").setData({type:"FeatureCollection",features:[{type:"Feature",properties:{kind:"cand",rank:"A",best:0},geometry:{type:"Point",coordinates:[lo,la]}}]}); }catch(e){}
+            let P=[la,lo]; if(losRoads){ const sn=snapToWays(losRoads.ways,P,150); if(sn) P=sn.pt; }
+            losScanA=P; losScanStage=2;
+            $("#losBannerText").textContent="Now tap the END of the stretch";
+            try{ cmap.getSource("los-cands").setData({type:"FeatureCollection",features:[{type:"Feature",properties:{kind:"cand",rank:"A",best:0},geometry:{type:"Point",coordinates:[P[1],P[0]]}}]}); }catch(e){}
             return;
           }
-          if(losScanStage===2){ losScanB=[la,lo]; losScanStage=0; $("#losBanner").classList.add("hidden"); runScan(); return; }
+          if(losScanStage===2){
+            let P=[la,lo]; if(losRoads){ const sn=snapToWays(losRoads.ways,P,150); if(sn) P=sn.pt; }
+            losScanB=P; losScanStage=0; $("#losBanner").classList.add("hidden");
+            let path=null;
+            if(losRoads){ try{ path=roadPath(losRoads,losScanA,losScanB); }catch(e){ path=null; } }
+            losScanPath=path||[losScanA,losScanB]; losScanSnapped=!!path;
+            runScan(); return;
+          }
           if(pinPlacing){ pinPlacing=false; $("#pinBanner").classList.add("hidden"); openPinSheet(null,la,lo); return; }
         });
         cmap.on("click","sites-pts",ev=>{
-          if(losMode||pinPlacing) return;
+          if(losMode||pinPlacing||measOn) return;
           const f=ev.features[0], id=f.properties.id;
           if(cSel.has(id)){ cSel.delete(id); refreshMarks(); closeMapPopup(); return; }
           cSel.add(id); refreshMarks();
@@ -2629,10 +2675,10 @@
   }
   { const layer=$("#lassoLayer");
     if(layer){
-      layer.addEventListener("pointerdown",e=>{ if(!lassoOn)return; e.preventDefault(); lassoDrawing=true; lassoRect=layer.getBoundingClientRect(); lassoPts=[[e.clientX-lassoRect.left,e.clientY-lassoRect.top]]; drawLassoPath(); });
-      layer.addEventListener("pointermove",e=>{ if(!lassoOn||!lassoDrawing)return; e.preventDefault(); lassoPts.push([e.clientX-lassoRect.left,e.clientY-lassoRect.top]); drawLassoPath(); });
-      layer.addEventListener("pointerup",e=>{ if(!lassoOn||!lassoDrawing)return; e.preventDefault(); finishLasso(); });
-      layer.addEventListener("pointercancel",()=>{ if(lassoOn) setLasso(false); });
+      layer.addEventListener("pointerdown",e=>{ if(!(lassoOn||zoneDraw))return; e.preventDefault(); lassoDrawing=true; lassoRect=layer.getBoundingClientRect(); lassoPts=[[e.clientX-lassoRect.left,e.clientY-lassoRect.top]]; drawLassoPath(); });
+      layer.addEventListener("pointermove",e=>{ if(!(lassoOn||zoneDraw)||!lassoDrawing)return; e.preventDefault(); lassoPts.push([e.clientX-lassoRect.left,e.clientY-lassoRect.top]); drawLassoPath(); });
+      layer.addEventListener("pointerup",e=>{ if(!(lassoOn||zoneDraw)||!lassoDrawing)return; e.preventDefault(); if(zoneDraw) finishZoneDraw(); else finishLasso(); });
+      layer.addEventListener("pointercancel",()=>{ if(lassoOn) setLasso(false); if(zoneDraw){ lassoDrawing=false; lassoPts=[]; drawLassoPath(); } });
     }
   }
   { const lb=$("#mLasso"); if(lb) lb.addEventListener("click",()=>setLasso(!lassoOn)); }
@@ -2752,7 +2798,7 @@
   $("#impCancel").addEventListener("click",reqCloseImport);
 
   (function addSheetCloseButtons(){
-    const closers={ dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, rtSheet:closeRoute, losSheet:closeLos, addSheet:closeAdd, pinSheet:closePinSheet };
+    const closers={ dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, rtSheet:closeRoute, losSheet:closeLos, addSheet:closeAdd, pinSheet:closePinSheet, misSheet:closeMisSheet };
     Object.keys(closers).forEach(id=>{
       const sh=document.getElementById(id); if(!sh)return;
       const bar=document.createElement("div"); bar.className="sheettop";
@@ -2891,6 +2937,159 @@
   { const r=$("#rtRound"); if(r) r.addEventListener("change",()=>{ if(!rtState)return; rtState.closed=r.checked; rtState.ordered=optimizeStops(rtState.src,rtState.start,rtState.closed); renderRoute(); }); }
   { const g=$("#rtGoogle"); if(g) g.addEventListener("click",()=>{ if(rtState&&rtState.gurl) window.open(rtState.gurl,"_blank","noopener"); }); }
 
+  /* ---------------- measure tool ---------------- */
+  let measOn=false, measArea=false, measPts=[];
+  function fmtDistM(m){ const ft=m/0.3048; return ft<1500 ? Math.round(ft)+" ft" : (m/1609.34).toFixed(2)+" mi"; }
+  function polyAreaM2(pts){
+    if(pts.length<3) return 0;
+    const kx=Math.cos(pts[0][0]*Math.PI/180)*111320, ky=110540; let s2=0;
+    for(let i=0;i<pts.length;i++){ const a=pts[i], b=pts[(i+1)%pts.length];
+      s2+=(a[1]*kx)*(b[0]*ky)-(b[1]*kx)*(a[0]*ky); }
+    return Math.abs(s2/2);
+  }
+  function measGeo(){
+    const f=[];
+    if(measPts.length>=2) f.push({type:"Feature",properties:{k:"l"},geometry:{type:"LineString",coordinates:measPts.map(p=>[p[1],p[0]])}});
+    if(measArea&&measPts.length>=3){ const ring=measPts.map(p=>[p[1],p[0]]); ring.push(ring[0]); f.push({type:"Feature",properties:{k:"f"},geometry:{type:"Polygon",coordinates:[ring]}}); }
+    measPts.forEach(p=>f.push({type:"Feature",properties:{k:"p"},geometry:{type:"Point",coordinates:[p[1],p[0]]}}));
+    return {type:"FeatureCollection",features:f};
+  }
+  function measUpdate(){
+    try{ cmap.getSource("meas").setData(measGeo()); }catch(e){}
+    let txt="0 ft", hint="tap points";
+    if(measArea){
+      if(measPts.length>=3){ const a=polyAreaM2(measPts), sf=a/0.092903, ac=a/4046.86;
+        txt=(ac>=0.4? ac.toFixed(2)+" ac" : Math.round(sf).toLocaleString()+" sq ft"); hint=measPts.length+" corners"; }
+      else { txt="—"; hint="tap 3+ corners"; }
+    } else {
+      let m=0; for(let i=0;i<measPts.length-1;i++) m+=haversineKm(measPts[i],measPts[i+1])*1000;
+      txt=fmtDistM(m); hint=measPts.length<2?"tap points":(measPts.length-1)+" leg"+(measPts.length>2?"s":"");
+    }
+    $("#measVal").textContent=txt; $("#measHint").textContent=hint;
+  }
+  function openMeasure(){
+    if(!cmap||!cMapReady){ toast("Open the map first"); return; }
+    if(losMode){ toast("Finish line of sight first"); return; }
+    if(zoneDraw||misBusy){ toast("Finish the mission first"); return; }
+    pinPlacing=false; $("#pinBanner").classList.add("hidden");
+    measOn=true; measPts=[]; measUpdate();
+    $("#measBanner").classList.remove("hidden");
+    $("#mMeasure").classList.add("on");
+  }
+  function closeMeasure(){
+    measOn=false; measPts=[];
+    try{ cmap.getSource("meas").setData({type:"FeatureCollection",features:[]}); }catch(e){}
+    $("#measBanner").classList.add("hidden");
+    { const b=$("#mMeasure"); if(b) b.classList.remove("on"); }
+  }
+  { const b=$("#mMeasure"); if(b) b.addEventListener("click",()=>{ if(measOn) closeMeasure(); else openMeasure(); }); }
+  { const b=$("#measX"); if(b) b.addEventListener("click",closeMeasure); }
+  { const b=$("#measUndo"); if(b) b.addEventListener("click",()=>{ measPts.pop(); measUpdate(); }); }
+  { const b=$("#measModeBtn"); if(b) b.addEventListener("click",()=>{ measArea=!measArea; b.textContent=measArea?"Distance":"Area"; measPts=[]; measUpdate(); }); }
+
+  /* ---------------- roads (OpenStreetMap via Overpass): fetch, graph, snap ---------------- */
+  const OVERPASS="https://overpass-api.de/api/interpreter";
+  const _roadCache=new Map();
+  async function fetchRoads(so,we,no,ea){
+    const key=[so.toFixed(3),we.toFixed(3),no.toFixed(3),ea.toFixed(3)].join(",");
+    if(_roadCache.has(key)) return _roadCache.get(key);
+    const q='[out:json][timeout:25];way[highway~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|service|track|living_street|road)$"]('+so+','+we+','+no+','+ea+');out geom;';
+    const r=await fetch(OVERPASS,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"data="+encodeURIComponent(q)});
+    if(!r.ok) throw new Error("roads http "+r.status);
+    const j=await r.json();
+    const ways=(j.elements||[]).filter(el=>el.type==="way"&&el.geometry&&el.geometry.length>1)
+      .map(el=>({pts:el.geometry.map(g=>[g.lat,g.lon])}));
+    const out={ways:ways};
+    _roadCache.set(key,out); if(_roadCache.size>12) _roadCache.delete(_roadCache.keys().next().value);
+    return out;
+  }
+  function _rk(p){ return p[0].toFixed(6)+","+p[1].toFixed(6); }
+  function buildRoadGraph(ways){
+    const nodes=new Map();
+    function getN(p){ const k=_rk(p); let n=nodes.get(k); if(!n){ n={p:[p[0],p[1]],adj:[]}; nodes.set(k,n); } return k; }
+    ways.forEach(w=>{ for(let i=0;i<w.pts.length-1;i++){
+      const ka=getN(w.pts[i]), kb=getN(w.pts[i+1]);
+      const d=haversineKm(nodes.get(ka).p,nodes.get(kb).p)*1000;
+      nodes.get(ka).adj.push({k:kb,w:d}); nodes.get(kb).adj.push({k:ka,w:d}); } });
+    return nodes;
+  }
+  function projSeg(p,a,b){
+    const kx=Math.cos(p[0]*Math.PI/180)*111320, ky=110540;
+    const ax=(a[1]-p[1])*kx, ay=(a[0]-p[0])*ky, bx=(b[1]-p[1])*kx, by=(b[0]-p[0])*ky;
+    const dx=bx-ax, dy=by-ay, L2=dx*dx+dy*dy;
+    let t=L2?(-(ax*dx+ay*dy))/L2:0; t=Math.max(0,Math.min(1,t));
+    const x=ax+dx*t, y=ay+dy*t;
+    return {d:Math.hypot(x,y), t:t, p:[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t]};
+  }
+  function snapToWays(ways,pt,maxM){
+    let best=null;
+    for(let wi=0;wi<ways.length;wi++){ const w=ways[wi];
+      for(let i=0;i<w.pts.length-1;i++){ const r=projSeg(pt,w.pts[i],w.pts[i+1]);
+        if(r.d<=(maxM||150)&&(!best||r.d<best.d)) best={d:r.d,pt:r.p,wi:wi,seg:i,t:r.t}; } }
+    return best;
+  }
+  function pathLenM(pts){ let m=0; for(let i=0;i<pts.length-1;i++) m+=haversineKm(pts[i],pts[i+1])*1000; return m; }
+  function samplePath(pts,step){
+    if(pts.length<2) return pts.slice();
+    const out=[pts[0].slice()]; let carry=0;
+    for(let i=0;i<pts.length-1;i++){
+      const a=pts[i], b=pts[i+1], seg=haversineKm(a,b)*1000; if(seg<=0) continue;
+      let d=step-carry, emitted=false;
+      while(d<=seg){ const t=d/seg; out.push([a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t]); d+=step; emitted=true; }
+      carry = emitted ? (seg-(d-step)) : (carry+seg);
+    }
+    const last=pts[pts.length-1];
+    if(haversineKm(out[out.length-1],last)*1000>step*0.3) out.push(last.slice()); else out[out.length-1]=last.slice();
+    return out;
+  }
+  function roadPath(rd,A,B){
+    const ways=rd.ways, g=rd.graph;
+    const sa=snapToWays(ways,A,200), sb=snapToWays(ways,B,200);
+    if(!sa||!sb) return null;
+    if(sa.wi===sb.wi){
+      const w=ways[sa.wi];
+      let i0=sa.seg,t0=sa.t,i1=sb.seg,t1=sb.t,rev=false;
+      if(i1<i0||(i1===i0&&t1<t0)){ const ti=i0,tt=t0; i0=i1; t0=t1; i1=ti; t1=tt; rev=true; }
+      const pts=[[w.pts[i0][0]+(w.pts[i0+1][0]-w.pts[i0][0])*t0, w.pts[i0][1]+(w.pts[i0+1][1]-w.pts[i0][1])*t0]];
+      for(let i=i0+1;i<=i1;i++) pts.push([w.pts[i][0],w.pts[i][1]]);
+      pts.push([w.pts[i1][0]+(w.pts[i1+1][0]-w.pts[i1][0])*t1, w.pts[i1][1]+(w.pts[i1+1][1]-w.pts[i1][1])*t1]);
+      if(rev) pts.reverse();
+      return pts;
+    }
+    const wa=ways[sa.wi], wb=ways[sb.wi];
+    const aN=[_rk(wa.pts[sa.seg]),_rk(wa.pts[sa.seg+1])], bN=[_rk(wb.pts[sb.seg]),_rk(wb.pts[sb.seg+1])];
+    const extra=new Map();
+    function addE(k,e){ if(!extra.has(k)) extra.set(k,[]); extra.get(k).push(e); }
+    aN.forEach(k=>{ const n=g.get(k); if(n){ const w=haversineKm(sa.pt,n.p)*1000; addE("__A",{k:k,w:w}); addE(k,{k:"__A",w:w}); } });
+    bN.forEach(k=>{ const n=g.get(k); if(n){ const w=haversineKm(sb.pt,n.p)*1000; addE("__B",{k:k,w:w}); addE(k,{k:"__B",w:w}); } });
+    const dist=new Map([["__A",0]]), prev=new Map(), Q=[["__A",0]], seen=new Set();
+    function adjOf(k){ const base=(k==="__A"||k==="__B")?[]:((g.get(k)||{}).adj||[]); const ex=extra.get(k)||[]; return ex.length?base.concat(ex):base; }
+    let found=false, guard=0;
+    while(Q.length&&guard++<250000){
+      let bi=0; for(let i=1;i<Q.length;i++) if(Q[i][1]<Q[bi][1]) bi=i;
+      const it=Q.splice(bi,1)[0], k=it[0], d=it[1];
+      if(seen.has(k)) continue; seen.add(k);
+      if(k==="__B"){ found=true; break; }
+      const ad=adjOf(k);
+      for(let i=0;i<ad.length;i++){ const e=ad[i], nd=d+e.w, cur=dist.has(e.k)?dist.get(e.k):Infinity;
+        if(nd<cur){ dist.set(e.k,nd); prev.set(e.k,k); Q.push([e.k,nd]); } }
+    }
+    if(!found) return null;
+    const keys=[]; let cur="__B";
+    while(cur!==undefined){ keys.push(cur); if(cur==="__A") break; cur=prev.get(cur); }
+    if(keys[keys.length-1]!=="__A") return null;
+    keys.reverse();
+    return keys.map(k=>k==="__A"?[sa.pt[0],sa.pt[1]]:(k==="__B"?[sb.pt[0],sb.pt[1]]:[g.get(k).p[0],g.get(k).p[1]]));
+  }
+  function geoInPoly(lat,lng,poly){
+    let inside=false;
+    for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+      const yi=poly[i][0],xi=poly[i][1],yj=poly[j][0],xj=poly[j][1];
+      if(((yi>lat)!==(yj>lat)) && (lng < (xj-xi)*(lat-yi)/(yj-yi)+xi)) inside=!inside;
+    }
+    return inside;
+  }
+
   /* ---------------- custom map pins (non-asset) ---------------- */
   const PIN_TYPES=[
     {k:"entrance",n:"Entrance / path",L:"E",c:"#C084FC"},
@@ -2949,6 +3148,7 @@
   const LOS_REFR=1.13, R_EARTH=6371000;
   let losMode=false, losPlacing=false, losObs=null, losAssetFt=null, losToken=0, losResults=[];
   let losScanStage=0, losScanA=null, losScanB=null, losScanActive=false, losScanCands=[], losMaxFt=1500;
+  let losRoads=null, losScanPath=null, losScanSnapped=false;
   let losStateById=new Map();
   let losCanopy=false, losCanopyStatus="off", losCanopyManualFt=50, _canopyProbeFailed=false;
 
@@ -3098,18 +3298,17 @@
   }
   /* ---- road scan: test candidate parking spots along a segment ---- */
   async function runScan(){
-    const token=++losToken, A=losScanA, B=losScanB; if(!A||!B) return;
-    $("#losSum").textContent="Scanning the road\u2026"; $("#losList").innerHTML=""; $("#losScanList").innerHTML="";
+    const token=++losToken, path=losScanPath; if(!path||path.length<2) return;
+    $("#losSum").textContent="Scanning the road\u2026"; $("#losList").innerHTML=""; $("#losScanList").innerHTML=""; $("#losScanMeta").textContent="";
     $("#losScanWrap").classList.remove("hidden");
     $("#losSheet").classList.remove("loscol");
     $("#losScrim").classList.add("show"); $("#losSheet").classList.add("show");
-    const segM=haversineKm(A,B)*1000;
-    let N=Math.round(segM/30)+1; N=Math.max(6,Math.min(22,N));
+    const segM=pathLenM(path);
     const maxM=(losMaxFt||1500)*0.3048, tgtH=(losAssetFt||40)*0.3048;
-    // assets near the segment (corridor prefilter)
+    // assets near the path (corridor prefilter)
     const sel=customers.filter(c=>cSel.has(c.id));
     let assets=(sel.length?sel:mapList()).filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o);});
-    const corridor=[]; for(let i=0;i<=8;i++){ const t=i/8; corridor.push([A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t]); }
+    const corridor=samplePath(path,Math.max(40,segM/12));
     assets=assets.filter(c=>{const P=[+c.lat,+c.lng]; return corridor.some(q=>haversineKm(q,P)*1000<=maxM);});
     if(!assets.length){
       losScanActive=false; $("#losScanWrap").classList.add("hidden");
@@ -3118,16 +3317,20 @@
       return;
     }
     if(assets.length>40) assets=assets.slice(0,40);
-    // canopy mode for the scan (probe once at the midpoint; area sampler if measured)
-    const mid=corridor[4];
+    // candidate spots along the path; adaptive step, hard perf cap
+    let step=Math.max(25, segM/80);
+    let candPts=samplePath(path,step);
+    while(candPts.length>81 || candPts.length*assets.length>3600){ step*=1.3; candPts=samplePath(path,step); }
+    // canopy mode (probe path midpoint; area sampler if measured)
+    const mid=candPts[Math.floor(candPts.length/2)];
     const midGround=await sampleElevation(mid[0],mid[1]); if(losToken!==token) return;
     let canopyMode=null, sampler=null; losCanopyStatus=losCanopy?"checking":"off";
     if(losCanopy && midGround!=null){
       let probe=null;
       if(!_canopyProbeFailed){ probe=await sampleCanopyM(mid[0],mid[1]); if(losToken!==token) return; if(probe==null) _canopyProbeFailed=true; }
       if(probe!=null){
-        let laMin=Math.min(A[0],B[0]), laMax=Math.max(A[0],B[0]), loMin=Math.min(A[1],B[1]), loMax=Math.max(A[1],B[1]);
-        assets.forEach(c=>{ const la=+c.lat, lo=+c.lng; if(la<laMin)laMin=la; if(la>laMax)laMax=la; if(lo<loMin)loMin=lo; if(lo>loMax)loMax=lo; });
+        let laMin=90,laMax=-90,loMin=180,loMax=-180;
+        candPts.concat(assets.map(c=>[+c.lat,+c.lng])).forEach(P=>{ if(P[0]<laMin)laMin=P[0]; if(P[0]>laMax)laMax=P[0]; if(P[1]<loMin)loMin=P[1]; if(P[1]>loMax)loMax=P[1]; });
         const pad=0.002;
         sampler=await makeCanopyBoxSampler(laMin-pad,laMax+pad,loMin-pad,loMax+pad); if(losToken!==token) return;
         if(sampler){ canopyMode="measured"; losCanopyStatus="measured"; }
@@ -3138,13 +3341,11 @@
       else losCanopyStatus="unavailable";
     }
     const manualM=(losCanopyManualFt||0)*0.3048;
-    // asset ground elevations once
     const ag=new Map();
     for(const c of assets){ const g=await sampleElevation(+c.lat,+c.lng); if(losToken!==token) return; ag.set(c.id,g); }
-    // candidates along the segment
     const cands=[];
-    for(let i=0;i<N;i++){
-      const t=(N===1)?0:i/(N-1), P=[A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t];
+    for(let i=0;i<candPts.length;i++){
+      const P=candPts[i];
       const g=await sampleElevation(P[0],P[1]); if(losToken!==token) return;
       if(g==null) continue;
       let vis=0, inR=0, sumD=0;
@@ -3164,10 +3365,11 @@
       return;
     }
     cands.sort((a,b)=> b.vis-a.vis || b.inR-a.inR || a.avgD-b.avgD);
-    const kept=[]; const minSep=Math.max(25, segM/N);
+    const kept=[]; const minSep=Math.max(30, segM/candPts.length);
     for(const cd of cands){ if(kept.length>=5) break; if(kept.every(k=>haversineKm(k.pt,cd.pt)*1000>=minSep)) kept.push(cd); }
     losScanCands=kept; losScanActive=true;
-    const feats=[{type:"Feature",properties:{kind:"seg"},geometry:{type:"LineString",coordinates:[[A[1],A[0]],[B[1],B[0]]]}}];
+    $("#losScanMeta").textContent=fmtDistM(segM)+" of road \u00B7 "+candPts.length+" spots tested \u00B7 "+(losScanSnapped?"snapped to roads":"straight line (roads unavailable here)");
+    const feats=[{type:"Feature",properties:{kind:"seg"},geometry:{type:"LineString",coordinates:path.map(P=>[P[1],P[0]])}}];
     kept.forEach((k,i)=>feats.push({type:"Feature",properties:{kind:"cand",rank:String(i+1),best:i===0?1:0},geometry:{type:"Point",coordinates:[k.pt[1],k.pt[0]]}}));
     try{ cmap.getSource("los-cands").setData({type:"FeatureCollection",features:feats}); }catch(e){}
     previewCand(0);
@@ -3189,6 +3391,168 @@
     try{ cmap.getSource("los-observer").setData({type:"FeatureCollection",features:[{type:"Feature",properties:{},geometry:{type:"Point",coordinates:[k.pt[1],k.pt[0]]}}]}); }catch(e){}
     computeLos();
   }
+  /* ---------------- mission planner: zones -> best spots -> route ---------------- */
+  let misMode=false, zoneDraw=false, misZones=[], misStops=[], misToken=0, misBusy=false, misRoadMi=0;
+  function misGeo(){
+    const f=[];
+    misZones.forEach(z=>{ const ring=z.poly.map(P=>[P[1],P[0]]); if(ring.length>2){ ring.push(ring[0]); f.push({type:"Feature",properties:{k:"zone"},geometry:{type:"Polygon",coordinates:[ring]}}); } });
+    if(misStops.length>1) f.push({type:"Feature",properties:{k:"rt"},geometry:{type:"LineString",coordinates:misStops.map(st=>[st.pt[1],st.pt[0]])}});
+    misStops.forEach((st,i)=>f.push({type:"Feature",properties:{k:"stop",rank:String(i+1)},geometry:{type:"Point",coordinates:[st.pt[1],st.pt[0]]}}));
+    return {type:"FeatureCollection",features:f};
+  }
+  function refreshMission(){ if(cmap&&cMapReady){ try{ cmap.getSource("mission").setData(misGeo()); }catch(e){} } }
+  function updateZoneCt(){ $("#misBannerText").textContent = misZones.length ? ("Zones: "+misZones.length+" \u00B7 draw another, or tap Done") : "Draw a loop around each work zone"; }
+  function finishZoneDraw(){
+    lassoDrawing=false;
+    const raw=lassoPts.slice(); lassoPts=[]; drawLassoPath();
+    if(raw.length<8) return;
+    const poly=[];
+    for(let i=0;i<raw.length;i+=2){ try{ const ll=cmap.unproject([raw[i][0],raw[i][1]]); poly.push([ll.lat,ll.lng]); }catch(e){} }
+    if(poly.length<3) return;
+    misZones.push({poly:poly});
+    refreshMission(); updateZoneCt();
+  }
+  function openMission(){
+    if(!cmap||!cMapReady){ toast("Open the map first"); return; }
+    if(misMode){ $("#misScrim").classList.add("show"); $("#misSheet").classList.add("show"); return; }
+    if(losMode) closeLos();
+    if(measOn) closeMeasure();
+    pinPlacing=false; $("#pinBanner").classList.add("hidden");
+    misMode=true; zoneDraw=true; misZones=[]; misStops=[]; misRoadMi=0; refreshMission();
+    const layer=$("#lassoLayer"); if(layer) layer.classList.remove("hidden");
+    $("#misBanner").classList.remove("hidden"); updateZoneCt();
+    $("#mMission").classList.add("on");
+  }
+  function closeMisSheet(){ $("#misScrim").classList.remove("show"); $("#misSheet").classList.remove("show"); }
+  function closeMission(){
+    misToken++; misMode=false; misBusy=false; zoneDraw=false; misZones=[]; misStops=[]; misRoadMi=0;
+    refreshMission(); closeMisSheet();
+    $("#misBanner").classList.add("hidden");
+    const layer=$("#lassoLayer"); if(layer&&!lassoOn) layer.classList.add("hidden");
+    { const b=$("#mMission"); if(b) b.classList.remove("on"); }
+    clearLosOverlays();
+  }
+  async function runMission(){
+    const token=++misToken; misBusy=true; misStops=[]; misRoadMi=0; refreshMission();
+    $("#misSum").textContent="Planning\u2026"; $("#misList").innerHTML=""; $("#misProg").textContent="";
+    if(losAssetFt==null) losAssetFt=parseFloat(store.get("fk_los_ft","40"))||40;
+    losMaxFt=parseFloat(store.get("fk_los_maxft","1500"))||1500;
+    losCanopy=store.get("fk_los_canopy","0")==="1";
+    losCanopyManualFt=parseFloat(store.get("fk_los_canopy_ft","50")); if(isNaN(losCanopyManualFt)) losCanopyManualFt=50;
+    _canopyProbeFailed=false;
+    const maxM=losMaxFt*0.3048, tgtH=losAssetFt*0.3048, manualM=(losCanopyManualFt||0)*0.3048;
+    const prog=t=>{ const e=$("#misProg"); if(e) e.textContent=t; };
+    const zn=misZones.length;
+    for(let zi=0; zi<zn; zi++){
+      if(misToken!==token) return;
+      const z=misZones[zi]; z.best=null; z.note="";
+      prog("Zone "+(zi+1)+"/"+zn+" \u2014 finding assets\u2026");
+      let assets=customers.filter(c=>{ const a=parseFloat(c.lat),o=parseFloat(c.lng); return !isNaN(a)&&!isNaN(o)&&geoInPoly(a,o,z.poly); });
+      if(!assets.length){ z.note="no assets inside this zone"; continue; }
+      let laMin=90,laMax=-90,loMin=180,loMax=-180;
+      z.poly.forEach(P=>{ if(P[0]<laMin)laMin=P[0]; if(P[0]>laMax)laMax=P[0]; if(P[1]<loMin)loMin=P[1]; if(P[1]>loMax)loMax=P[1]; });
+      const ctr=[(laMin+laMax)/2,(loMin+loMax)/2];
+      if(assets.length>40){ assets.sort((a,b)=>haversineKm([+a.lat,+a.lng],ctr)-haversineKm([+b.lat,+b.lng],ctr)); assets=assets.slice(0,40); }
+      const padLa=maxM/111000, padLo=maxM/(111320*Math.cos(ctr[0]*Math.PI/180));
+      prog("Zone "+(zi+1)+"/"+zn+" \u2014 loading roads\u2026");
+      let rd=null;
+      try{ rd=await fetchRoads(laMin-padLa, loMin-padLo, laMax+padLa, loMax+padLo); }catch(e){ rd=null; }
+      if(misToken!==token) return;
+      if(!rd||!rd.ways.length){ z.note="no road data (offline?)"; continue; }
+      let cand=[];
+      rd.ways.forEach(w=>{ cand=cand.concat(samplePath(w.pts,50)); });
+      cand=cand.filter(P=>assets.some(c=>haversineKm(P,[+c.lat,+c.lng])*1000<=maxM));
+      if(cand.length>120){ const stride=Math.ceil(cand.length/120); cand=cand.filter((_,i)=>i%stride===0); }
+      if(!cand.length){ z.note="no roads within "+losMaxFt+" ft of the assets"; continue; }
+      let canopyMode=null, sampler=null;
+      if(losCanopy){
+        let probe=null;
+        if(!_canopyProbeFailed){ try{ probe=await sampleCanopyM(ctr[0],ctr[1]); }catch(e){ probe=null; } if(misToken!==token) return; if(probe==null) _canopyProbeFailed=true; }
+        if(probe!=null){
+          sampler=await makeCanopyBoxSampler(laMin-padLa-0.002,laMax+padLa+0.002,loMin-padLo-0.002,loMax+padLo+0.002);
+          if(misToken!==token) return;
+          if(sampler) canopyMode="measured"; else if(manualM>0) canopyMode="manual";
+        } else if(manualM>0) canopyMode="manual";
+      }
+      const ag=new Map();
+      for(const c of assets){ const g=await sampleElevation(+c.lat,+c.lng); if(misToken!==token) return; ag.set(c.id,g); }
+      prog("Zone "+(zi+1)+"/"+zn+" \u2014 checking "+cand.length+" spots\u2026");
+      let best=null;
+      for(let i=0;i<cand.length;i++){
+        const P=cand[i];
+        const g=await sampleElevation(P[0],P[1]); if(misToken!==token) return;
+        if(g==null) continue;
+        let vis=0,inR=0,sumD=0;
+        for(const c of assets){
+          const T=[+c.lat,+c.lng], d=haversineKm(P,T)*1000; if(d>maxM) continue;
+          inR++;
+          const tg=ag.get(c.id); if(tg==null) continue;
+          const r=await lineOfSight(P,g,T,tg,tgtH,canopyMode,manualM,sampler); if(misToken!==token) return;
+          if(r.ok&&!r.blocked){ vis++; sumD+=d; }
+        }
+        const sc={pt:P,vis:vis,inR:inR,avgD:vis?sumD/vis:1e9};
+        if(!best || sc.vis>best.vis || (sc.vis===best.vis&&(sc.inR>best.inR||(sc.inR===best.inR&&sc.avgD<best.avgD)))) best=sc;
+      }
+      if(!best){ z.note="no elevation data here"; continue; }
+      // sightline features for this best spot (for preview)
+      const g0=await sampleElevation(best.pt[0],best.pt[1]); if(misToken!==token) return;
+      const lines=[];
+      for(const c of assets){
+        const T=[+c.lat,+c.lng], d=haversineKm(best.pt,T)*1000; if(d>maxM) continue;
+        const tg=ag.get(c.id);
+        let st="unknown";
+        if(g0!=null&&tg!=null){ const r=await lineOfSight(best.pt,g0,T,tg,tgtH,canopyMode,manualM,sampler); if(misToken!==token) return; st=!r.ok?"unknown":(r.blocked?"blocked":"clear"); }
+        lines.push({type:"Feature",properties:{state:st},geometry:{type:"LineString",coordinates:[[best.pt[1],best.pt[0]],[T[1],T[0]]]}});
+      }
+      z.best={pt:best.pt,vis:best.vis,inR:best.inR,lines:lines,zone:zi+1};
+    }
+    if(misToken!==token) return;
+    const stops=misZones.filter(z=>z.best).map(z=>z.best);
+    const skipped=misZones.filter(z=>!z.best);
+    if(!stops.length){
+      $("#misSum").textContent="No workable stops"; $("#misProg").textContent=skipped.map((z,i)=>"Zone: "+z.note).join(" \u00B7 ");
+      misBusy=false; return;
+    }
+    prog("Ordering the route\u2026");
+    const start=await getPos(3500); if(misToken!==token) return;
+    const ordered=optimizeStops(stops.map(b=>({lat:b.pt[0],lng:b.pt[1],b:b})), start, false).map(o=>o.b);
+    misStops=ordered;
+    let straightKm=0, prev=start;
+    ordered.forEach(b=>{ if(prev) straightKm+=haversineKm(prev,b.pt); prev=b.pt; });
+    misRoadMi=straightKm*ROAD_FACTOR*0.621371;
+    refreshMission();
+    $("#misSum").innerHTML=misStops.length+" stop"+(misStops.length===1?"":"s")+" \u00B7 ~"+misRoadMi.toFixed(1)+" mi drive"+'<span class="rtsub">'+(start?"from your location \u00B7 ":"")+"asset "+losAssetFt+" ft \u00B7 within "+losMaxFt+" ft"+(skipped.length?(" \u00B7 "+skipped.length+" zone"+(skipped.length===1?"":"s")+" skipped"):"")+"</span>";
+    $("#misProg").textContent=skipped.length?skipped.map(z=>"Skipped zone: "+z.note).join(" \u00B7 "):"";
+    renderMisList(-1);
+    misBusy=false;
+  }
+  function renderMisList(active){
+    $("#misList").innerHTML=misStops.map((b,i)=>{
+      const badge='<span class="rtn" style="background:'+(i===active?"var(--amber)":"var(--line2)")+';color:'+(i===active?"#10141a":"var(--muted)")+'">'+(i+1)+'</span>';
+      return '<li data-mis="'+i+'" class="'+(i===active?"misOn":"")+'">'+badge+'<div class="rtmain"><div class="rttitle">Sees '+b.vis+' of '+b.inR+' in range</div><div class="rtmeta">Zone '+b.zone+' \u00B7 tap to preview \u00B7 '+navLinks(b.pt[0],b.pt[1]).replace(/<div[^>]*>|<\/div>/g,"")+'</div></div></li>';
+    }).join("");
+    $("#misList").querySelectorAll("[data-mis]").forEach(el=>el.addEventListener("click",ev=>{ if(ev.target&&ev.target.tagName==="A") return; previewMisStop(+el.dataset.mis,false); }));
+  }
+  function previewMisStop(i,fromMap){
+    const b=misStops[i]; if(!b) return;
+    renderMisList(i);
+    try{ cmap.getSource("los-lines").setData({type:"FeatureCollection",features:b.lines}); }catch(e){}
+    try{ cmap.getSource("los-observer").setData({type:"FeatureCollection",features:[{type:"Feature",properties:{},geometry:{type:"Point",coordinates:[b.pt[1],b.pt[0]]}}]}); }catch(e){}
+    if(!fromMap){ closeMisSheet(); try{ cmap.easeTo({center:[b.pt[1],b.pt[0]],duration:500}); }catch(e){} }
+  }
+  { const b=$("#mMission"); if(b) b.addEventListener("click",openMission); }
+  { const b=$("#misDone"); if(b) b.addEventListener("click",()=>{
+      if(!misZones.length){ toast("Draw at least one zone first"); return; }
+      zoneDraw=false; $("#misBanner").classList.add("hidden");
+      const layer=$("#lassoLayer"); if(layer&&!lassoOn) layer.classList.add("hidden");
+      $("#misScrim").classList.add("show"); $("#misSheet").classList.add("show");
+      runMission();
+  }); }
+  { const b=$("#misX"); if(b) b.addEventListener("click",closeMission); }
+  { const b=$("#misClear"); if(b) b.addEventListener("click",closeMission); }
+  { const b=$("#misOk"); if(b) b.addEventListener("click",closeMisSheet); }
+  { const sc=$("#misScrim"); if(sc) sc.addEventListener("click",closeMisSheet); }
+
   function renderLosResults(){
     const r=losResults||[];
     const clear=r.filter(x=>x.state==="clear").length, blocked=r.filter(x=>x.state==="blocked").length, unk=r.filter(x=>x.state==="unknown").length;
@@ -3232,7 +3596,9 @@
   function openLos(){
     if(!cmap||!cMapReady){ toast("Open the map first"); return; }
     losMode=true; losPlacing=true; losObs=null; losResults=[]; _canopyProbeFailed=false;
-    losScanStage=0; losScanA=null; losScanB=null; losScanActive=false; losScanCands=[];
+    losScanStage=0; losScanA=null; losScanB=null; losScanActive=false; losScanCands=[]; losScanPath=null; losScanSnapped=false;
+    { const mEl=$("#losScanMeta"); if(mEl) mEl.textContent=""; }
+    if(measOn) closeMeasure();
     pinPlacing=false; $("#pinBanner").classList.add("hidden");
     losMaxFt=parseFloat(store.get("fk_los_maxft","1500"))||1500; { const e=$("#losMaxFt"); if(e) e.value=losMaxFt; }
     $("#losScanWrap").classList.add("hidden"); $("#losScanList").innerHTML="";
@@ -3246,8 +3612,10 @@
     $("#mLos").classList.add("on");
   }
   function closeLos(){
+    losToken++;
     losMode=false; losPlacing=false; losObs=null;
-    losScanStage=0; losScanA=null; losScanB=null; losScanActive=false; losScanCands=[];
+    losScanStage=0; losScanA=null; losScanB=null; losScanActive=false; losScanCands=[]; losScanPath=null; losScanSnapped=false;
+    { const mEl=$("#losScanMeta"); if(mEl) mEl.textContent=""; }
     $("#losScanWrap").classList.add("hidden");
     $("#losBanner").classList.add("hidden");
     $("#losScrim").classList.remove("show"); $("#losSheet").classList.remove("show","loscol");
@@ -3260,17 +3628,28 @@
   { const b=$("#losDone"); if(b) b.addEventListener("click",closeLos); }
   { const b=$("#losScrim"); if(b) b.addEventListener("click",closeLos); }
   { const b=$("#losMove"); if(b) b.addEventListener("click",()=>{
-      losScanStage=0; losScanA=null; losScanB=null; losScanActive=false; losScanCands=[];
+      losScanStage=0; losScanA=null; losScanB=null; losScanActive=false; losScanCands=[]; losScanPath=null; losScanSnapped=false;
+      { const mEl=$("#losScanMeta"); if(mEl) mEl.textContent=""; }
       $("#losScanWrap").classList.add("hidden");
       try{ cmap.getSource("los-cands").setData({type:"FeatureCollection",features:[]}); }catch(e){}
       $("#losBannerText").textContent="Tap the map to set your parking point";
       { const sb=$("#losScanBtn"); if(sb) sb.classList.remove("hidden"); }
       losPlacing=true; $("#losScrim").classList.remove("show"); $("#losSheet").classList.remove("show"); $("#losBanner").classList.remove("hidden");
   }); }
-  { const b=$("#losScanBtn"); if(b) b.addEventListener("click",()=>{
-      losPlacing=false; losScanStage=1; losScanA=null; losScanB=null;
-      $("#losBannerText").textContent="Tap the START of the road segment";
+  { const b=$("#losScanBtn"); if(b) b.addEventListener("click",async()=>{
+      losPlacing=false; losScanStage=0; losScanA=null; losScanB=null; losScanPath=null; losScanSnapped=false;
       b.classList.add("hidden");
+      $("#losBannerText").textContent="Loading nearby roads\u2026";
+      losRoads=null;
+      try{
+        const bd=cmap.getBounds();
+        const pla=(bd.getNorth()-bd.getSouth())*0.3, plo=(bd.getEast()-bd.getWest())*0.3;
+        const r=await fetchRoads(bd.getSouth()-pla, bd.getWest()-plo, bd.getNorth()+pla, bd.getEast()+plo);
+        if(r&&r.ways.length) losRoads={ways:r.ways, graph:buildRoadGraph(r.ways)};
+      }catch(e){}
+      if(!losMode){ return; }
+      losScanStage=1;
+      $("#losBannerText").textContent=losRoads?"Tap the START of the road stretch (snaps to the road)":"Roads unavailable \u2014 tap the START point";
   }); }
   { const e=$("#losMaxFt"); if(e) e.addEventListener("change",()=>{
       let v=parseFloat(e.value); if(isNaN(v)||v<100) v=1500; losMaxFt=v; e.value=v; store.set("fk_los_maxft",String(v));
