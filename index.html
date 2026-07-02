@@ -134,6 +134,11 @@
   .maplegend{display:flex;flex-wrap:wrap;gap:5px 12px;font:500 11px var(--ui);color:var(--muted)}
   .maplegend span{display:flex;align-items:center;gap:5px;white-space:nowrap}
   .maplegend i{width:9px;height:9px;border-radius:50%;border:1.5px solid #0E1116;flex:none}
+  .mapdock .mapdockbody{display:flex;flex-direction:column;gap:9px;overflow:hidden;transition:max-height .26s cubic-bezier(.2,.8,.2,1),opacity .2s,margin .2s;max-height:640px;opacity:1}
+  .mapdock.collapsed .mapdockbody{max-height:0;opacity:0;margin-top:-9px;pointer-events:none}
+  .mapdock .dockToggle{position:absolute;top:-30px;right:12px;z-index:7;display:inline-flex;align-items:center;gap:5px;background:rgba(14,17,22,.92);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid var(--line2);border-bottom:0;color:var(--muted);border-radius:10px 10px 0 0;padding:5px 12px;font:600 12px var(--ui);cursor:pointer}
+  .mapdock .dockToggle .chev{transition:transform .26s}
+  .mapdock.collapsed .dockToggle .chev{transform:rotate(180deg)}
   .mapbar-row{display:flex;align-items:center;gap:8px}
   .mapbar-row.main>.btn{flex:1}
   .mapcount{flex:1;font:600 13px var(--ui);color:var(--ink)}
@@ -648,7 +653,7 @@
   <div class="losbanner hidden" id="losBanner"><span id="losBannerText">Tap the map to set your parking point</span><button class="losbanscan" id="losScanBtn" type="button">Scan a road</button><button class="losbanx" id="losCancel" type="button">Cancel</button></div>
   <div class="losbanner hidden" id="pinBanner"><span>Tap the map to place a pin</span><button class="losbanx" id="pinCancel" type="button">Cancel</button></div>
   <div class="losbanner hidden" id="measBanner"><b id="measVal" style="font-family:var(--mono);font-size:13px">0 ft</b><span class="note" id="measHint" style="margin:0">tap points</span><button class="losbanscan" id="measModeBtn" type="button">Area</button><button class="losbanx" id="measUndo" type="button">Undo</button><button class="losbanx" id="measX" type="button">Done</button></div>
-  <div class="losbanner hidden" id="misBanner"><span id="misBannerText">Draw a loop around each work zone</span><button class="losbanscan" id="misDone" type="button">Done</button><button class="losbanx" id="misX" type="button">Cancel</button></div>
+  <div class="losbanner hidden" id="misBanner"><span id="misBannerText">Move the map, then tap Draw zone</span><button class="losbanscan" id="misDraw" type="button">Draw zone</button><button class="losbanscan" id="misDone" type="button">Done</button><button class="losbanx" id="misX" type="button">Cancel</button></div>
   <div class="dloverlay hidden" id="dlOverlay">
     <div class="dlcard">
       <div class="dltitle" id="dlTitle">Save this area offline</div>
@@ -661,7 +666,9 @@
       </div>
     </div>
   </div>
-  <div class="mapdock">
+  <div class="mapdock" id="mapDock">
+    <button class="dockToggle" id="dockToggle" type="button" aria-label="Show or hide controls"><span class="chev">&#9662;</span><span id="dockToggleLabel">Hide</span></button>
+    <div class="mapdockbody" id="mapDockBody">
     <div class="maplegend" id="mLegend">
       <span><i style="background:#9aa4b0"></i>New</span>
       <span><i style="background:#FFB000"></i>Texted</span>
@@ -691,6 +698,7 @@
     <div class="mapbar-row main">
       <button class="btn ghost issue" id="mFlag" type="button">Mark access issue</button>
       <button class="btn ghost" id="mPin" type="button">Drop pin</button>
+    </div>
     </div>
   </div>
 </div>
@@ -3401,16 +3409,35 @@
     return {type:"FeatureCollection",features:f};
   }
   function refreshMission(){ if(cmap&&cMapReady){ try{ cmap.getSource("mission").setData(misGeo()); }catch(e){} } }
-  function updateZoneCt(){ $("#misBannerText").textContent = misZones.length ? ("Zones: "+misZones.length+" \u00B7 draw another, or tap Done") : "Draw a loop around each work zone"; }
+  function updateZoneCt(){
+    const t=$("#misBannerText"); if(!t) return;
+    if(zoneDraw){ t.textContent="Draw a loop around the zone \u2014 the map is locked while drawing"; }
+    else if(misZones.length){ t.textContent="Zones: "+misZones.length+" \u00B7 tap Draw zone for another, or Done"; }
+    else { t.textContent="Move the map to a zone, then tap Draw zone"; }
+    const db=$("#misDraw"); if(db) db.classList.toggle("on",zoneDraw);
+  }
+  function armZoneDraw(){
+    if(!misMode) return;
+    zoneDraw=true; lassoDrawing=false; lassoPts=[];
+    const layer=$("#lassoLayer"); if(layer) layer.classList.remove("hidden");
+    const p=$("#lassoPath"); if(p) p.setAttribute("points","");
+    updateZoneCt();
+  }
+  function disarmZoneDraw(){
+    zoneDraw=false; lassoDrawing=false; lassoPts=[];
+    const layer=$("#lassoLayer"); if(layer&&!lassoOn) layer.classList.add("hidden");
+    const p=$("#lassoPath"); if(p) p.setAttribute("points","");
+    updateZoneCt();
+  }
   function finishZoneDraw(){
     lassoDrawing=false;
     const raw=lassoPts.slice(); lassoPts=[]; drawLassoPath();
     if(raw.length<8) return;
     const poly=[];
     for(let i=0;i<raw.length;i+=2){ try{ const ll=cmap.unproject([raw[i][0],raw[i][1]]); poly.push([ll.lat,ll.lng]); }catch(e){} }
-    if(poly.length<3) return;
+    if(poly.length<3){ disarmZoneDraw(); return; }
     misZones.push({poly:poly});
-    refreshMission(); updateZoneCt();
+    refreshMission(); disarmZoneDraw();
   }
   function openMission(){
     if(!cmap||!cMapReady){ toast("Open the map first"); return; }
@@ -3418,8 +3445,8 @@
     if(losMode) closeLos();
     if(measOn) closeMeasure();
     pinPlacing=false; $("#pinBanner").classList.add("hidden");
-    misMode=true; zoneDraw=true; misZones=[]; misStops=[]; misRoadMi=0; refreshMission();
-    const layer=$("#lassoLayer"); if(layer) layer.classList.remove("hidden");
+    misMode=true; zoneDraw=false; misZones=[]; misStops=[]; misRoadMi=0; refreshMission();
+    const layer=$("#lassoLayer"); if(layer) layer.classList.add("hidden");
     $("#misBanner").classList.remove("hidden"); updateZoneCt();
     $("#mMission").classList.add("on");
   }
@@ -3541,6 +3568,13 @@
     if(!fromMap){ closeMisSheet(); try{ cmap.easeTo({center:[b.pt[1],b.pt[0]],duration:500}); }catch(e){} }
   }
   { const b=$("#mMission"); if(b) b.addEventListener("click",openMission); }
+  { const dt=$("#dockToggle"), dk=$("#mapDock"), lbl=$("#dockToggleLabel");
+    if(dt&&dk){
+      const setC=c=>{ dk.classList.toggle("collapsed",c); if(lbl) lbl.textContent=c?"Controls":"Hide"; store.set("fk_dock_collapsed",c?"1":"0"); };
+      if(store.get("fk_dock_collapsed","0")==="1") setC(true);
+      dt.addEventListener("click",()=>setC(!dk.classList.contains("collapsed")));
+    } }
+  { const b=$("#misDraw"); if(b) b.addEventListener("click",()=>{ if(zoneDraw) disarmZoneDraw(); else armZoneDraw(); }); }
   { const b=$("#misDone"); if(b) b.addEventListener("click",()=>{
       if(!misZones.length){ toast("Draw at least one zone first"); return; }
       zoneDraw=false; $("#misBanner").classList.add("hidden");
