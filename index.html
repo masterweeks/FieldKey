@@ -939,7 +939,7 @@
   <div class="sgroup"><label class="label">Vehicle weight (lbs)</label><input type="number" id="sVeh" min="500" step="100" inputmode="numeric" /><p class="note">Used to estimate the extra fuel from climbing on hilly routes.</p></div>
   <div class="sgroup"><label class="label">Your height (ft) — for line of sight</label><input type="number" id="sObs" min="3" max="8" step="0.1" inputmode="decimal" /><p class="note">Your standing eye height, used when checking which assets you can see over the terrain from a parking point. E.g. 6.3 for about 6'4".</p></div>
   <div class="sgroup"><label class="label">Canopy proxy URL (optional)</label><input type="url" id="sCanopyProxy" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://….supabase.co/functions/v1/canopy" /><p class="note">Unlocks measured 1&#8209;meter tree-canopy data in line-of-sight. Paste your canopy proxy endpoint here. Leave blank to use the manual typical-height estimate.</p></div>
-  <p class="note" style="text-align:center;margin-top:14px">FieldKey · <span id="sAppVer">v50</span> · runs offline once added to your Home Screen</p>
+  <p class="note" style="text-align:center;margin-top:14px">FieldKey · <span id="sAppVer">v51</span> · runs offline once added to your Home Screen</p>
   <div class="sgroup"><button class="btn ghost sm" id="sCheckUpdate" type="button">Check for update</button></div>
 </div>
 
@@ -977,7 +977,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v50";
+  const APP_VER="v51";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -2876,6 +2876,28 @@
     const o=(t.py*256+t.px)*4;
     return (data[o]*256+data[o+1]+data[o+2]/256)-32768;
   }
+  /* Synchronous read from already-cached DEM tiles. Returns undefined if the tile
+     hasn't been fetched yet (caller falls back to the async path), null if the tile
+     failed to load, else meters. Pure array math -> ~1M reads/sec on a phone. */
+  function sampleElevSync(lat,lng){
+    const t=_demTile(lat,lng,ELEV_Z), key=ELEV_Z+"/"+t.xt+"/"+t.yt;
+    const data=_tileCache.get(key);
+    if(data===undefined) return undefined;
+    if(!data) return null;
+    const o=(t.py*256+t.px)*4;
+    return (data[o]*256+data[o+1]+data[o+2]/256)-32768;
+  }
+  /* Fetch every DEM tile covering a bbox once, so the sync path never misses. */
+  async function prefetchElevBox(laMin,laMax,loMin,loMax){
+    const span=360/Math.pow(2,ELEV_Z), step=span*0.4; // < half a tile in both axes
+    const jobs=[];
+    for(let la=laMin; la<=laMax+step; la+=step)
+      for(let lo=loMin; lo<=loMax+step; lo+=step){
+        const t=_demTile(Math.min(la,laMax),Math.min(lo,loMax),ELEV_Z), key=ELEV_Z+"/"+t.xt+"/"+t.yt;
+        if(!_tileCache.has(key)) jobs.push(sampleElevation(Math.min(la,laMax),Math.min(lo,loMax)));
+      }
+    if(jobs.length) await Promise.all(jobs);
+  }
   function routeSamplePoints(ordered,start,closed){
     const path=[]; if(start)path.push(start);
     ordered.forEach(s=>path.push([parseFloat(s.lat),parseFloat(s.lng)]));
@@ -3305,6 +3327,34 @@
     }
     return {ok:true, blocked, clearAglFt:Math.max(0,reqTgtE-tgtGround)/0.3048};
   }
+  /* Synchronous LOS over prefetched tiles. Same math as lineOfSight; `coarse` uses a
+     wider sample step for cheap first-pass scoring. Returns {missing:true} if a tile
+     wasn't prefetched (caller retries via the async version). */
+  function lineOfSightSync(obs,obsGround,target,tgtGround,tgtH,canopyMode,manualM,canSamp,coarse){
+    const D=haversineKm(obs,target)*1000;
+    const obsE=obsGround+obsHeightM(), tgtE=tgtGround+tgtH, Reff=R_EARTH*LOS_REFR;
+    if(D<1) return {ok:true,blocked:false,clearAglFt:tgtH/0.3048};
+    const step=coarse?Math.max(30,D/48):Math.max(15,D/160), nSteps=Math.max(2,Math.ceil(D/step));
+    let blocked=false, reqTgtE=tgtE;
+    for(let i=1;i<nSteps;i++){
+      const t=i/nSteps, pla=obs[0]+(target[0]-obs[0])*t, plo=obs[1]+(target[1]-obs[1])*t;
+      let terr=sampleElevSync(pla,plo);
+      if(terr===undefined) return {missing:true};
+      if(terr==null) return {ok:false};
+      if(canopyMode==="measured"&&canSamp){ const cp=canSamp(pla,plo); if(cp>0) terr+=cp; }
+      else if(canopyMode==="manual"){ terr+=manualM; }
+      const di=D*t, drop=(di*(D-di))/(2*Reff), sight=obsE+(tgtE-obsE)*t;
+      if(sight-drop<terr) blocked=true;
+      const needE=obsE+(terr+drop-obsE)/t; if(needE>reqTgtE) reqTgtE=needE;
+    }
+    return {ok:true, blocked, clearAglFt:Math.max(0,reqTgtE-tgtGround)/0.3048};
+  }
+  /* sync first, async fallback for the rare unprefetched tile */
+  async function losCheck(obs,g,T,tg,tgtH,canopyMode,manualM,canSamp,coarse){
+    const r=lineOfSightSync(obs,g,T,tg,tgtH,canopyMode,manualM,canSamp,coarse);
+    if(!r.missing) return r;
+    return await lineOfSight(obs,g,T,tg,tgtH,canopyMode,manualM,canSamp);
+  }
   function clearLosOverlays(){ if(losStateById.size){ losStateById=new Map(); refreshMarks(); } if(cmap){ ["los-lines","los-observer","los-cands"].forEach(sr=>{ try{cmap.getSource(sr).setData({type:"FeatureCollection",features:[]});}catch(e){} }); } }
   async function computeLos(){
     const token=++losToken, obs=losObs; if(!obs) return;
@@ -3383,22 +3433,30 @@
       else losCanopyStatus="unavailable";
     }
     const manualM=(losCanopyManualFt||0)*0.3048;
+    { // prefetch every elevation tile the scan can touch, then LOS is synchronous
+      let laMin=90,laMax=-90,loMin=180,loMax=-180;
+      candPts.concat(assets.map(c=>[+c.lat,+c.lng])).forEach(P=>{ if(P[0]<laMin)laMin=P[0]; if(P[0]>laMax)laMax=P[0]; if(P[1]<loMin)loMin=P[1]; if(P[1]>loMax)loMax=P[1]; });
+      try{ await prefetchElevBox(laMin-0.003,laMax+0.003,loMin-0.003,loMax+0.003); }catch(e){}
+      if(losToken!==token) return;
+    }
     const ag=new Map();
     for(const c of assets){ const g=await sampleElevation(+c.lat,+c.lng); if(losToken!==token) return; ag.set(c.id,g); }
     const cands=[];
     for(let i=0;i<candPts.length;i++){
       const P=candPts[i];
-      const g=await sampleElevation(P[0],P[1]); if(losToken!==token) return;
+      const gS=sampleElevSync(P[0],P[1]);
+      const g=(gS===undefined)?await sampleElevation(P[0],P[1]):gS; if(losToken!==token) return;
       if(g==null) continue;
       let vis=0, inR=0, sumD=0;
       for(const c of assets){
         const T=[+c.lat,+c.lng], d=haversineKm(P,T)*1000; if(d>maxM) continue;
         inR++;
         const tg=ag.get(c.id); if(tg==null) continue;
-        const r=await lineOfSight(P,g,T,tg,tgtH,canopyMode,manualM,sampler); if(losToken!==token) return;
+        const r=await losCheck(P,g,T,tg,tgtH,canopyMode,manualM,sampler,false); if(losToken!==token) return;
         if(r.ok&&!r.blocked){ vis++; sumD+=d; }
       }
       cands.push({pt:P, vis:vis, inR:inR, avgD:vis?sumD/vis:1e9});
+      if(i%20===19) await sleep(0);
     }
     if(!cands.length){
       losScanActive=false; $("#losScanWrap").classList.add("hidden");
@@ -3540,24 +3598,44 @@
           if(sampler) canopyMode="measured"; else if(manualM>0) canopyMode="manual";
         } else if(manualM>0) canopyMode="manual";
       }
+      // keep the spot-count x asset-count product bounded (like the road scan)
+      if(cand.length*assets.length>4200){ const stride=Math.ceil(cand.length*assets.length/4200); cand=cand.filter((_,i)=>i%stride===0); }
+      prog("Zone "+(zi+1)+"/"+zn+" \u2014 loading terrain\u2026");
+      // pull every elevation tile for this zone once, then all LOS math is synchronous
+      try{ await prefetchElevBox(laMin-padLa, laMax+padLa, loMin-padLo, loMax+padLo); }catch(e){}
+      if(misToken!==token) return;
       const ag=new Map();
       for(const c of assets){ const g=await sampleElevation(+c.lat,+c.lng); if(misToken!==token) return; ag.set(c.id,g); }
       prog("Zone "+(zi+1)+"/"+zn+" \u2014 checking "+cand.length+" spots\u2026");
-      let best=null;
-      for(let i=0;i<cand.length;i++){
-        const P=cand[i];
-        const g=await sampleElevation(P[0],P[1]); if(misToken!==token) return;
-        if(g==null) continue;
+      async function scoreCand(P,coarse){
+        const g=sampleElevSync(P[0],P[1]);
+        const g2=(g===undefined)?await sampleElevation(P[0],P[1]):g;
+        if(g2==null) return null;
         let vis=0,inR=0,sumD=0;
         for(const c of assets){
           const T=[+c.lat,+c.lng], d=haversineKm(P,T)*1000; if(d>candR) continue;
           inR++;
           const tg=ag.get(c.id); if(tg==null) continue;
-          const r=await lineOfSight(P,g,T,tg,tgtH,canopyMode,manualM,sampler); if(misToken!==token) return;
+          const r=await losCheck(P,g2,T,tg,tgtH,canopyMode,manualM,sampler,coarse);
           if(r.ok&&!r.blocked){ vis++; sumD+=d; }
         }
-        const sc={pt:P,vis:vis,inR:inR,avgD:vis?sumD/vis:1e9};
-        if(!best || sc.vis>best.vis || (sc.vis===best.vis&&(sc.inR>best.inR||(sc.inR===best.inR&&sc.avgD<best.avgD)))) best=sc;
+        return {pt:P,vis:vis,inR:inR,avgD:vis?sumD/vis:1e9};
+      }
+      // pass 1: coarse-sampled score for every candidate (cheap, all-sync)
+      const scored=[];
+      for(let i=0;i<cand.length;i++){
+        const sc=await scoreCand(cand[i],true); if(misToken!==token) return;
+        if(sc) scored.push(sc);
+        if(i%25===24){ await sleep(0); prog("Zone "+(zi+1)+"/"+zn+" \u2014 checking spots "+(i+1)+"/"+cand.length+"\u2026"); }
+      }
+      if(!scored.length){ z.note="no elevation data here"; continue; }
+      scored.sort((a,b)=> b.vis-a.vis || b.inR-a.inR || a.avgD-b.avgD);
+      // pass 2: full-resolution rescore of the front-runners only
+      let best=null;
+      const finals=scored.slice(0,Math.min(12,scored.length));
+      for(const f of finals){
+        const sc=await scoreCand(f.pt,false); if(misToken!==token) return;
+        if(sc && (!best || sc.vis>best.vis || (sc.vis===best.vis&&(sc.inR>best.inR||(sc.inR===best.inR&&sc.avgD<best.avgD))))) best=sc;
       }
       if(!best){ z.note="no elevation data here"; continue; }
       // sightline features for this best spot (for preview)
@@ -3567,7 +3645,7 @@
         const T=[+c.lat,+c.lng], d=haversineKm(best.pt,T)*1000; if(d>candR) continue;
         const tg=ag.get(c.id);
         let st="unknown";
-        if(g0!=null&&tg!=null){ const r=await lineOfSight(best.pt,g0,T,tg,tgtH,canopyMode,manualM,sampler); if(misToken!==token) return; st=!r.ok?"unknown":(r.blocked?"blocked":"clear"); }
+        if(g0!=null&&tg!=null){ const r=await losCheck(best.pt,g0,T,tg,tgtH,canopyMode,manualM,sampler,false); if(misToken!==token) return; st=!r.ok?"unknown":(r.blocked?"blocked":"clear"); }
         lines.push({type:"Feature",properties:{state:st},geometry:{type:"LineString",coordinates:[[best.pt[1],best.pt[0]],[T[1],T[0]]]}});
       }
       z.best={pt:best.pt,vis:best.vis,inR:best.inR,lines:lines,zone:zi+1};

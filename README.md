@@ -1,62 +1,374 @@
-# FieldKey canopy proxy
+# FieldKey — Access Request Builder
 
-A ~40-line Supabase Edge Function that unlocks the **measured 1-meter tree-canopy
-data** in FieldKey's line-of-sight tool.
+A phone app (PWA) that turns a CSV **or KML** of inspection sites into an on-device
+customer database and copy-ready access requests. Import a file → it finds your SAP
+ID / latitude / longitude columns → reverse-geocodes each point to an address →
+merges them into your database. Then select or filter the sites you want and build
+batch access-request text, plus `.csv` / `.kml` export and SMS outreach.
 
-## Why this exists
-FieldKey can fold real tree heights into a sightline so a line crossing a tree
-stand reads as blocked. That data (the Meta/WRI 1 m canopy map) lives in a public
-AWS bucket that a **browser can't read directly** — the bucket sends no CORS
-headers, so the request is blocked. Without this proxy, FieldKey falls back to a
-flat "typical tree height" you set by hand.
+Everything parses on-device; only the coordinates are sent out for address
+lookup. The maps need an internet connection (they stream a vector basemap from
+OpenFreeMap, plus Esri aerial or OpenStreetMap tiles depending on the basemap you
+pick); everything
+else works offline once installed.
 
-This function fetches the canopy tile **server-side** (where CORS doesn't apply)
-and re-serves it with the headers a browser needs, including HTTP Range support so
-the map reads only the few small byte-ranges it needs per sightline.
+Everything happens on one screen — your customer database. Data comes in at the
+top, and you build access requests from whatever you've selected or filtered to.
 
-## What's here
-```
-supabase/functions/canopy/index.ts   the function
-supabase/config.toml                 block that turns off the login-token check
-```
+Any panel that slides up — an asset's details, the map, build-request, import,
+settings, and so on — has a **✕** button in its top-right corner to close it and go
+back. (Opening one panel from another, like build-request from the map, returns you
+to where you were.) You can also tap the dimmed area behind a panel to dismiss it.
 
-## Deploy (one time, ~5 min)
-1. Install the CLI and sign in:
-   ```
-   npm install -g supabase
-   supabase login
-   ```
-2. Link to your project (create a free project at supabase.com first if needed):
-   ```
-   supabase link --project-ref <your-project-ref>
-   ```
-3. Copy the `supabase/functions/canopy/` folder into your project (this repo
-   mirrors the expected layout), then deploy **without JWT verification** so the
-   map can call it with no login token:
-   ```
-   supabase functions deploy canopy --no-verify-jwt
-   ```
-   Your endpoint is:
-   ```
-   https://<your-project-ref>.supabase.co/functions/v1/canopy
-   ```
+### Bringing data in
+**Import KML / CSV** takes your daily site file. It auto-detects the SAP ID,
+latitude, and longitude — for a CSV it shows those columns so you can confirm or fix
+them; a KML's coordinates are unambiguous, so it skips straight through — then shows
+**"N assets found."** Tap **Import** and the batch saves into the database
+**instantly** — no waiting, and no address lookups are spent at import time.
+Addresses resolve later, only for the assets you actually build requests for (see
+below). It **merges** into what's already there: a point that
+matches an existing customer (by SAP ID, then name, then address) updates that
+record and keeps the phone / access / status / text history you've collected;
+brand-new points are added; anything already in the database that isn't in this file
+is left untouched. The file is tagged and the view auto-filters to **Latest KML** so
+you immediately see just what you loaded — which is also the set you'll usually build
+requests for. (If you pick the wrong file, close the sheet before tapping Import,
+and the daily snapshot is your undo otherwise.)
 
-## Point FieldKey at it
-FieldKey → **Settings → "Canopy proxy URL"** → paste the endpoint above → save.
-Then open **Line of sight → Include tree canopy**. The panel should now read
-**"with tree canopy (measured)"** instead of the "~N ft" assumption.
+This is how a fresh daily KML merges with everything you've built up. **Addresses
+are resolved on demand:** when you tap **Build request** (list or map), FieldKey
+looks up street addresses just for the selected assets that don't have one yet —
+progress shows right in the request sheet — and saves them onto the records, so each
+site is only ever looked up once. This keeps lookups down to the assets you actually
+work, instead of burning quota on every imported point.
 
-## Sanity check
-```
-curl -I "https://<your-project-ref>.supabase.co/functions/v1/canopy?qk=023010203"
-```
-Expect `HTTP/2 200`, `access-control-allow-origin: *`, and `accept-ranges: bytes`.
-(Any real quadkey works; a 404 just means no canopy tile covers that quadkey.)
+**Add contact manually** is for customer info that arrives some other way — a phone
+call, a text, a note from a colleague. Tap it (under the import buttons), and enter a
+name and/or phone; that's the minimum. SAP ID, address, and notes are optional. If you
+add a SAP ID and a record with that ID already exists, it **updates** that record
+(adding the phone) instead of creating a duplicate — so it lines up with the site when
+that KML eventually comes in. A phone you type here is stored the same way as an
+imported one, so the contact is immediately callable and textable from its card and
+counts in the guided-text run. A manual contact with no coordinates won't appear on
+the map (there's nothing to place yet); give it the SAP ID and the map pin arrives
+with the next KML.
+
+### Building access requests
+**Build request** — in the toolbar, in the selection bar once you've picked assets,
+and on the map — generates copy-ready access-request text: Requestor details from
+Settings plus each site's SAP ID and address. It acts on **whatever you've selected
+or filtered to** — tick specific rows (or map pins) to build for just those, or leave
+nothing selected and it builds for everything currently shown (e.g. the whole *Latest
+KML* batch). The preview shows the count before you copy or share.
+
+### Your database
+A persistent, on-device view of every site you've collected. The header shows
+how many are in the database. Tap any customer to see the full record — phones,
+access with gate codes, address, coordinates, which file it came from, and any
+extra fields — plus **Apple Maps / Google Maps** directions buttons when the site
+has coordinates. (Backing up, restoring, rolling back to an earlier day, and
+clearing the database all live in **Settings → Data** — see below.)
+
+**Filling in a record.** A site imported from a KML often has coordinates and a SAP
+ID but no name or phone yet. On the record's card you can add them directly: type a
+**Name** at the top, and use **Add a phone number** under Phones to attach one (or
+several — each gets its own Call / Text buttons, and the **×** removes one). It saves
+as you go, the phone works exactly like an imported one, and the list updates when you
+close the card. This is the usual way to attach a phone that came in by call or text
+to the right site. (For a contact that isn't in the database at all yet, **Add contact
+manually** on the main screen creates a fresh record.)
+
+- **Import email return** — paste the reply you get after sending a list. It
+  reads each record and merges it in by **SAP ID, then name, then address**. The
+  SAP ID is matched **by its structure** — a standalone 9-digit number — so it's
+  found whether the sender labels it "SAP Equipment ID", "SAP ID", "Equipment ID",
+  or doesn't label it at all. Phone numbers are pulled out **wherever they appear**
+  — even mid-line (e.g. `Mobile Primary  (541) 591-3438`) — and odd dash
+  characters that email programs sometimes substitute (en-dashes, etc.) are handled.
+  The email's address, name, and phones are taken as authoritative; coordinates you
+  already have are kept. (This is for email replies only — site files go through
+  **Import KML / CSV**.)
+- **Text customers** — each customer has a one-tap **Text** button that opens
+  Messages pre-filled with your template (first name and address fill in
+  automatically). The app counts each send and marks the customer *Texted*.
+  *Guided text* walks through everyone you haven't texted yet, one tap each
+  (iOS doesn't allow an app to send texts silently or in bulk).
+- **Track** — per-customer status (New / Texted / Replied / Scheduled / Done),
+  a text counter, and your own notes. Marking a customer **Scheduled** reveals a
+  date/time picker that's saved to the database (and shown on the row), plus
+  **Apple Calendar** and **Google Calendar** buttons that create a real 30-minute
+  inspection event — pre-filled with the site name, address, phone, access notes,
+  and a directions link. Filter chips (including **Latest KML** and **Selected**,
+  which shows whatever you've picked in the list or on the map) and a search box
+  that matches name, address, SAP ID, or **phone number** — phone matching ignores
+  formatting, so `5303398783`, `530-339-8783`, or even just the last few digits
+  all find the right customer.
+- **Collapsible controls** — the panel of buttons along the bottom of the map can be
+  hidden: tap the small **Hide / Controls** tab at its top-right corner to slide it
+  down for an unobstructed view of the map, and tap again to bring it back. Your choice
+  is remembered.
+
+- **Map & export KML** — the **Map** button opens a **full-screen** map of the
+  customers you're currently working with: whatever the filter/search is showing,
+  or — if you've selected specific assets — just those. Close it with the **✕** in
+  the top-left corner. The map is a fast vector map you can **rotate and
+  tilt** (twist or drag with two fingers). Use the switcher in the top-left corner
+  to pick a basemap: **Dark** (a clean low-glare vector style that matches the app),
+  **Aerial** (high-resolution Esri imagery with place labels — often the most
+  useful for spotting rooftops, access roads, and terrain on an inspection — which
+  automatically switches to cached **USGS** imagery when you're offline),
+  **Hybrid** (the same aerial imagery with a **street map drawn on top** — road
+  lines plus labels — the best of both for tracing an access road across the
+  imagery; the street overlay streams live, so offline Hybrid falls back to plain
+  imagery just like Aerial), or **Streets**. Your choice is remembered. On the **Dark** basemap the map shows **terrain shading** (hillshade relief) so ridges and canyons read at a glance. For a stronger sense of the land, the **3D** button (top-left) tilts into a 3-D view — drag up with two fingers and the terrain physically rises, on any basemap (try it over **Aerial** for a draped-satellite view). 3D is on by default and remembered; tap the button to switch back to a flat map. Both are useful for sizing up access and approach in hilly country. When many sites sit close together they
+  **cluster** into a single numbered circle — tap it to zoom in and split it apart.
+  Individual pins are **colored by status** (grey = new, amber = texted, blue =
+  replied, green = scheduled, red = access issue), with a legend along the bottom; a
+  selected pin gets a bright gold ring. Pins are drawn as **3-D markers**, and under
+  **Settings → Map pins** you can change their **shape** (Pin, Dot, Square, or
+  Diamond) and **size** (Small, Medium, Large) — a live preview shows the look, and
+  the change takes effect the next time you open the map. The location button (top-right, under the
+  zoom controls) drops a live dot showing **your current location** with an accuracy
+  ring and heading, and tracks it as you move — handy for seeing which site you're
+  closest to. Tap it once to start; the browser will ask permission the first time.
+  Location stops automatically when you close the map, to save battery. Tap a pin and
+  it selects the site and shows a small popup with just its **SAP ID**; a **details ▸**
+  button in that popup opens the rest (site name, access, and **Apple Maps / Google
+  Maps** directions). Tap the same pin again to deselect it and close the popup in one
+  tap. The action bar along the bottom is where you turn a selection into work:
+  tap pins to add them one at a time, or hit **Lasso** and draw a freehand loop right
+  on the map to grab every site inside it at once (drag to draw, lift to select — tap
+  **Lasso** again to cancel; it adds to whatever's already selected, so **Clear**
+  first if you want a fresh set). **Select visible** is the quick "grab everything on
+  screen" shortcut. Lasso works even when sites are bunched into clusters, since it
+  selects by location, not by visible pin. Then hit **Export KML** — of the pins you
+  picked, or, if you haven't picked
+  any, of everything shown on the map. Or tap **Build request email** to generate
+  the access-request text (Requestor details from Settings + each site's SAP and
+  address) for that same set, ready to copy or share/email. The exported KML
+  carries the name, phone, access, and status in each placemark, and re-imports
+  cleanly through **Import KML / CSV**.
+- **Optimize route** — with sites selected (or all shown if none), tap **Optimize
+  route** and FieldKey works out an efficient order to drive them, starting from your
+  current GPS location. The ordering runs entirely on the device — no signal, no API
+  key needed — so it works in the field the same as everything else. It shows the
+  ordered stop list with per-leg distances, plus a total distance, drive-time, and
+  fuel-cost estimate (set your vehicle **MPG**, **fuel price**, **average speed**, and
+  **weight** under **Settings → Route & fuel**). The fuel estimate is **climb-aware**:
+  FieldKey reads the elevation along the route from the same terrain tiles the map
+  uses and adds the extra gas burned climbing, showing the total **feet of climb** in
+  the summary. Elevation works online, or offline for any area you've saved with
+  **Save offline** — outside a saved area with no signal it just notes the elevation
+  isn't available and gives the flat estimate. A **Round trip** toggle re-optimizes as a loop
+  back to your start. **Open route in Google Maps** hands the whole ordered run to
+  Google Maps for real turn-by-turn driving (up to 10 stops per link — for a longer
+  day it opens the first 10 and you build a second route for the rest). Apple Maps
+  can't take a multi-stop route from a link, so on Apple Maps use the per-site
+  directions on each pin instead. The optimizer measures in straight-line distance
+  with a road-distance factor, which is why the mileage and fuel are estimates —
+  your maps app gives the exact drive; this is for sequencing and rough planning.
+- **Measure** — the **⟷ Measure** button (top-left, under 3D) turns on a quick
+  tape measure. Tap points on the map and the banner shows the running **distance**
+  (feet, switching to miles past ~1,500 ft). Tap **Area** in the banner to switch
+  modes: tap the corners of a parcel or work area and it shows **acres** (or square
+  feet for small areas). **Undo** removes the last point, switching modes clears the
+  points, and **Done** exits and clears the map. Handy for pacing out a setback,
+  sizing a landing zone, or checking how far a stretch of road really runs.
+
+- **Line of sight** — tap **Line of sight**, then tap the map to drop your
+  parking/launch point. FieldKey walks the terrain between that point and each
+  selected asset (or all shown) and tells you which ones you can actually **see** over
+  the landscape — useful for judging whether you'll hold visual line of sight while
+  flying. It draws a **green** line to each asset you can see and a **red** line to
+  each one the terrain blocks, and — while the check is up — the asset **pins
+  themselves recolor** green/red to match, so visibility reads at a glance even when
+  the lines get dense; normal status colors return the moment you exit. It lists them
+  with a count. For blocked assets it
+  reports the **altitude the drone clears at** ("clears above ~X ft"), so you know how
+  high you'd need to fly to keep it in view. Asset height is adjustable right in the
+  panel — a **Distribution** preset (~40 ft), a **Transmission** preset for taller
+  lattice towers, or type any height; your own eye height is set once under
+  **Settings → Route & fuel**. It accounts for earth curvature, and like the climb
+  data it reads elevation online or from any area you've saved offline (outside a
+  saved area with no signal it says so). Tap **Move parking point** to try another
+  spot, or **Done** to clear the lines. Tap the summary (or the handle) to **collapse
+  the panel to a peek** so you can see the map and sightlines, then tap again to bring
+  the full results back — the **X** exits line-of-sight entirely.
+
+  **Scan a road (find the best parking spot):** instead of guessing one spot, let
+  FieldKey test a whole stretch. In the line-of-sight banner tap **Scan a road** —
+  FieldKey loads the actual roads around your view from OpenStreetMap — then tap the
+  **start** and the **end** of the stretch you'd park along. Both taps **snap to the
+  nearest road**, and the tested path **follows the road itself** between them (curves,
+  bends and turns through intersections included), so one scan now covers a long, curvy
+  stretch instead of a short straight line. FieldKey samples up to ~80 candidate spots
+  along the path (spacing adapts to the length), checks sight from each spot to every
+  asset **within your max distance** — default **1,500 ft**, adjustable via **Max
+  distance to asset** in the panel — and ranks the top five under **Best parking
+  spots**. A line above the results shows exactly what was tested: the **road length
+  scanned, how many spots were checked, and whether it snapped to roads** (if road data
+  can't be loaded — no signal, or Overpass is busy — it falls back to the straight line
+  between your taps and says so). The winner is starred, drawn as the **amber** circle
+  on the map, and previewed with its sightlines; the runners-up are numbered grey
+  circles. Tap any row (or any numbered circle) to preview that spot instead. Changing
+  the max distance re-runs the scan. **Move parking point** returns to the normal
+  one-tap mode.
+
+  **Include tree canopy:** an opt-in toggle that folds tree height into the sightline,
+  so a line crossing a tree stand reads as blocked even where the bare ground is clear.
+  It tries to use the measured Meta/WRI 1-meter canopy map first, but that data is
+  served from a store that (at least right now) doesn't allow a browser to read it
+  directly — so in practice FieldKey falls back to a **typical tree height** you set
+  (default 50 ft) and applies it along each sightline. Set it to match your territory's
+  tree lines; a taller value is more conservative. This works offline and needs no
+  signal. To use the real **measured 1-meter canopy** instead, deploy the tiny canopy
+  proxy (see the `canopy-proxy` folder — a free Supabase Edge Function) and paste its
+  URL into **Settings → Canopy proxy**; the toggle then reads measured tree heights and
+  the panel says "measured." Either way, buildings
+  and structures aren't included, so treat the result as planning guidance and keep
+  your own eyes on the aircraft.
+- **Plan mission** (zones → spots → route) — the whole trip in one tool. Tap
+  **Plan mission** in the dock. The map stays **fully pan/zoomable** — line up a
+  cluster of assets, then tap **Draw zone** in the banner to lock the map and trace a
+  freehand loop around it. As soon as you finish the loop the map unlocks again, so you
+  can pan to the next cluster and tap **Draw zone** for each one (draw as many zones as
+  you have clusters). Tap **Done** when every zone is drawn. For every zone FieldKey: finds the assets inside your loop, pulls
+  the **real roads** around that zone from OpenStreetMap, samples parking candidates
+  along those roads, runs the **line-of-sight check from every candidate to every
+  asset in range** (terrain, and tree canopy if you've enabled it in Line of sight),
+  and picks the **single best parking spot for that zone** — the one that sees the
+  most assets. It then **orders the stops into a route** (starting from your location
+  when available), draws zones, stops and route on the map, and lists each stop with
+  how many assets it sees plus **Apple/Google navigation links**. Tap a stop in the
+  list (or its green circle on the map) to **preview its sightlines**. **Done** keeps
+  everything on the map while you drive; **Plan mission** reopens the list; **Clear
+  mission** removes it all. Zones with no assets or no nearby road data are skipped
+  and say why. Notes: road data comes from OpenStreetMap (needs internet; the free
+  Overpass service can occasionally be slow, though FieldKey now retries across several
+  Overpass mirrors so a single busy server no longer skips a zone; if every mirror is
+  busy the zone note says so and a quick retry usually clears it), the drive distance is a **straight-line
+  estimate ×1.3** (not turn-by-turn routing), and each zone tests up to ~140 spots
+  against up to 40 assets, so very large zones are sampled rather than exhaustive.
+  Planning is fast: elevation tiles for each zone are pulled once up front and all the
+  sight-line math runs locally against them (a quick pass ranks every spot, then the
+  front-runners get the full-resolution check), so a multi-zone mission takes seconds
+  of computation — the wait you see is mostly the road/canopy downloads per zone.
+  Mission looks for a parking spot **within ~3,000 ft of the assets** (you park close),
+  even if your Line-of-sight *max distance* is set much higher — that larger number
+  still controls how far a chosen spot can see, but it no longer scatters the parking
+  search across kilometers.
+
+- **Drop pin (your own markers)** — markers that are *not* customer sites. Tap
+  **Drop pin** on the map sheet, tap the spot, and give it a label, a **type**
+  (Entrance / path, Parking, Hazard, Note — each its own color and letter), and
+  optional notes (gate code, trail conditions). Tap a pin for its popup with
+  **directions** and **edit / delete**. Pins live on the device and ride along in
+  **Backups**, and they deliberately stay out of everything asset-related — they never
+  join selections, exports, access requests, or line-of-sight counts. Made for things
+  like the entrance to an off-road path, a staging area, or a locked gate.
+- **Select & export** — every row has a circle on the left; tap it to pick
+  specific assets (a bar shows how many are selected). This is the same selection
+  you build by tapping pins on the **Map**, and the **Selected** filter shows it.
+  **Export** then covers exactly what you've chosen — or, if nothing is selected,
+  whatever the current **filter and search** are showing. The export sheet states
+  the scope ("Exporting 3 selected customers" / "Exporting 12 customers (Latest
+  KML)") before you pick a format: `.csv` (opens in Excel/Numbers), `.json`, `.vcf`
+  (imports every customer with a phone into Contacts), and `.kml` (the selected
+  points that have coordinates). All exported text is plain and readable — any HTML
+  that came in from a KML's description is stripped to clean text (on import, on
+  export, and when an older database is first opened in this version).
+- **Access issues** — flag any site you couldn't get into. Open a site and tap
+  **Flag access issue**, then pick a reason (Locked gate / Need gate code / No
+  answer / Aggressive dog / Customer refused / Can't locate / Other → free text).
+  To flag several at once, select them (row circles *or* map pins) and hit **Mark
+  access issue** — in the selection bar or on the map sheet — then pick one reason
+  for the whole batch (or "Flag now, set reason later"). Flagged sites show a solid
+  **red dot** on the map (a red dot with a bright ring when also selected), and in
+  the list they get a bold **red left border**, a red **ACCESS ISSUE** badge, and
+  the reason. The flag is independent of status — a site can be *Texted* or
+  *Scheduled* and still flagged — so it stays red until you clear it (open the site
+  → **Clear flag**, or select flagged sites → the button flips to **Clear access
+  issue**). The red **Access issue** filter chip pulls up just the problem sites in
+  one tap, and CSV exports include **Access Issue** and **Issue Reason** columns.
+  Flagging is purely visual — it doesn't pull a site out of your Not-texted /
+  Scheduled / etc. views.
+- **Offline maps** — the map works with no signal for areas you've saved first.
+  On the map, frame the area you'll be working (pan/zoom so it fills the screen),
+  then tap **⤓ Save offline** (top-left, under the basemap switcher). It checks the
+  size, shows roughly how many tiles and megabytes it'll store, and — once you tap
+  **Save** — downloads the dark basemap for that area onto the device with a
+  progress bar (tap **Stop** to halt; whatever finished is kept). After that, in a
+  dead zone, opening the map still shows that area's roads and labels, your pins,
+  and your live GPS location — everything but a data connection. The app shell and
+  map engine are cached automatically, so the whole app launches offline once it's
+  on your Home Screen; **Save offline** is only for the *map tiles* of a specific
+  area. Saved tiles persist across app updates and stay until you remove them:
+  **Settings → Offline maps** shows how many areas you've saved and the storage
+  used, with **Clear offline maps** to free it all. Saving an area also stores the
+  **terrain elevation** for it, so the hillshade relief and 3-D view keep working with
+  no signal — and it's the same elevation data the upcoming parking-spot line-of-sight
+  check will use. By default it **also saves aerial imagery** (USGS) for the area, so
+  the **Aerial** and **Hybrid** basemaps keep working offline (Hybrid's street-line
+  overlay is online-only, so offline it shows the plain imagery); because imagery is much larger, the save
+  dialog has an **Include aerial imagery** switch you can turn off when you only want
+  the lighter basemap-plus-terrain download (the tile count and size update live as you
+  toggle it). So a saved area gives you the dark map with terrain, your pins, GPS, and
+  aerial — all with no signal.
+
+### Settings → Data
+- **Back up data** downloads a single `.json` file with every customer and your
+  Settings — keep it somewhere safe (Files, email, cloud).
+- **Restore from backup** reads that file back in, replacing the current database
+  (after a confirmation).
+- **Earlier versions** — FieldKey automatically snapshots the database the first
+  time you open it each day (the last 14 days are kept). Restore any of them to
+  roll the whole database back to how it looked that morning — useful if a day's
+  import or edits went sideways.
+- **Clear database** wipes everything (with a confirmation). Moved here so it's
+  out of the way of day-to-day work.
+
+Edit the text-message template anytime in **Settings → Text message**.
+
+## Files
+- `index.html` — the whole app
+- `manifest.webmanifest`, `sw.js` — make it installable + work offline
+- `icon-*.png`, `apple-touch-icon.png` — home-screen icons
+
+## Install on iPhone (no Mac, no App Store)
+1. Put these files on any HTTPS host. Easiest free option: a GitHub repo with
+   **Pages** turned on (Settings → Pages → deploy from branch). You'll get a
+   `https://…github.io/…/` link.
+2. Open that link in **Safari** on your iPhone.
+3. Tap **Share** → **Add to Home Screen**.
+4. Launch it from the icon — full screen, works offline after first open.
+
+## Updating an already-installed app
+FieldKey now updates itself: whenever you're online, it fetches the newest files
+first (so a fresh commit shows up), and when a new version is ready the app
+**reloads once on its own** to load it. You can confirm which build you're running
+at the bottom of **Settings** ("FieldKey · v48…"), and force a check with
+**Settings → Check for update**.
+
+If you're upgrading *from an older build that didn't have this* (like the one
+currently stuck on your phone), the old cached version can hang on once. To clear it
+that one time: delete FieldKey from your Home Screen (press-and-hold → Remove App →
+Delete), reopen the Pages link in **Safari**, confirm the version line reads the new
+build, then **Add to Home Screen** again. After that, updates land on their own.
+
+Two things to check if a commit isn't showing: make sure GitHub actually finished
+deploying (the Pages "Actions" tab shows a green check — it can lag a minute), and
+that you bumped `CACHE` in `sw.js` (each release does this). To see the live file
+independent of any cache, open `…/index.html?x=1` in Safari — the query string
+sidesteps caching.
 
 ## Notes
-- **Cost:** negligible. Tiles are cached (immutable), and each check reads only a
-  few small ranges — comfortably inside Supabase's free tier.
-- **Safety:** the function accepts only a quadkey (digits 0-3), so it can't be used
-  to proxy arbitrary URLs.
-- **Coverage:** trees only — buildings and structures aren't in the canopy data.
-  Data © Meta / World Resources Institute, free for commercial use.
+- Default address lookup is **OpenStreetMap** (free, no key). Keep the lookup
+  delay at ~1100 ms to respect its 1-request-per-second policy.
+- For higher volume/precision, switch to **Google** in Settings and paste your
+  own Maps JavaScript API key. Google lookups are capped by a **weekly limit**
+  (default 9,999, adjustable in Settings, resets Monday); Settings shows how much
+  of the week's budget you've used, and when the cap is hit FieldKey says so and
+  stops rather than silently burning quota.
+- Requestor name / LanID / phone / descriptions live in **Settings** and are
+  saved on the device.
