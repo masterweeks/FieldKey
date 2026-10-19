@@ -696,6 +696,9 @@
       <button class="btn ghost" id="mExport" type="button">Export KML</button>
     </div>
     <div class="mapbar-row main">
+      <button class="btn ghost" id="mParcels" type="button">Property lines: off</button>
+    </div>
+    <div class="mapbar-row main">
       <button class="btn ghost issue" id="mFlag" type="button">Mark access issue</button>
       <button class="btn ghost" id="mPin" type="button">Drop pin</button>
     </div>
@@ -789,6 +792,8 @@
   <h2>Mission plan</h2>
   <div class="rtsum" id="misSum">Planning…</div>
   <p class="note" id="misProg" style="margin:6px 0 0"></p>
+  <button class="btn primary" id="misNav" type="button" style="margin-top:10px;display:none">Start full route (Google Maps)</button>
+  <p class="note" id="misNavNote" style="margin:6px 0 0;display:none"></p>
   <ol class="rtlist" id="misList" style="margin-top:10px"></ol>
   <div class="mapbar-row main" style="margin-top:12px">
     <button class="btn ghost" id="misClear" type="button">Clear mission</button>
@@ -939,7 +944,9 @@
   <div class="sgroup"><label class="label">Vehicle weight (lbs)</label><input type="number" id="sVeh" min="500" step="100" inputmode="numeric" /><p class="note">Used to estimate the extra fuel from climbing on hilly routes.</p></div>
   <div class="sgroup"><label class="label">Your height (ft) — for line of sight</label><input type="number" id="sObs" min="3" max="8" step="0.1" inputmode="decimal" /><p class="note">Your standing eye height, used when checking which assets you can see over the terrain from a parking point. E.g. 6.3 for about 6'4".</p></div>
   <div class="sgroup"><label class="label">Canopy proxy URL (optional)</label><input type="url" id="sCanopyProxy" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://….supabase.co/functions/v1/canopy" /><p class="note">Unlocks measured 1&#8209;meter tree-canopy data in line-of-sight. Paste your canopy proxy endpoint here. Leave blank to use the manual typical-height estimate.</p></div>
-  <p class="note" style="text-align:center;margin-top:14px">FieldKey · <span id="sAppVer">v51</span> · runs offline once added to your Home Screen</p>
+  <div class="sgroup"><label class="label">Roads proxy URL (optional)</label><input type="url" id="sRoadsProxy" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://….supabase.co/functions/v1/roads" /><p class="note">Makes mission planning reliable: your own cached road service, so zones stop getting skipped with &ldquo;road service was busy.&rdquo; Leave blank to use the public OpenStreetMap servers directly.</p></div>
+  <div class="sgroup"><label class="label">Parcels proxy URL (optional)</label><input type="url" id="sParcelsProxy" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://….supabase.co/functions/v1/parcels" /><p class="note">Turns on the <b>Property lines</b> overlay (Regrid parcel boundaries). Paste your parcels proxy endpoint. Takes effect next time you open the map. Leave blank to hide the feature.</p></div>
+  <p class="note" style="text-align:center;margin-top:14px">FieldKey · <span id="sAppVer">v54</span> · runs offline once added to your Home Screen</p>
   <div class="sgroup"><button class="btn ghost sm" id="sCheckUpdate" type="button">Check for update</button></div>
 </div>
 
@@ -968,7 +975,7 @@
     name:"Obii weeks", lan:"OXWC", phone:"3052196892",
     issue:"need code/contact info", work:"Drone inspection",
     provider:"osm", email:"", gkey:"", delay:"1100", geolimit:"9999",
-    mpg:"22", fuelprice:"4.75", avgspeed:"40", vehweight:"4800", obsft:"6.33", canopyproxy:"",
+    mpg:"22", fuelprice:"4.75", avgspeed:"40", vehweight:"4800", obsft:"6.33", canopyproxy:"", roadsproxy:"", parcelsproxy:"",
     latestKml:"",
     smsTemplate:"Hey [Customer name] this is Cyberhawk with PGE, I need to complete an aerial inspection at [customer address]. Let me know what time during business hours works for you."
   };
@@ -977,7 +984,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v51";
+  const APP_VER="v54";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -1236,15 +1243,21 @@
   function showGeo(){ els.stepGeo.classList.remove("hidden"); plotPoints(true); }
 
   /* ---------------- geocoding ---------------- */
+  let _osmBlocked=false; // set once the public Nominatim server refuses us, so we stop hammering it
   async function geocodeOSM(lat,lng){
     const key=lat+","+lng;
     if(geoCache.has(key)) return geoCache.get(key);
-    let url="https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=0&lat="+
-      encodeURIComponent(lat)+"&lon="+encodeURIComponent(lng);
-    if(cfg.email) url+="&email="+encodeURIComponent(cfg.email);
-    const r=await fetch(url,{headers:{"Accept":"application/json"}});
-    if(!r.ok) throw new Error("HTTP "+r.status);
-    const j=await r.json();
+    // Nominatim's policy asks for an identifying app + contact. A browser can't set
+    // User-Agent, so we pass them as query params, which the public server accepts.
+    let url="https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=0"+
+      "&lat="+encodeURIComponent(lat)+"&lon="+encodeURIComponent(lng)+
+      "&email="+encodeURIComponent(cfg.email||"obiiweeks@gmail.com");
+    let r;
+    try{ r=await fetch(url,{headers:{"Accept":"application/json"},referrerPolicy:"strict-origin-when-cross-origin"}); }
+    catch(e){ const err=new Error("network"); err.geoReason="network"; throw err; }
+    if(r.status===403||r.status===429){ _osmBlocked=true; const err=new Error("osm-blocked"); err.geoReason="blocked"; throw err; }
+    if(!r.ok){ const err=new Error("HTTP "+r.status); err.geoReason="http"; throw err; }
+    let j; try{ j=await r.json(); }catch(e){ const err=new Error("bad-json"); err.geoReason="blocked"; throw err; }
     const addr=j.display_name||"";
     geoCache.set(key,addr); return addr;
   }
@@ -1339,9 +1352,10 @@
     els.dock.classList.remove("hidden");
     els.resCount.textContent="(0/"+results.length+")";
 
-    const provider = cfg.provider==="google" && cfg.gkey ? geocodeGoogle : geocodeOSM;
+    let useGoogle = cfg.provider==="google" && cfg.gkey;
+    let provider = useGoogle ? geocodeGoogle : geocodeOSM;
     const delay = Math.max(0, parseInt(cfg.delay,10)||0);
-    let done=0, ok=0;
+    let done=0, ok=0, blockedWarned=false;
     for(let i=0;i<results.length;i++){
       if(cancel) break;
       const d=results[i];
@@ -1353,7 +1367,17 @@
           d.status = d.addr ? "done" : "failed";
           if(d.addr) ok++;
         }
-      }catch(e){ d.addr=""; d.status="failed"; if(String(e&&e.message)==="geo-limit"){ toast("Weekly Google lookup limit reached \u2014 raise it in Settings."); cancel=true; } }
+      }catch(e){
+        d.addr=""; d.status="failed";
+        const reason=e&&e.geoReason;
+        if(String(e&&e.message)==="geo-limit"){ toast("Weekly Google lookup limit reached \u2014 raise it in Settings."); cancel=true; }
+        else if(reason==="blocked" && !useGoogle){
+          // Public OpenStreetMap server refused us. Switch to Google for the rest of
+          // this run if a key is set; otherwise stop and say so plainly.
+          if(cfg.gkey){ useGoogle=true; provider=geocodeGoogle; i--; continue; }
+          else if(!blockedWarned){ blockedWarned=true; toast("OpenStreetMap blocked the lookups \u2014 add a Google Maps key in Settings to resolve addresses."); cancel=true; }
+        }
+      }
       done++;
       updateTicket(i);
       plotPoints(false);
@@ -1422,7 +1446,7 @@
     $("#sEmail").value=cfg.email; $("#sGkey").value=cfg.gkey; $("#sDelay").value=cfg.delay;
     { const e=$("#sGeoLimit"); if(e) e.value=cfg.geolimit; }
     { const n=$("#sGeoNote"); if(n) n.textContent="Used "+geoUsed()+" of "+geoBudget()+" Google lookups this week (resets Monday)."; }
-    $("#sMpg").value=cfg.mpg; $("#sFuel").value=cfg.fuelprice; $("#sSpeed").value=cfg.avgspeed; $("#sVeh").value=cfg.vehweight; $("#sObs").value=cfg.obsft; $("#sCanopyProxy").value=cfg.canopyproxy;
+    $("#sMpg").value=cfg.mpg; $("#sFuel").value=cfg.fuelprice; $("#sSpeed").value=cfg.avgspeed; $("#sVeh").value=cfg.vehweight; $("#sObs").value=cfg.obsft; $("#sCanopyProxy").value=cfg.canopyproxy; $("#sRoadsProxy").value=cfg.roadsproxy; $("#sParcelsProxy").value=cfg.parcelsproxy;
     setProviderUI(cfg.provider);
     setSeg("segPinShape", store.get("fk_pin_shape","pin"));
     setSeg("segPinSize", store.get("fk_pin_size","medium"));
@@ -1447,9 +1471,9 @@
     cfg.email=$("#sEmail").value.trim(); cfg.gkey=$("#sGkey").value.trim();
     cfg.delay=String(parseInt($("#sDelay").value,10)||0);
     cfg.geolimit=String(Math.max(1,parseInt($("#sGeoLimit").value,10)||9999));
-    cfg.mpg=String(parseFloat($("#sMpg").value)||22); cfg.fuelprice=String(parseFloat($("#sFuel").value)||0); cfg.avgspeed=String(parseFloat($("#sSpeed").value)||40); cfg.vehweight=String(parseFloat($("#sVeh").value)||4800); cfg.obsft=String(parseFloat($("#sObs").value)||6.33); cfg.canopyproxy=($("#sCanopyProxy").value||"").trim();
+    cfg.mpg=String(parseFloat($("#sMpg").value)||22); cfg.fuelprice=String(parseFloat($("#sFuel").value)||0); cfg.avgspeed=String(parseFloat($("#sSpeed").value)||40); cfg.vehweight=String(parseFloat($("#sVeh").value)||4800); cfg.obsft=String(parseFloat($("#sObs").value)||6.33); cfg.canopyproxy=($("#sCanopyProxy").value||"").trim(); cfg.roadsproxy=($("#sRoadsProxy").value||"").trim(); cfg.parcelsproxy=($("#sParcelsProxy").value||"").trim();
     cfg.provider=cfg._pendProvider||cfg.provider;
-    for(const k of ["name","lan","phone","issue","work","email","gkey","delay","geolimit","mpg","fuelprice","avgspeed","vehweight","obsft","canopyproxy","provider"]) store.set("fk_"+k,cfg[k]);
+    for(const k of ["name","lan","phone","issue","work","email","gkey","delay","geolimit","mpg","fuelprice","avgspeed","vehweight","obsft","canopyproxy","roadsproxy","parcelsproxy","provider"]) store.set("fk_"+k,cfg[k]);
     if(results.length) renderTickets();
     closeSheet(); toast("Settings saved");
   });
@@ -2275,6 +2299,12 @@
       cmap.setLayoutProperty("esri-ref","visibility",(air&&!useUSGS)?"visible":"none");
       cmap.setLayoutProperty("usgs","visibility",useUSGS?"visible":"none");
       cmap.setLayoutProperty("osm","visibility",streets?"visible":"none");
+      // Hybrid: bright vector roads + bold names on top of the aerial. These work
+      // online (vector tiles) and from the offline cache once an area is saved.
+      const hybRoads = hybrid ? "visible" : "none";
+      ["hyb-road-case","hyb-road-fill","hyb-road-name"].forEach(L=>{ if(cmap.getLayer(L)) cmap.setLayoutProperty(L,"visibility",hybRoads); });
+      // when Hybrid's own vector roads are on, the ESRI raster road overlay is redundant
+      if(cmap.getLayer("esri-rd")) cmap.setLayoutProperty("esri-rd","visibility","none");
     }catch(e){}
     store.set("fk_basemap",choice);
     const sw=$("#mBasemaps"); if(sw) sw.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.bm===choice));
@@ -2420,6 +2450,38 @@
         cmap.addLayer({id:"esri",type:"raster",source:"esri-src",layout:{visibility:"none"}});
         cmap.addLayer({id:"esri-rd",type:"raster",source:"esrird-src",layout:{visibility:"none"},paint:{"raster-opacity":0.9}});
         cmap.addLayer({id:"esri-ref",type:"raster",source:"esriref-src",layout:{visibility:"none"}});
+        // Vector roads for the Hybrid basemap: real line geometry we can style with a
+        // dark casing + bright fill (a subtle 3D bevel) and bold, haloed name labels.
+        // We reuse the vector source the Dark basemap already loaded (OpenMapTiles
+        // schema) rather than fetching our own tiles, so there's no extra download and
+        // nothing to stall style load.
+        try{
+          const st=cmap.getStyle(); let vsrc=null;
+          for(const k in (st.sources||{})){ if(st.sources[k] && st.sources[k].type==="vector"){ vsrc=k; break; } }
+          if(vsrc){
+            const rdFilter=["match",["get","class"],["motorway","trunk","primary","secondary","tertiary","minor","service","residential","living_street","unclassified","road","track"],true,false];
+            // dark casing underneath (the "shadow" that fakes depth)
+            cmap.addLayer({id:"hyb-road-case",type:"line",source:vsrc,"source-layer":"transportation",layout:{visibility:"none","line-cap":"round","line-join":"round"},filter:rdFilter,
+              paint:{"line-color":"#0a0d12","line-opacity":0.85,
+                "line-width":["interpolate",["exponential",1.4],["zoom"],
+                  11,["match",["get","class"],["motorway","trunk"],5,["primary","secondary"],4,2.5],
+                  16,["match",["get","class"],["motorway","trunk"],16,["primary","secondary"],13,["tertiary","minor","residential","unclassified"],9,6],
+                  19,["match",["get","class"],["motorway","trunk"],30,["primary","secondary"],24,["tertiary","minor","residential","unclassified"],18,13]]}});
+            // bright fill on top (the road surface that pops off the aerial)
+            cmap.addLayer({id:"hyb-road-fill",type:"line",source:vsrc,"source-layer":"transportation",layout:{visibility:"none","line-cap":"round","line-join":"round"},filter:rdFilter,
+              paint:{"line-color":["match",["get","class"],["motorway","trunk"],"#FFD24D",["primary","secondary"],"#FFE9A6","#FFFFFF"],
+                "line-width":["interpolate",["exponential",1.4],["zoom"],
+                  11,["match",["get","class"],["motorway","trunk"],2.6,["primary","secondary"],2,1.2],
+                  16,["match",["get","class"],["motorway","trunk"],10,["primary","secondary"],8,["tertiary","minor","residential","unclassified"],5.5,3.5],
+                  19,["match",["get","class"],["motorway","trunk"],20,["primary","secondary"],16,["tertiary","minor","residential","unclassified"],12,8]]}});
+            // bold, haloed road-name labels that stay legible over imagery
+            cmap.addLayer({id:"hyb-road-name",type:"symbol",source:vsrc,"source-layer":"transportation_name",layout:{visibility:"none",
+              "symbol-placement":"line","text-field":["coalesce",["get","name:en"],["get","name"]],
+              "text-font":["Noto Sans Bold"],"text-letter-spacing":0.02,
+              "text-size":["interpolate",["linear"],["zoom"],12,11,16,14,19,17],"symbol-spacing":260,"text-max-angle":40},
+              paint:{"text-color":"#FFFFFF","text-halo-color":"#0a0d12","text-halo-width":2.2,"text-halo-blur":0.3}});
+          }
+        }catch(e){}
         cmap.addLayer({id:"osm",type:"raster",source:"osm-src",layout:{visibility:"none"}});
         cmap.addSource("usgs-src",{type:"raster",tiles:[USGS_IMG],tileSize:256,maxzoom:16,attribution:"Imagery: USGS"});
         cmap.addLayer({id:"usgs",type:"raster",source:"usgs-src",layout:{visibility:"none"}});
@@ -2479,6 +2541,21 @@
         cmap.addLayer({id:"mis-stops",type:"circle",source:"mission",filter:["==",["get","k"],"stop"],paint:{"circle-radius":11,"circle-color":"#41D88B","circle-stroke-width":2.5,"circle-stroke-color":"#FFFFFF"}});
         cmap.addLayer({id:"mis-num",type:"symbol",source:"mission",filter:["==",["get","k"],"stop"],layout:{"text-field":["get","rank"],"text-size":12,"text-font":["Noto Sans Regular"],"text-allow-overlap":true},paint:{"text-color":"#0b0f15"}});
         cmap.on("click","mis-stops",ev=>{ if(measOn||losMode||pinPlacing) return; const r=parseInt(ev.features[0].properties.rank); if(r>=1) previewMisStop(r-1,true); });
+        // Property lines (Regrid parcels via your proxy). Source added only when a
+        // proxy URL is set; layers stay hidden until the user toggles them on.
+        { const px=(store.get("fk_parcelsproxy","")||"").trim();
+          if(px){
+            try{
+              cmap.addSource("parcels",{type:"vector",tiles:[px.replace(/\/+$/,"")+"/{z}/{x}/{y}.mvt"],minzoom:10,maxzoom:16,attribution:"Parcels \u00A9 Regrid"});
+              cmap.addLayer({id:"parcels-fill",type:"fill",source:"parcels","source-layer":"parcels",layout:{visibility:"none"},paint:{"fill-color":"#FFB000","fill-opacity":["case",["boolean",["feature-state","sel"],false],0.22,0.03]}});
+              cmap.addLayer({id:"parcels-line",type:"line",source:"parcels","source-layer":"parcels",layout:{visibility:"none","line-join":"round"},paint:{"line-color":"#FFD24D","line-opacity":0.9,"line-width":["interpolate",["linear"],["zoom"],13,0.6,16,1.4,19,2.2]}});
+              cmap.addLayer({id:"parcels-lbl",type:"symbol",source:"parcels","source-layer":"parcels",minzoom:17,layout:{visibility:"none","text-field":["coalesce",["get","fields.parcelnumb"],["get","parcelnumb"],["get","address"]],"text-font":["Noto Sans Regular"],"text-size":10,"text-max-width":8},paint:{"text-color":"#FFE9A6","text-halo-color":"#0a0d12","text-halo-width":1.6}});
+              cmap.on("mouseenter","parcels-fill",()=>{cmap.getCanvas().style.cursor="pointer";});
+              cmap.on("mouseleave","parcels-fill",()=>{cmap.getCanvas().style.cursor="";});
+              cmap.on("click","parcels-fill",ev=>{ if(measOn||losMode||pinPlacing||misMode||zoneDraw) return; if(!parcelsOn) return; showParcelPopup(ev); });
+            }catch(e){}
+          }
+        }
         ["los-cands","user-pins","mis-stops"].forEach(L=>{ cmap.on("mouseenter",L,()=>{cmap.getCanvas().style.cursor="pointer";}); cmap.on("mouseleave",L,()=>{cmap.getCanvas().style.cursor="";}); });
         cmap.on("click","clusters",ev=>{ const f=ev.features[0]; cmap.getSource("sites").getClusterExpansionZoom(f.properties.cluster_id).then(z=>cmap.easeTo({center:f.geometry.coordinates,zoom:z})).catch(()=>{}); });
         cmap.on("click",ev=>{
@@ -2512,6 +2589,7 @@
         ["clusters","sites-pts"].forEach(L=>{ cmap.on("mouseenter",L,()=>{cmap.getCanvas().style.cursor="pointer";}); cmap.on("mouseleave",L,()=>{cmap.getCanvas().style.cursor="";}); });
         cMapReady=true;
         applyBasemap(store.get("fk_basemap","Dark"));
+        if(store.get("fk_parcels_on","0")==="1" && (store.get("fk_parcelsproxy","")||"").trim()) setParcels(true);
         applyTerrain();
         fitToSites();
         setTimeout(()=>{ if(cmap) try{cmap.resize();}catch(e){} },140);
@@ -2721,9 +2799,10 @@
     const missing=list.filter(c=>!c.address && c.lat!==""&&c.lng!==""&&!isNaN(parseFloat(c.lat))&&!isNaN(parseFloat(c.lng)));
     if(!missing.length) return {resolved:0,total:0,limited:false};
     const token=++rqToken;
-    const provider = cfg.provider==="google" && cfg.gkey ? geocodeGoogle : geocodeOSM;
+    let useGoogle = cfg.provider==="google" && cfg.gkey;
+    let provider = useGoogle ? geocodeGoogle : geocodeOSM;
     const delay=Math.max(0,parseInt(cfg.delay,10)||0);
-    let ok=0, limited=false;
+    let ok=0, limited=false, blocked=false;
     for(let i=0;i<missing.length;i++){
       if(rqToken!==token) return null;
       $("#rqInfo").textContent="Resolving addresses "+(i+1)+"/"+missing.length+"\u2026";
@@ -2731,12 +2810,18 @@
         const a=await provider(missing[i].lat,missing[i].lng);
         if(rqToken!==token) return null;
         if(a){ missing[i].address=cleanText(a); ok++; }
-      }catch(e){ if(String(e&&e.message)==="geo-limit"){ limited=true; break; } }
+      }catch(e){
+        if(String(e&&e.message)==="geo-limit"){ limited=true; break; }
+        if(e&&e.geoReason==="blocked" && !useGoogle){
+          if(cfg.gkey){ useGoogle=true; provider=geocodeGoogle; i--; continue; }
+          else { blocked=true; break; }
+        }
+      }
       if(i<missing.length-1&&delay) await sleep(delay);
     }
     if(rqToken!==token) return null;
     if(ok){ persist(); renderCustomers(); }
-    return {resolved:ok,total:missing.length,limited:limited};
+    return {resolved:ok,total:missing.length,limited:limited,blocked:blocked};
   }
   async function openReqSheet(list){
     $("#rqText").value=requestsTextFor(list);
@@ -3050,19 +3135,36 @@
     return (j.elements||[]).filter(el=>el.type==="way"&&el.geometry&&el.geometry.length>1)
       .map(el=>({pts:el.geometry.map(g=>[g.lat,g.lon])}));
   }
+  async function _roadsViaProxy(so,we,no,ea){
+    const px=(store.get("fk_roadsproxy","")||"").trim(); if(!px) return null;
+    const url=px.replace(/\/+$/,"")+"?s="+so+"&w="+we+"&n="+no+"&e="+ea;
+    const r=await fetch(url,{method:"GET"});
+    if(!r.ok) throw new Error("roads proxy http "+r.status);
+    const j=await r.json();
+    if(j && j.error) throw new Error(j.error);
+    return {ways:(j.ways||[]).filter(w=>w&&w.pts&&w.pts.length>1)};
+  }
   async function fetchRoads(so,we,no,ea){
     const key=[so.toFixed(3),we.toFixed(3),no.toFixed(3),ea.toFixed(3)].join(",");
     if(_roadCache.has(key)) return _roadCache.get(key);
+    // 1) your own cached roads proxy first (reliable, not IP-rate-limited)
+    let proxyErr=null;
+    try{
+      const viaProxy=await _roadsViaProxy(so,we,no,ea);
+      if(viaProxy){
+        if(viaProxy.ways.length){ _roadCache.set(key,viaProxy); if(_roadCache.size>12) _roadCache.delete(_roadCache.keys().next().value); }
+        return viaProxy;
+      }
+    }catch(e){ proxyErr=e; } // proxy down/unreachable -> fall through to public mirrors
+    // 2) public Overpass mirrors as fallback
     const q='[out:json][timeout:25];way[highway~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|service|track|living_street|road)$"]('+so+','+we+','+no+','+ea+');out geom;';
-    // Try each mirror in turn; the public servers throttle independently, so if one is
-    // busy another usually answers. Short backoff between tries.
-    let lastErr=null;
+    let lastErr=proxyErr;
     for(let i=0;i<OVERPASS_ENDPOINTS.length;i++){
       try{
         const ways=await _overpassOnce(q,OVERPASS_ENDPOINTS[i]);
         const out={ways:ways};
         if(ways.length){ _roadCache.set(key,out); if(_roadCache.size>12) _roadCache.delete(_roadCache.keys().next().value); }
-        return out; // clean response (even if empty = genuinely no roads here)
+        return out;
       }catch(e){ lastErr=e; if(i<OVERPASS_ENDPOINTS.length-1) await sleep(500*(i+1)); }
     }
     const err=new Error("roads unavailable"); err.roadsBusy=true; throw err;
@@ -3491,8 +3593,42 @@
     try{ cmap.getSource("los-observer").setData({type:"FeatureCollection",features:[{type:"Feature",properties:{},geometry:{type:"Point",coordinates:[k.pt[1],k.pt[0]]}}]}); }catch(e){}
     computeLos();
   }
+  /* ---------------- property lines (Regrid parcels via proxy) ---------------- */
+  let parcelsOn=false, parcelSelId=null;
+  function parcelsAvailable(){ return !!(store.get("fk_parcelsproxy","")||"").trim() && cmap && cmap.getLayer && cmap.getLayer("parcels-line"); }
+  function setParcels(on){
+    const btn=$("#mParcels");
+    if(on && !parcelsAvailable()){
+      if(!((store.get("fk_parcelsproxy","")||"").trim())) toast("Add a Parcels proxy URL in Settings to use property lines.");
+      else toast("Property lines need internet (or a saved offline area).");
+      return;
+    }
+    parcelsOn=on;
+    ["parcels-fill","parcels-line","parcels-lbl"].forEach(L=>{ if(cmap.getLayer(L)) cmap.setLayoutProperty(L,"visibility",on?"visible":"none"); });
+    if(btn){ btn.textContent="Property lines: "+(on?"on":"off"); btn.classList.toggle("on",on); }
+    if(!on) closeMapPopup();
+    store.set("fk_parcels_on", on?"1":"0");
+  }
+  function showParcelPopup(ev){
+    const f=ev.features&&ev.features[0]; if(!f) return;
+    const pr=f.properties||{};
+    const pn=pr["fields.parcelnumb"]||pr.parcelnumb||pr.parcel||"";
+    const own=pr["fields.owner"]||pr.owner||"";
+    const addr=pr["fields.address"]||pr.address||"";
+    const acres=pr["fields.ll_gisacre"]||pr.ll_gisacre||pr.acres||"";
+    const rows=[];
+    if(addr) rows.push('<div style="font-weight:600">'+escapeHtml(addr)+'</div>');
+    if(own) rows.push('<div>'+escapeHtml(own)+'</div>');
+    if(pn) rows.push('<div class="note" style="margin:2px 0 0">Parcel '+escapeHtml(String(pn))+'</div>');
+    if(acres) rows.push('<div class="note" style="margin:0">'+(parseFloat(acres)?parseFloat(acres).toFixed(2)+" ac":escapeHtml(String(acres)))+'</div>');
+    if(!rows.length) rows.push('<div class="note" style="margin:0">Parcel (no details in this tile)</div>');
+    closeMapPopup();
+    mapPopup=new maplibregl.Popup({offset:12}).setLngLat(ev.lngLat).setHTML('<div style="min-width:150px">'+rows.join("")+'</div>').addTo(cmap);
+  }
+  { const b=$("#mParcels"); if(b) b.addEventListener("click",()=>setParcels(!parcelsOn)); }
+
   /* ---------------- mission planner: zones -> best spots -> route ---------------- */
-  let misMode=false, zoneDraw=false, misZones=[], misStops=[], misToken=0, misBusy=false, misRoadMi=0;
+  let misMode=false, zoneDraw=false, misZones=[], misStops=[], misToken=0, misBusy=false, misRoadMi=0, misStart=null;
   const MIS_PARK_M=915; /* ~3000 ft: how far mission will look for a parking spot from the assets */
   function misGeo(){
     const f=[];
@@ -3545,7 +3681,8 @@
   }
   function closeMisSheet(){ $("#misScrim").classList.remove("show"); $("#misSheet").classList.remove("show"); }
   function closeMission(){
-    misToken++; misMode=false; misBusy=false; zoneDraw=false; misZones=[]; misStops=[]; misRoadMi=0;
+    misToken++; misMode=false; misBusy=false; zoneDraw=false; misZones=[]; misStops=[]; misRoadMi=0; misStart=null;
+    { const nb=$("#misNav"); if(nb) nb.style.display="none"; } { const nn=$("#misNavNote"); if(nn) nn.style.display="none"; }
     refreshMission(); closeMisSheet();
     $("#misBanner").classList.add("hidden");
     const layer=$("#lassoLayer"); if(layer&&!lassoOn) layer.classList.add("hidden");
@@ -3562,6 +3699,38 @@
     _canopyProbeFailed=false;
     const maxM=losMaxFt*0.3048, tgtH=losAssetFt*0.3048, manualM=(losCanopyManualFt||0)*0.3048;
     const prog=t=>{ const e=$("#misProg"); if(e) e.textContent=t; };
+    // 4A fallback: no road data for this zone -> still produce a stop, placed at the
+    // asset with the best line of sight to the rest of the cluster (no road snapping).
+    async function fallbackStop(assets,zi,candR2,canopyMode,manualM,sampler){
+      let laN=90,laX=-90,loN=180,loX=-180;
+      assets.forEach(c=>{const a=+c.lat,o=+c.lng; if(a<laN)laN=a; if(a>laX)laX=a; if(o<loN)loN=o; if(o>loX)loX=o;});
+      try{ await prefetchElevBox(laN-0.003,laX+0.003,loN-0.003,loX+0.003); }catch(e){}
+      if(misToken!==token) return null;
+      const ag=new Map();
+      for(const c of assets){ const g=await sampleElevation(+c.lat,+c.lng); if(misToken!==token) return null; ag.set(c.id,g); }
+      let best=null;
+      for(const s0 of assets){
+        const P=[+s0.lat,+s0.lng], g=ag.get(s0.id); if(g==null) continue;
+        let vis=0,inR=0,sumD=0;
+        for(const c of assets){ if(c.id===s0.id){ vis++; inR++; continue; }
+          const T=[+c.lat,+c.lng], d=haversineKm(P,T)*1000; if(d>candR2) continue; inR++;
+          const tg=ag.get(c.id); if(tg==null) continue;
+          const r=await losCheck(P,g,T,tg,tgtH,canopyMode,manualM,sampler,false); if(misToken!==token) return null;
+          if(r.ok&&!r.blocked){ vis++; sumD+=d; }
+        }
+        if(!best || vis>best.vis || (vis===best.vis&&sumD<best._sd)) best={pt:P,vis:vis,inR:inR,_sd:sumD};
+      }
+      if(!best){ const c0=assets[0]; best={pt:[+c0.lat,+c0.lng],vis:1,inR:assets.length}; }
+      // sightline features for preview
+      const g0=await sampleElevation(best.pt[0],best.pt[1]); if(misToken!==token) return null;
+      const lines=[];
+      for(const c of assets){ const T=[+c.lat,+c.lng], d=haversineKm(best.pt,T)*1000; if(d>candR2) continue;
+        const tg=ag.get(c.id); let st="unknown";
+        if(g0!=null&&tg!=null){ const r=await losCheck(best.pt,g0,T,tg,tgtH,canopyMode,manualM,sampler,false); if(misToken!==token) return null; st=!r.ok?"unknown":(r.blocked?"blocked":"clear"); }
+        lines.push({type:"Feature",properties:{state:st},geometry:{type:"LineString",coordinates:[[best.pt[1],best.pt[0]],[T[1],T[0]]]}});
+      }
+      return {pt:best.pt,vis:best.vis,inR:best.inR,lines:lines,zone:zi+1,noRoads:true};
+    }
     const zn=misZones.length;
     for(let zi=0; zi<zn; zi++){
       if(misToken!==token) return;
@@ -3581,13 +3750,7 @@
       let rd=null, roadsBusy=false;
       try{ rd=await fetchRoads(laMin-padLa, loMin-padLo, laMax+padLa, loMax+padLo); }catch(e){ rd=null; roadsBusy=!!(e&&e.roadsBusy); }
       if(misToken!==token) return;
-      if(!rd){ z.note = roadsBusy ? "road service was busy \u2014 try Plan mission again" : "couldn't reach road service (offline?)"; continue; }
-      if(!rd.ways.length){ z.note="no mapped roads near this zone"; continue; }
-      let cand=[];
-      rd.ways.forEach(w=>{ cand=cand.concat(samplePath(w.pts,40)); });
-      cand=cand.filter(P=>assets.some(c=>haversineKm(P,[+c.lat,+c.lng])*1000<=candR));
-      if(cand.length>140){ const stride=Math.ceil(cand.length/140); cand=cand.filter((_,i)=>i%stride===0); }
-      if(!cand.length){ z.note="no roads within "+Math.round(candR/0.3048)+" ft of the assets"; continue; }
+      // canopy setup is needed for both the normal and fallback paths; do it up front
       let canopyMode=null, sampler=null;
       if(losCanopy){
         let probe=null;
@@ -3597,6 +3760,24 @@
           if(misToken!==token) return;
           if(sampler) canopyMode="measured"; else if(manualM>0) canopyMode="manual";
         } else if(manualM>0) canopyMode="manual";
+      }
+      // If roads couldn't be loaded (proxy + mirrors down, offline, or genuinely
+      // none nearby) DON'T skip the zone — place a stop at the best-visibility asset
+      // so the zone still appears in the route, clearly flagged as un-snapped.
+      let cand=[];
+      if(rd&&rd.ways.length){
+        rd.ways.forEach(w=>{ cand=cand.concat(samplePath(w.pts,40)); });
+        cand=cand.filter(P=>assets.some(c=>haversineKm(P,[+c.lat,+c.lng])*1000<=candR));
+        if(cand.length>140){ const stride=Math.ceil(cand.length/140); cand=cand.filter((_,i)=>i%stride===0); }
+      }
+      if(!cand.length){
+        const why = !rd ? (roadsBusy?"road service busy":"couldn't reach road service")
+                        : (rd.ways.length?("no roads within "+Math.round(candR/0.3048)+" ft"):"no mapped roads");
+        prog("Zone "+(zi+1)+"/"+zn+" \u2014 no roads, placing a stop at the assets\u2026");
+        const fb=await fallbackStop(assets,zi,candR,canopyMode,manualM,sampler);
+        if(misToken!==token) return;
+        if(fb){ fb.note=why; z.best=fb; z.note=""; } else { z.note="no elevation data here"; }
+        continue;
       }
       // keep the spot-count x asset-count product bounded (like the road scan)
       if(cand.length*assets.length>4200){ const stride=Math.ceil(cand.length*assets.length/4200); cand=cand.filter((_,i)=>i%stride===0); }
@@ -3660,7 +3841,7 @@
     prog("Ordering the route\u2026");
     const start=await getPos(3500); if(misToken!==token) return;
     const ordered=optimizeStops(stops.map(b=>({lat:b.pt[0],lng:b.pt[1],b:b})), start, false).map(o=>o.b);
-    misStops=ordered;
+    misStops=ordered; misStart=start||null;
     let straightKm=0, prev=start;
     ordered.forEach(b=>{ if(prev) straightKm+=haversineKm(prev,b.pt); prev=b.pt; });
     misRoadMi=straightKm*ROAD_FACTOR*0.621371;
@@ -3668,12 +3849,42 @@
     $("#misSum").innerHTML=misStops.length+" stop"+(misStops.length===1?"":"s")+" \u00B7 ~"+misRoadMi.toFixed(1)+" mi drive"+'<span class="rtsub">'+(start?"from your location \u00B7 ":"")+"asset "+losAssetFt+" ft \u00B7 within "+losMaxFt+" ft"+(skipped.length?(" \u00B7 "+skipped.length+" zone"+(skipped.length===1?"":"s")+" skipped"):"")+"</span>";
     $("#misProg").textContent=skipped.length?skipped.map(z=>"Skipped zone: "+z.note).join(" \u00B7 "):"";
     renderMisList(-1);
+    updateMisNav();
     misBusy=false;
   }
+  // Build a single Google Maps directions URL for the whole ordered mission:
+  // origin (your location, if known) -> waypoints (middle stops) -> destination (last stop).
+  function misRouteUrl(){
+    if(!misStops.length) return null;
+    const ll=b=>(+b.pt[0]).toFixed(6)+","+(+b.pt[1]).toFixed(6);
+    const MAXW=9; // Google consumer URL supports ~9 waypoints (excludes origin/dest)
+    let pts=misStops.slice();
+    let trimmed=0;
+    // origin + waypoints + destination must fit; waypoints = all but the last stop.
+    if(pts.length-1>MAXW){ const keep=MAXW+1; trimmed=pts.length-keep; pts=pts.slice(0,keep); }
+    const dest=pts[pts.length-1];
+    const mids=pts.slice(0,pts.length-1);
+    let url="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination="+encodeURIComponent(ll(dest));
+    if(misStart) url+="&origin="+encodeURIComponent((+misStart[0]).toFixed(6)+","+(+misStart[1]).toFixed(6));
+    if(mids.length) url+="&waypoints="+mids.map(ll).map(encodeURIComponent).join("|");
+    return {url:url, trimmed:trimmed};
+  }
+  function updateMisNav(){
+    const btn=$("#misNav"), note=$("#misNavNote"); if(!btn) return;
+    if(misStops.length<1){ btn.style.display="none"; if(note) note.style.display="none"; return; }
+    btn.style.display=""; btn.textContent = misStops.length===1 ? "Navigate to the stop (Google Maps)" : "Start full route \u00B7 "+misStops.length+" stops (Google Maps)";
+    const info=misRouteUrl();
+    if(note){
+      if(info && info.trimmed>0){ note.style.display=""; note.textContent="Google Maps allows ~10 stops per link; the last "+info.trimmed+" will be dropped from this route. Use the per-stop links below for those."; }
+      else { note.style.display="none"; note.textContent=""; }
+    }
+  }
+  { const b=$("#misNav"); if(b) b.addEventListener("click",()=>{ const info=misRouteUrl(); if(info&&info.url){ try{ window.open(info.url,"_blank","noopener"); }catch(e){ location.href=info.url; } } }); }
   function renderMisList(active){
     $("#misList").innerHTML=misStops.map((b,i)=>{
       const badge='<span class="rtn" style="background:'+(i===active?"var(--amber)":"var(--line2)")+';color:'+(i===active?"#10141a":"var(--muted)")+'">'+(i+1)+'</span>';
-      return '<li data-mis="'+i+'" class="'+(i===active?"misOn":"")+'">'+badge+'<div class="rtmain"><div class="rttitle">Sees '+b.vis+' of '+b.inR+' in range</div><div class="rtmeta">Zone '+b.zone+' \u00B7 tap to preview \u00B7 '+navLinks(b.pt[0],b.pt[1]).replace(/<div[^>]*>|<\/div>/g,"")+'</div></div></li>';
+      const flag=b.noRoads?' \u00B7 <span style="color:var(--gold)">no road data \u2014 at the assets</span>':'';
+      return '<li data-mis="'+i+'" class="'+(i===active?"misOn":"")+'">'+badge+'<div class="rtmain"><div class="rttitle">Sees '+b.vis+' of '+b.inR+' in range</div><div class="rtmeta">Zone '+b.zone+flag+' \u00B7 tap to preview \u00B7 '+navLinks(b.pt[0],b.pt[1]).replace(/<div[^>]*>|<\/div>/g,"")+'</div></div></li>';
     }).join("");
     $("#misList").querySelectorAll("[data-mis]").forEach(el=>el.addEventListener("click",ev=>{ if(ev.target&&ev.target.tagName==="A") return; previewMisStop(+el.dataset.mis,false); }));
   }
