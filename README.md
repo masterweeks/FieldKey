@@ -149,25 +149,6 @@ manually** on the main screen creates a fresh record.)
   address) for that same set, ready to copy or share/email. The exported KML
   carries the name, phone, access, and status in each placemark, and re-imports
   cleanly through **Import KML / CSV**.
-- **Optimize route** — with sites selected (or all shown if none), tap **Optimize
-  route** and FieldKey works out an efficient order to drive them, starting from your
-  current GPS location. The ordering runs entirely on the device — no signal, no API
-  key needed — so it works in the field the same as everything else. It shows the
-  ordered stop list with per-leg distances, plus a total distance, drive-time, and
-  fuel-cost estimate (set your vehicle **MPG**, **fuel price**, **average speed**, and
-  **weight** under **Settings → Route & fuel**). The fuel estimate is **climb-aware**:
-  FieldKey reads the elevation along the route from the same terrain tiles the map
-  uses and adds the extra gas burned climbing, showing the total **feet of climb** in
-  the summary. Elevation works online, or offline for any area you've saved with
-  **Save offline** — outside a saved area with no signal it just notes the elevation
-  isn't available and gives the flat estimate. A **Round trip** toggle re-optimizes as a loop
-  back to your start. **Open route in Google Maps** hands the whole ordered run to
-  Google Maps for real turn-by-turn driving (up to 10 stops per link — for a longer
-  day it opens the first 10 and you build a second route for the rest). Apple Maps
-  can't take a multi-stop route from a link, so on Apple Maps use the per-site
-  directions on each pin instead. The optimizer measures in straight-line distance
-  with a road-distance factor, which is why the mileage and fuel are estimates —
-  your maps app gives the exact drive; this is for sequencing and rough planning.
 - **Measure** — the **⟷ Measure** button (top-left, under 3D) turns on a quick
   tape measure. Tap points on the map and the banner shows the running **distance**
   (feet, switching to miles past ~1,500 ft). Tap **Area** in the banner to switch
@@ -176,96 +157,13 @@ manually** on the main screen creates a fresh record.)
   points, and **Done** exits and clears the map. Handy for pacing out a setback,
   sizing a landing zone, or checking how far a stretch of road really runs.
 
-- **Line of sight** — tap **Line of sight**, then tap the map to drop your
-  parking/launch point. FieldKey walks the terrain between that point and each
-  selected asset (or all shown) and tells you which ones you can actually **see** over
-  the landscape — useful for judging whether you'll hold visual line of sight while
-  flying. It draws a **green** line to each asset you can see and a **red** line to
-  each one the terrain blocks, and — while the check is up — the asset **pins
-  themselves recolor** green/red to match, so visibility reads at a glance even when
-  the lines get dense; normal status colors return the moment you exit. It lists them
-  with a count. For blocked assets it
-  reports the **altitude the drone clears at** ("clears above ~X ft"), so you know how
-  high you'd need to fly to keep it in view. Asset height is adjustable right in the
-  panel — a **Distribution** preset (~40 ft), a **Transmission** preset for taller
-  lattice towers, or type any height; your own eye height is set once under
-  **Settings → Route & fuel**. It accounts for earth curvature, and like the climb
-  data it reads elevation online or from any area you've saved offline (outside a
-  saved area with no signal it says so). Tap **Move parking point** to try another
-  spot, or **Done** to clear the lines. Tap the summary (or the handle) to **collapse
-  the panel to a peek** so you can see the map and sightlines, then tap again to bring
-  the full results back — the **X** exits line-of-sight entirely.
-
-  **Scan a road (find the best parking spot):** instead of guessing one spot, let
-  FieldKey test a whole stretch. In the line-of-sight banner tap **Scan a road** —
-  FieldKey loads the actual roads around your view from OpenStreetMap — then tap the
-  **start** and the **end** of the stretch you'd park along. Both taps **snap to the
-  nearest road**, and the tested path **follows the road itself** between them (curves,
-  bends and turns through intersections included), so one scan now covers a long, curvy
-  stretch instead of a short straight line. FieldKey samples up to ~80 candidate spots
-  along the path (spacing adapts to the length), checks sight from each spot to every
-  asset **within your max distance** — default **1,500 ft**, adjustable via **Max
-  distance to asset** in the panel — and ranks the top five under **Best parking
-  spots**. A line above the results shows exactly what was tested: the **road length
-  scanned, how many spots were checked, and whether it snapped to roads** (if road data
-  can't be loaded — no signal, or Overpass is busy — it falls back to the straight line
-  between your taps and says so). The winner is starred, drawn as the **amber** circle
-  on the map, and previewed with its sightlines; the runners-up are numbered grey
-  circles. Tap any row (or any numbered circle) to preview that spot instead. Changing
-  the max distance re-runs the scan. **Move parking point** returns to the normal
-  one-tap mode.
-
-  **Include tree canopy:** an opt-in toggle that folds tree height into the sightline,
-  so a line crossing a tree stand reads as blocked even where the bare ground is clear.
-  It tries to use the measured Meta/WRI 1-meter canopy map first, but that data is
-  served from a store that (at least right now) doesn't allow a browser to read it
-  directly — so in practice FieldKey falls back to a **typical tree height** you set
-  (default 50 ft) and applies it along each sightline. Set it to match your territory's
-  tree lines; a taller value is more conservative. This works offline and needs no
-  signal. To use the real **measured 1-meter canopy** instead, deploy the tiny canopy
-  proxy (see the `canopy-proxy` folder — a free Supabase Edge Function) and paste its
-  URL into **Settings → Canopy proxy**; the toggle then reads measured tree heights and
-  the panel says "measured." Either way, buildings
-  and structures aren't included, so treat the result as planning guidance and keep
-  your own eyes on the aircraft.
-- **Plan mission** (zones → spots → route) — the whole trip in one tool. Tap
-  **Plan mission** in the dock. The map stays **fully pan/zoomable** — line up a
-  cluster of assets, then tap **Draw zone** in the banner to lock the map and trace a
-  freehand loop around it. As soon as you finish the loop the map unlocks again, so you
-  can pan to the next cluster and tap **Draw zone** for each one (draw as many zones as
-  you have clusters). Tap **Done** when every zone is drawn. For every zone FieldKey: finds the assets inside your loop, pulls
-  the **real roads** around that zone from OpenStreetMap, samples parking candidates
-  along those roads, runs the **line-of-sight check from every candidate to every
-  asset in range** (terrain, and tree canopy if you've enabled it in Line of sight),
-  and picks the **single best parking spot for that zone** — the one that sees the
-  most assets. It then **orders the stops into a route** (starting from your location
-  when available), draws zones, stops and route on the map, and lists each stop with
-  how many assets it sees plus **Apple/Google navigation links**. Tap a stop in the
-  list (or its green circle on the map) to **preview its sightlines**. **Done** keeps
-  everything on the map while you drive; **Plan mission** reopens the list; **Clear
-  mission** removes it all. Zones with no assets or no nearby road data are skipped
-  and say why. Notes: road data comes from OpenStreetMap (needs internet; the free
-  Overpass service can occasionally be slow, though FieldKey now retries across several
-  Overpass mirrors so a single busy server no longer skips a zone; if every mirror is
-  busy the zone note says so and a quick retry usually clears it), the drive distance is a **straight-line
-  estimate ×1.3** (not turn-by-turn routing), and each zone tests up to ~140 spots
-  against up to 40 assets, so very large zones are sampled rather than exhaustive.
-  Planning is fast: elevation tiles for each zone are pulled once up front and all the
-  sight-line math runs locally against them (a quick pass ranks every spot, then the
-  front-runners get the full-resolution check), so a multi-zone mission takes seconds
-  of computation — the wait you see is mostly the road/canopy downloads per zone.
-  Mission looks for a parking spot **within ~3,000 ft of the assets** (you park close),
-  even if your Line-of-sight *max distance* is set much higher — that larger number
-  still controls how far a chosen spot can see, but it no longer scatters the parking
-  search across kilometers.
-
 - **Drop pin (your own markers)** — markers that are *not* customer sites. Tap
   **Drop pin** on the map sheet, tap the spot, and give it a label, a **type**
   (Entrance / path, Parking, Hazard, Note — each its own color and letter), and
   optional notes (gate code, trail conditions). Tap a pin for its popup with
   **directions** and **edit / delete**. Pins live on the device and ride along in
   **Backups**, and they deliberately stay out of everything asset-related — they never
-  join selections, exports, access requests, or line-of-sight counts. Made for things
+  join selections, exports, or access requests. Made for things
   like the entrance to an off-road path, a staging area, or a locked gate.
 - **Select & export** — every row has a circle on the left; tap it to pick
   specific assets (a bar shows how many are selected). This is the same selection
@@ -307,8 +205,7 @@ manually** on the main screen creates a fresh record.)
   **Settings → Offline maps** shows how many areas you've saved and the storage
   used, with **Clear offline maps** to free it all. Saving an area also stores the
   **terrain elevation** for it, so the hillshade relief and 3-D view keep working with
-  no signal — and it's the same elevation data the upcoming parking-spot line-of-sight
-  check will use. By default it **also saves aerial imagery** (USGS) for the area, so
+  no signal. By default it **also saves aerial imagery** (USGS) for the area, so
   the **Aerial** and **Hybrid** basemaps keep working offline (Hybrid's street-line
   overlay is online-only, so offline it shows the plain imagery); because imagery is much larger, the save
   dialog has an **Include aerial imagery** switch you can turn off when you only want

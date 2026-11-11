@@ -650,10 +650,8 @@
   <button class="mapsave" id="mSave" type="button" aria-label="Save this area offline">&#8675; Save offline</button>
   <button class="mapsave mapterr" id="mTerr" type="button" aria-label="Toggle 3D terrain">&#9968; 3D</button>
   <button class="mapsave mapmeas" id="mMeasure" type="button" aria-label="Measure distance or area">&#10231; Measure</button>
-  <div class="losbanner hidden" id="losBanner"><span id="losBannerText">Tap the map to set your parking point</span><button class="losbanscan" id="losScanBtn" type="button">Scan a road</button><button class="losbanx" id="losCancel" type="button">Cancel</button></div>
   <div class="losbanner hidden" id="pinBanner"><span>Tap the map to place a pin</span><button class="losbanx" id="pinCancel" type="button">Cancel</button></div>
   <div class="losbanner hidden" id="measBanner"><b id="measVal" style="font-family:var(--mono);font-size:13px">0 ft</b><span class="note" id="measHint" style="margin:0">tap points</span><button class="losbanscan" id="measModeBtn" type="button">Area</button><button class="losbanx" id="measUndo" type="button">Undo</button><button class="losbanx" id="measX" type="button">Done</button></div>
-  <div class="losbanner hidden" id="misBanner"><span id="misBannerText">Move the map, then tap Draw zone</span><button class="losbanscan" id="misDraw" type="button">Draw zone</button><button class="losbanscan" id="misDone" type="button">Done</button><button class="losbanx" id="misX" type="button">Cancel</button></div>
   <div class="dloverlay hidden" id="dlOverlay">
     <div class="dlcard">
       <div class="dltitle" id="dlTitle">Save this area offline</div>
@@ -685,13 +683,6 @@
       </span>
     </div>
     <div class="mapbar-row main">
-      <button class="btn primary" id="mRoute" type="button">Optimize route</button>
-      <button class="btn ghost" id="mLos" type="button">Line of sight</button>
-    </div>
-    <div class="mapbar-row main">
-      <button class="btn ghost" id="mMission" type="button">Plan mission &#183; zones &#8594; spots &#8594; route</button>
-    </div>
-    <div class="mapbar-row main">
       <button class="btn primary" id="mReq" type="button">Build request</button>
       <button class="btn ghost" id="mExport" type="button">Export KML</button>
     </div>
@@ -704,59 +695,6 @@
     </div>
     </div>
   </div>
-</div>
-
-<!-- line-of-sight results sheet -->
-<div class="scrim" id="losScrim"></div>
-<div class="sheet" id="losSheet" role="dialog" aria-label="Line of sight">
-  <div class="grab"></div>
-  <h2>Line of sight</h2>
-  <div class="losSumWrap" id="losSumWrap">
-    <div class="rtsum" id="losSum">Checking\u2026</div>
-    <span class="losChev" aria-hidden="true">&#9662;</span>
-  </div>
-  <div class="loshint" id="losHint"></div>
-  <div id="losScanWrap" class="hidden" style="margin-top:12px">
-    <span class="label">Best parking spots</span>
-    <p class="note" id="losScanMeta" style="margin:4px 0 0"></p>
-    <ol class="rtlist" id="losScanList" style="margin-top:8px"></ol>
-  </div>
-  <div class="sgroup" style="margin-top:12px">
-    <span class="label">Asset height (ft)</span>
-    <div class="losheight">
-      <button class="btn ghost sm" data-ft="40" id="losPreDist" type="button">Distribution 40</button>
-      <button class="btn ghost sm" data-ft="100" id="losPreTx" type="button">Transmission 100</button>
-      <input type="number" id="losFt" min="1" step="1" inputmode="numeric" />
-    </div>
-  </div>
-  <div class="sgroup">
-    <span class="label">Max distance to asset (ft)</span>
-    <div class="losheight"><input type="number" id="losMaxFt" min="100" step="100" inputmode="numeric" /></div>
-    <p class="note" style="margin:5px 0 0">Used by the road scan: a site only counts for a spot if it's within this range.</p>
-  </div>
-  <label class="rtopt"><input type="checkbox" id="losCanopy" /> <span>Include tree canopy</span></label>
-  <div class="losheight hidden" id="losCanopyRow" style="margin:2px 0 4px">
-    <span class="label" style="flex:0 0 auto">Typical tree height (ft)</span>
-    <input type="number" id="losCanopyFt" min="0" step="5" inputmode="numeric" style="max-width:90px" />
-  </div>
-  <ol class="rtlist" id="losList"></ol>
-  <div class="mapbar-row main">
-    <button class="btn ghost" id="losMove" type="button">Move parking point</button>
-    <button class="btn primary" id="losDone" type="button">Done</button>
-  </div>
-  <p class="note" id="losNote"></p>
-</div>
-
-<!-- optimized route sheet -->
-<div class="scrim" id="rtScrim"></div>
-<div class="sheet" id="rtSheet" role="dialog" aria-label="Optimized route">
-  <div class="grab"></div>
-  <h2>Optimized route</h2>
-  <div class="rtsum" id="rtSum">Building route…</div>
-  <label class="rtopt"><input type="checkbox" id="rtRound" /> <span>Round trip (return to start)</span></label>
-  <ol class="rtlist" id="rtList"></ol>
-  <button class="btn primary" id="rtGoogle" type="button">Open route in Google Maps</button>
-  <p class="note" id="rtNote"></p>
 </div>
 
 <!-- access issue reason picker -->
@@ -785,23 +723,6 @@
 </div>
 
 <!-- email import sheet -->
-<!-- mission plan -->
-<div class="scrim" id="misScrim"></div>
-<div class="sheet" id="misSheet" role="dialog" aria-label="Mission plan">
-  <div class="grab"></div>
-  <h2>Mission plan</h2>
-  <div class="rtsum" id="misSum">Planning…</div>
-  <p class="note" id="misProg" style="margin:6px 0 0"></p>
-  <button class="btn primary" id="misNav" type="button" style="margin-top:10px;display:none">Start full route (Google Maps)</button>
-  <p class="note" id="misNavNote" style="margin:6px 0 0;display:none"></p>
-  <ol class="rtlist" id="misList" style="margin-top:10px"></ol>
-  <div class="mapbar-row main" style="margin-top:12px">
-    <button class="btn ghost" id="misClear" type="button">Clear mission</button>
-    <button class="btn primary" id="misOk" type="button">Done</button>
-  </div>
-  <p class="note" style="margin-top:10px">Parking spots come from OpenStreetMap roads near each zone. Drive distance is a straight-line estimate × 1.3. Tap a stop to preview its sightlines; Done keeps everything on the map, Clear removes it.</p>
-</div>
-
 <!-- custom map pin -->
 <div class="scrim" id="pinScrim"></div>
 <div class="sheet" id="pinSheet" role="dialog" aria-label="Map pin">
@@ -936,15 +857,7 @@
   </div>
   <div class="sgroup pinprev"><canvas id="pinPreview" width="252" height="120"></canvas></div>
 
-  <h2 style="margin-top:22px">Route &amp; fuel</h2>
-  <p class="hint">Used to estimate drive time and fuel for an optimized route (map → <b>Optimize route</b>). These are estimates; your maps app gives the real drive.</p>
-  <div class="sgroup"><label class="label">Vehicle fuel economy (MPG)</label><input type="number" id="sMpg" min="1" step="1" inputmode="numeric" /></div>
-  <div class="sgroup"><label class="label">Fuel price ($ / gallon)</label><input type="number" id="sFuel" min="0" step="0.01" inputmode="decimal" /></div>
-  <div class="sgroup"><label class="label">Average driving speed (mph)</label><input type="number" id="sSpeed" min="1" step="1" inputmode="numeric" /></div>
-  <div class="sgroup"><label class="label">Vehicle weight (lbs)</label><input type="number" id="sVeh" min="500" step="100" inputmode="numeric" /><p class="note">Used to estimate the extra fuel from climbing on hilly routes.</p></div>
-  <div class="sgroup"><label class="label">Your height (ft) — for line of sight</label><input type="number" id="sObs" min="3" max="8" step="0.1" inputmode="decimal" /><p class="note">Your standing eye height, used when checking which assets you can see over the terrain from a parking point. E.g. 6.3 for about 6'4".</p></div>
-  <div class="sgroup"><label class="label">Canopy proxy URL (optional)</label><input type="url" id="sCanopyProxy" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://….supabase.co/functions/v1/canopy" /><p class="note">Unlocks measured 1&#8209;meter tree-canopy data in line-of-sight. Paste your canopy proxy endpoint here. Leave blank to use the manual typical-height estimate.</p></div>
-  <div class="sgroup"><label class="label">Roads proxy URL (optional)</label><input type="url" id="sRoadsProxy" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://….supabase.co/functions/v1/roads" /><p class="note">Makes mission planning reliable: your own cached road service, so zones stop getting skipped with &ldquo;road service was busy.&rdquo; Leave blank to use the public OpenStreetMap servers directly.</p></div>
+  <h2 style="margin-top:22px">Property lines</h2>
   <div class="sgroup"><label class="label">Parcels proxy URL (optional)</label><input type="url" id="sParcelsProxy" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://….supabase.co/functions/v1/parcels" /><p class="note">Turns on the <b>Property lines</b> overlay (Regrid parcel boundaries). Paste your parcels proxy endpoint. Takes effect next time you open the map. Leave blank to hide the feature.</p></div>
   <p class="note" style="text-align:center;margin-top:14px">FieldKey · <span id="sAppVer">v54</span> · runs offline once added to your Home Screen</p>
   <div class="sgroup"><button class="btn ghost sm" id="sCheckUpdate" type="button">Check for update</button></div>
@@ -975,7 +888,7 @@
     name:"Obii weeks", lan:"OXWC", phone:"3052196892",
     issue:"need code/contact info", work:"Drone inspection",
     provider:"osm", email:"", gkey:"", delay:"1100", geolimit:"9999",
-    mpg:"22", fuelprice:"4.75", avgspeed:"40", vehweight:"4800", obsft:"6.33", canopyproxy:"", roadsproxy:"", parcelsproxy:"",
+    parcelsproxy:"",
     latestKml:"",
     smsTemplate:"Hey [Customer name] this is Cyberhawk with PGE, I need to complete an aerial inspection at [customer address]. Let me know what time during business hours works for you."
   };
@@ -984,7 +897,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v54";
+  const APP_VER="v55";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -1446,7 +1359,7 @@
     $("#sEmail").value=cfg.email; $("#sGkey").value=cfg.gkey; $("#sDelay").value=cfg.delay;
     { const e=$("#sGeoLimit"); if(e) e.value=cfg.geolimit; }
     { const n=$("#sGeoNote"); if(n) n.textContent="Used "+geoUsed()+" of "+geoBudget()+" Google lookups this week (resets Monday)."; }
-    $("#sMpg").value=cfg.mpg; $("#sFuel").value=cfg.fuelprice; $("#sSpeed").value=cfg.avgspeed; $("#sVeh").value=cfg.vehweight; $("#sObs").value=cfg.obsft; $("#sCanopyProxy").value=cfg.canopyproxy; $("#sRoadsProxy").value=cfg.roadsproxy; $("#sParcelsProxy").value=cfg.parcelsproxy;
+    $("#sParcelsProxy").value=cfg.parcelsproxy;
     setProviderUI(cfg.provider);
     setSeg("segPinShape", store.get("fk_pin_shape","pin"));
     setSeg("segPinSize", store.get("fk_pin_size","medium"));
@@ -1471,9 +1384,9 @@
     cfg.email=$("#sEmail").value.trim(); cfg.gkey=$("#sGkey").value.trim();
     cfg.delay=String(parseInt($("#sDelay").value,10)||0);
     cfg.geolimit=String(Math.max(1,parseInt($("#sGeoLimit").value,10)||9999));
-    cfg.mpg=String(parseFloat($("#sMpg").value)||22); cfg.fuelprice=String(parseFloat($("#sFuel").value)||0); cfg.avgspeed=String(parseFloat($("#sSpeed").value)||40); cfg.vehweight=String(parseFloat($("#sVeh").value)||4800); cfg.obsft=String(parseFloat($("#sObs").value)||6.33); cfg.canopyproxy=($("#sCanopyProxy").value||"").trim(); cfg.roadsproxy=($("#sRoadsProxy").value||"").trim(); cfg.parcelsproxy=($("#sParcelsProxy").value||"").trim();
+    cfg.parcelsproxy=($("#sParcelsProxy").value||"").trim();
     cfg.provider=cfg._pendProvider||cfg.provider;
-    for(const k of ["name","lan","phone","issue","work","email","gkey","delay","geolimit","mpg","fuelprice","avgspeed","vehweight","obsft","canopyproxy","roadsproxy","parcelsproxy","provider"]) store.set("fk_"+k,cfg[k]);
+    for(const k of ["name","lan","phone","issue","work","email","gkey","delay","geolimit","parcelsproxy","provider"]) store.set("fk_"+k,cfg[k]);
     if(results.length) renderTickets();
     closeSheet(); toast("Settings saved");
   });
@@ -1511,7 +1424,7 @@
   function phoneDigits(s){ const d=s.replace(/\D/g,""); return d.length===10?"+1"+d:(d.length===11&&d[0]==="1"?"+"+d:"+"+d); }
   function csvEsc(v){ v=String(v==null?"":v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
   function stripUSA(a){ return String(a||"").replace(/,?\s*USA\s*$/i,""); }
-  function smsHref(tel,body){ return "sms:"+tel+"&body="+encodeURIComponent(body); }
+  function smsHref(tel,body){ return "sms:"+tel+(IS_ANDROID?"?":"&")+"body="+encodeURIComponent(body); }   // Android wants ?body=, iOS &body=
   function buildMsg(tmpl,name,address){
     return (tmpl||"").replace(/\[Customer name\]/gi,firstName(name)).replace(/\[customer address\]|\[address\]/gi,stripUSA(address));
   }
@@ -1522,18 +1435,22 @@
     m=ln.match(/(?:^|[^\d.])(\d{9})(?![\d.])/); if(m) return m[1];
     return "";
   }
+  // lines from our own request template — quoted back in replies, they sit just before the next SAP line
+  const TEMPLATE_LINE=/^(?:Requestor\s+(?:Name|LanID|Phone(?:\s+number)?)|Description of (?:Access Issue|work))\s*:/i;
+  function isOwnPhone(tel){ const own=String(cfg.phone||"").replace(/\D/g,"").slice(-10); return own.length===10 && String(tel).replace(/\D/g,"").slice(-10)===own; }
   function finishRecord(r){
     const used=new Set(), notes=[];
     r._lines.forEach((ln,i)=>{
-      if(!ln){used.add(i);return;} let m;
+      if(!ln||TEMPLATE_LINE.test(ln)){used.add(i);return;} let m;
       if((m=ln.match(/^Address Attempted:\s*(.*)$/i))){r.address=m[1].trim();used.add(i);}
       else if(/^\*/.test(ln)){r.name=ln.replace(/^\*\s*/,"").trim();used.add(i);}
-      else if(PHONE_LINE.test(ln)&&!isCoordinateText(ln)){r.phones.push({display:ln,tel:phoneDigits(ln)});used.add(i);}
+      else if(PHONE_LINE.test(ln)&&!isCoordinateText(ln)){ if(!isOwnPhone(ln)) r.phones.push({display:ln,tel:phoneDigits(ln)}); used.add(i); }
       else if((m=ln.match(/^AXS:\s*(.*)$/i))){r.access=m[1].trim();used.add(i);}
     });
     const sapDigits=String(r.sapId||"").replace(/\D/g,"");
-    extractPhones(r._lines.join("\n")).forEach(p=>{
+    extractPhones(r._lines.filter(ln=>!TEMPLATE_LINE.test(ln)).join("\n")).forEach(p=>{
       if(sapDigits && p.tel.replace(/\D/g,"").indexOf(sapDigits)>=0) return;   // don't read the SAP id as a phone
+      if(isOwnPhone(p.tel)) return;   // never attach the requestor's own number to a customer
       if(!r.phones.some(x=>x.tel===p.tel)) r.phones.push(p);
     });
     const esc=String(r.sapId).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
@@ -1736,7 +1653,7 @@
     updateBulkButtons();
   }
   function customerRow(c){
-    const st=c.status||"new";
+    const st=escapeHtml(c.status||"new"), cid=escapeHtml(c.id);   // ids come from file SAP cells — escape for attributes
     const stShow=(st==="enriched"||st==="new")?"":'<span class="cstat '+st+'">'+st+'</span>';
     const flagged=!!c.accessIssue;
     const issueBadge=flagged?'<span class="cstat issue">ACCESS ISSUE</span>':'';
@@ -1744,9 +1661,9 @@
     const hasP=c.phones&&c.phones.length;
     const axs=[c.access,c.accessNotes].filter(Boolean).join(" · ");
     const meta=[(c.sapId&&c.name)?c.name:"",stripUSA(c.address)].filter(Boolean).join("  ·  ");
-    return '<div class="crow '+st+(flagged?" flagged":"")+'" data-id="'+c.id+'">'+
-      '<button class="csel'+(cSel.has(c.id)?" on":"")+'" data-sel="'+c.id+'" aria-label="Select for export"></button>'+
-      '<div class="cmain" data-open="'+c.id+'">'+
+    return '<div class="crow '+st+(flagged?" flagged":"")+'" data-id="'+cid+'">'+
+      '<button class="csel'+(cSel.has(c.id)?" on":"")+'" data-sel="'+cid+'" aria-label="Select for export"></button>'+
+      '<div class="cmain" data-open="'+cid+'">'+
         '<div class="cname">'+escapeHtml(assetTitle(c))+issueBadge+stShow+'</div>'+
         (meta?'<div class="cmeta">'+escapeHtml(meta)+'</div>':'')+
         (axs?'<div class="caxs">'+escapeHtml(axs)+'</div>':'')+
@@ -1754,7 +1671,7 @@
         ((c.status==="scheduled"&&c.scheduledAt)?'<div class="csched">'+escapeHtml(fmtSched(c.scheduledAt))+'</div>':'')+
       '</div>'+
       '<div class="cright">'+
-        '<button class="textbtn '+(hasP?"":"nophone")+'" data-text="'+c.id+'"'+(hasP?"":" disabled")+'>Text</button>'+
+        '<button class="textbtn '+(hasP?"":"nophone")+'" data-text="'+cid+'"'+(hasP?"":" disabled")+'>Text</button>'+
         ((c.textCount||0)>0?'<span class="ccount">\u00D7'+c.textCount+'</span>':'')+
       '</div>'+
     '</div>';
@@ -1879,8 +1796,8 @@
   function renderDPhones(c){
     $("#dPhones").innerHTML=(c.phones&&c.phones.length)
       ? c.phones.map((p,i)=>'<div class="dphone"><span class="pn">'+escapeHtml(p.display)+'</span>'
-          +'<a href="tel:'+p.tel+'">Call</a>'
-          +'<a href="'+smsHref(p.tel,buildMsg(cfg.smsTemplate,c.name,c.address))+'" data-sms="'+c.id+'">Text</a>'
+          +'<a href="tel:'+escapeHtml(p.tel)+'">Call</a>'
+          +'<a href="'+escapeHtml(smsHref(p.tel,buildMsg(cfg.smsTemplate,c.name,c.address)))+'" data-sms="'+escapeHtml(c.id)+'">Text</a>'
           +'<button class="phrm" data-phrm="'+i+'" type="button" aria-label="Remove number">\u00D7</button></div>').join("")
       : '<p class="note">No phone number on file.</p>';
     $("#dPhones").querySelectorAll("[data-sms]").forEach(a=>a.addEventListener("click",()=>markTexted(a.dataset.sms)));
@@ -1987,7 +1904,7 @@
     if(phoneRaw && !phones.length){ $("#acStat").textContent="That phone number doesn't look right \u2014 check the digits."; return; }
     if(sap && !/^\d{6,12}$/.test(sap)){ $("#acStat").textContent="A SAP ID should be 6\u201312 digits (or leave it blank)."; return; }
     if(sap){
-      const existing=findById("sap_"+sap);
+      const existing=findById("sap_"+sap)||customers.find(c=>String(c.sapId||"").trim()===sap);
       if(existing){
         if(name) existing.name=name;
         if(addr) existing.address=addr;
@@ -2016,7 +1933,11 @@
       let e=findExisting(p);
       if(e){ matched++; }
       else { e={id:newId(p.sapId),sapId:p.sapId,name:"",address:"",lat:"",lng:"",phones:[],access:"",accessNotes:"",extra:{},status:"new",textCount:0,lastTexted:"",notes:""}; customers.push(e); added++; }
-      e.name=p.name||e.name; if(p.address)e.address=p.address; e.phones=p.phones; e.access=p.access; e.accessNotes=p.accessNotes;
+      if(p.sapId&&!String(e.sapId||"").trim()) e.sapId=p.sapId;   // matched a no-SAP record by name/address — claim it so the next SAP doesn't collapse into it
+      // the email is authoritative only for what it actually contains — never blank out data it omits
+      e.name=p.name||e.name; if(p.address)e.address=p.address;
+      if(p.phones&&p.phones.length) e.phones=p.phones;
+      if(p.access) e.access=p.access; if(p.accessNotes) e.accessNotes=p.accessNotes;
       if(e.status==="new"||!e.status) e.status="enriched";
       if(e.textCount==null)e.textCount=0;
     });
@@ -2074,7 +1995,7 @@
   }
   function backupData(){
     const data={app:"FieldKey", kind:"backup", exportedAt:new Date().toISOString(), count:customers.length, settings:{}, customers:customers, pins:userPins};
-    ["name","lan","phone","issue","work","provider","email","gkey","delay","smsTemplate","latestKml"].forEach(k=>data.settings[k]=cfg[k]);
+    Object.keys(DEF).forEach(k=>data.settings[k]=cfg[k]);
     download("fieldkey-backup-"+todayStr()+".json", JSON.stringify(data,null,2), "application/json"); toast("Backup downloaded");
   }
   function restoreFromFile(file){
@@ -2085,10 +2006,17 @@
       const list=Array.isArray(data)?data:(data&&Array.isArray(data.customers)?data.customers:null);
       if(!list){ toast("No customer data found in that file."); return; }
       if(!confirm("Replace the current database ("+customers.length+") with "+list.length+" customers from this backup?")) return;
-      customers=list.map(c=>sanitizeRecord(Object.assign({status:"new",textCount:0,phones:[],extra:{}},c))); cSel.clear();
+      customers=list.filter(c=>c&&typeof c==="object").map(c=>sanitizeRecord(Object.assign({status:"new",textCount:0,phones:[],extra:{}},c)));
+      customers.forEach(c=>{ if(!c.id) c.id=newId(c.sapId); });   // older/hand-edited files may lack ids — IndexedDB rejects those
+      cSel.clear();
       if(data&&Array.isArray(data.pins)){ userPins=data.pins.filter(p=>p&&isFinite(+p.lat)&&isFinite(+p.lng)); savePinsStore(); refreshUserPins(); }
-      if(dbOk){ try{ await dbClear(); await dbBulk(customers); }catch(e){} }
-      renderCustomers(); updateBadge(); closeSheet(); toast("Restored "+customers.length+" customers");
+      if(data&&data.settings&&typeof data.settings==="object"){
+        Object.keys(DEF).forEach(k=>{ const v=data.settings[k]; if(v!=null){ cfg[k]=String(v); store.set("fk_"+k,cfg[k]); } });
+      }
+      let saved=true;
+      if(dbOk){ try{ await dbClear(); await dbBulk(customers); }catch(e){ saved=false; } }
+      renderCustomers(); updateBadge(); closeSheet();
+      toast(saved ? "Restored "+customers.length+" customers" : "Restored on screen, but saving failed — keep the backup file and try again");
     };
     r.readAsText(file);
   }
@@ -2215,6 +2143,7 @@
     records.forEach(rec=>{
       let e=findExisting(rec);
       if(e){ matched++;
+        if(rec.sapId&&!String(e.sapId||"").trim()) e.sapId=rec.sapId;   // claim a no-SAP record so a second SAP with the same name gets its own
         if(rec.lat)e.lat=rec.lat; if(rec.lng)e.lng=rec.lng;
         if(!e.name&&rec.name)e.name=rec.name;
         if(rec.address&&!e.address)e.address=rec.address;
@@ -2272,7 +2201,7 @@
   function siteFeature(c){ const la=parseFloat(c.lat),lo=parseFloat(c.lng); return {type:"Feature",geometry:{type:"Point",coordinates:[lo,la]},properties:{
     id:c.id, st:c.status||"new", flag:c.accessIssue?1:0, sel:cSel.has(c.id)?1:0,
     title:assetTitle(c), sub:(c.sapId&&c.name)?c.name:"", axs:c.access||"",
-    issue:c.accessIssue?(c.accessIssueReason||"Access issue"):"", los:(losMode&&losStateById.has(c.id))?losStateById.get(c.id):"", lat:la, lng:lo }}; }
+    issue:c.accessIssue?(c.accessIssueReason||"Access issue"):"", lat:la, lng:lo }}; }
   function sitesGeo(list){ return {type:"FeatureCollection",features:(list||[]).map(siteFeature)}; }
   function mapCountLine(){
     const scoped=cSel.size||custFilter!=="all"||custQuery.trim();
@@ -2486,10 +2415,6 @@
         cmap.addSource("usgs-src",{type:"raster",tiles:[USGS_IMG],tileSize:256,maxzoom:16,attribution:"Imagery: USGS"});
         cmap.addLayer({id:"usgs",type:"raster",source:"usgs-src",layout:{visibility:"none"}});
         cmap.addSource("sites",{type:"geojson",data:sitesGeo(cShown),cluster:true,clusterRadius:48,clusterMaxZoom:14});
-        cmap.addSource("los-lines",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
-        cmap.addLayer({id:"los-lines",type:"line",source:"los-lines",layout:{"line-cap":"round"},paint:{
-          "line-color":["case",["==",["get","state"],"clear"],"#41D88B",["==",["get","state"],"blocked"],"#FF4D4D","#8a94a3"],
-          "line-width":3,"line-opacity":0.92}});
         cmap.addLayer({id:"clusters",type:"circle",source:"sites",filter:["has","point_count"],paint:{
           "circle-color":["step",["get","point_count"],"#46566b",10,"#5d7392",50,"#9a7b35"],
           "circle-radius":["step",["get","point_count"],15,10,19,50,25],
@@ -2499,8 +2424,6 @@
           paint:{"text-color":"#F2F5F9","text-halo-color":"#0E1116","text-halo-width":1.2}});
         const pinAnchor=ensurePinImages(cmap);
         const pinColorKey=["case",
-          ["==",["get","los"],"clear"],"scheduled",
-          ["==",["get","los"],"blocked"],"issue",
           ["==",["get","flag"],1],"issue",
           ["==",["get","st"],"replied"],"replied",
           ["==",["get","st"],"scheduled"],"scheduled",
@@ -2512,35 +2435,17 @@
             "icon-image":["concat","pin_",pinColorKey,["case",["==",["get","sel"],1],"_sel",""]],
             "icon-size":1,"icon-anchor":pinAnchor,
             "icon-allow-overlap":true,"icon-ignore-placement":true}});
-        cmap.addSource("los-observer",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
-        cmap.addLayer({id:"los-observer-ring",type:"circle",source:"los-observer",paint:{"circle-radius":11,"circle-color":"#1E63FF","circle-opacity":0.25}});
-        cmap.addLayer({id:"los-observer",type:"circle",source:"los-observer",paint:{"circle-radius":6,"circle-color":"#1E63FF","circle-stroke-width":2.5,"circle-stroke-color":"#FFFFFF"}});
-        cmap.addSource("los-cands",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
-        cmap.addLayer({id:"los-seg",type:"line",source:"los-cands",filter:["==",["geometry-type"],"LineString"],paint:{"line-color":"#8a94a3","line-width":2,"line-dasharray":[2,2]}});
-        cmap.addLayer({id:"los-cands",type:"circle",source:"los-cands",filter:["==",["get","kind"],"cand"],paint:{
-          "circle-radius":["case",["==",["get","best"],1],11,8],
-          "circle-color":["case",["==",["get","best"],1],"#FFB000","#5d7392"],
-          "circle-stroke-width":2,"circle-stroke-color":"#FFFFFF"}});
-        cmap.addLayer({id:"los-cands-num",type:"symbol",source:"los-cands",filter:["==",["get","kind"],"cand"],layout:{"text-field":["get","rank"],"text-size":11,"text-font":["Noto Sans Regular"],"text-allow-overlap":true},paint:{"text-color":["case",["==",["get","best"],1],"#10141a","#E7ECF3"]}});
         cmap.addSource("userpins",{type:"geojson",data:pinsGeo()});
         cmap.addLayer({id:"user-pins",type:"circle",source:"userpins",paint:{"circle-radius":10,"circle-color":["get","c"],"circle-stroke-width":2.5,"circle-stroke-color":"#FFFFFF"}});
         cmap.addLayer({id:"user-pins-l",type:"symbol",source:"userpins",layout:{"text-field":["get","L"],"text-size":12,"text-font":["Noto Sans Regular"],"text-allow-overlap":true},paint:{"text-color":"#FFFFFF","text-halo-color":"rgba(0,0,0,.5)","text-halo-width":1}});
-        cmap.on("click","los-cands",ev=>{ if(losScanActive&&!losPlacing&&!pinPlacing){ const r=parseInt(ev.features[0].properties.rank); if(r>=1) previewCand(r-1); } });
         cmap.on("click","user-pins",ev=>{
-          if(losMode||pinPlacing||measOn) return;
+          if(pinPlacing||measOn) return;
           const f=ev.features[0]; const p=userPins.find(x=>x.id===f.properties.id); if(p) showUserPinPopup(p);
         });
         cmap.addSource("meas",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
         cmap.addLayer({id:"meas-fill",type:"fill",source:"meas",filter:["==",["get","k"],"f"],paint:{"fill-color":"#FFB000","fill-opacity":0.14}});
         cmap.addLayer({id:"meas-line",type:"line",source:"meas",filter:["==",["get","k"],"l"],paint:{"line-color":"#FFB000","line-width":2.5,"line-dasharray":[2,1.5]}});
         cmap.addLayer({id:"meas-pts",type:"circle",source:"meas",filter:["==",["get","k"],"p"],paint:{"circle-radius":4,"circle-color":"#FFB000","circle-stroke-width":1.5,"circle-stroke-color":"#FFFFFF"}});
-        cmap.addSource("mission",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
-        cmap.addLayer({id:"mis-zone-fill",type:"fill",source:"mission",filter:["==",["get","k"],"zone"],paint:{"fill-color":"#FFB000","fill-opacity":0.08}});
-        cmap.addLayer({id:"mis-zone-line",type:"line",source:"mission",filter:["==",["get","k"],"zone"],paint:{"line-color":"#FFD24D","line-width":1.5,"line-dasharray":[2,2]}});
-        cmap.addLayer({id:"mis-rt",type:"line",source:"mission",filter:["==",["get","k"],"rt"],layout:{"line-cap":"round","line-join":"round"},paint:{"line-color":"#FFB000","line-width":3,"line-opacity":0.9}});
-        cmap.addLayer({id:"mis-stops",type:"circle",source:"mission",filter:["==",["get","k"],"stop"],paint:{"circle-radius":11,"circle-color":"#41D88B","circle-stroke-width":2.5,"circle-stroke-color":"#FFFFFF"}});
-        cmap.addLayer({id:"mis-num",type:"symbol",source:"mission",filter:["==",["get","k"],"stop"],layout:{"text-field":["get","rank"],"text-size":12,"text-font":["Noto Sans Regular"],"text-allow-overlap":true},paint:{"text-color":"#0b0f15"}});
-        cmap.on("click","mis-stops",ev=>{ if(measOn||losMode||pinPlacing) return; const r=parseInt(ev.features[0].properties.rank); if(r>=1) previewMisStop(r-1,true); });
         // Property lines (Regrid parcels via your proxy). Source added only when a
         // proxy URL is set; layers stay hidden until the user toggles them on.
         { const px=(store.get("fk_parcelsproxy","")||"").trim();
@@ -2552,35 +2457,19 @@
               cmap.addLayer({id:"parcels-lbl",type:"symbol",source:"parcels","source-layer":"parcels",minzoom:17,layout:{visibility:"none","text-field":["coalesce",["get","fields.parcelnumb"],["get","parcelnumb"],["get","address"]],"text-font":["Noto Sans Regular"],"text-size":10,"text-max-width":8},paint:{"text-color":"#FFE9A6","text-halo-color":"#0a0d12","text-halo-width":1.6}});
               cmap.on("mouseenter","parcels-fill",()=>{cmap.getCanvas().style.cursor="pointer";});
               cmap.on("mouseleave","parcels-fill",()=>{cmap.getCanvas().style.cursor="";});
-              cmap.on("click","parcels-fill",ev=>{ if(measOn||losMode||pinPlacing||misMode||zoneDraw) return; if(!parcelsOn) return; showParcelPopup(ev); });
+              cmap.on("click","parcels-fill",ev=>{ if(measOn||pinPlacing) return; if(!parcelsOn) return; showParcelPopup(ev); });
             }catch(e){}
           }
         }
-        ["los-cands","user-pins","mis-stops"].forEach(L=>{ cmap.on("mouseenter",L,()=>{cmap.getCanvas().style.cursor="pointer";}); cmap.on("mouseleave",L,()=>{cmap.getCanvas().style.cursor="";}); });
+        ["user-pins"].forEach(L=>{ cmap.on("mouseenter",L,()=>{cmap.getCanvas().style.cursor="pointer";}); cmap.on("mouseleave",L,()=>{cmap.getCanvas().style.cursor="";}); });
         cmap.on("click","clusters",ev=>{ const f=ev.features[0]; cmap.getSource("sites").getClusterExpansionZoom(f.properties.cluster_id).then(z=>cmap.easeTo({center:f.geometry.coordinates,zoom:z})).catch(()=>{}); });
         cmap.on("click",ev=>{
           const la=ev.lngLat.lat, lo=ev.lngLat.lng;
           if(measOn){ measPts.push([la,lo]); measUpdate(); return; }
-          if(losPlacing){ setObserver(la,lo); return; }
-          if(losScanStage===1){
-            let P=[la,lo]; if(losRoads){ const sn=snapToWays(losRoads.ways,P,150); if(sn) P=sn.pt; }
-            losScanA=P; losScanStage=2;
-            $("#losBannerText").textContent="Now tap the END of the stretch";
-            try{ cmap.getSource("los-cands").setData({type:"FeatureCollection",features:[{type:"Feature",properties:{kind:"cand",rank:"A",best:0},geometry:{type:"Point",coordinates:[P[1],P[0]]}}]}); }catch(e){}
-            return;
-          }
-          if(losScanStage===2){
-            let P=[la,lo]; if(losRoads){ const sn=snapToWays(losRoads.ways,P,150); if(sn) P=sn.pt; }
-            losScanB=P; losScanStage=0; $("#losBanner").classList.add("hidden");
-            let path=null;
-            if(losRoads){ try{ path=roadPath(losRoads,losScanA,losScanB); }catch(e){ path=null; } }
-            losScanPath=path||[losScanA,losScanB]; losScanSnapped=!!path;
-            runScan(); return;
-          }
           if(pinPlacing){ pinPlacing=false; $("#pinBanner").classList.add("hidden"); openPinSheet(null,la,lo); return; }
         });
         cmap.on("click","sites-pts",ev=>{
-          if(losMode||pinPlacing||measOn) return;
+          if(pinPlacing||measOn) return;
           const f=ev.features[0], id=f.properties.id;
           if(cSel.has(id)){ cSel.delete(id); refreshMarks(); closeMapPopup(); return; }
           cSel.add(id); refreshMarks();
@@ -2644,20 +2533,36 @@
     }
     return {glyphs,sprite,tilejson,vectorTiles};
   }
+  function countTiles(b,z){ // same ranges as tilesForBounds, without building them
+    const x0=clampT(lon2tile(b.w,z),z), x1=clampT(lon2tile(b.e,z),z);
+    const y0=clampT(lat2tile(b.n,z),z), y1=clampT(lat2tile(b.s,z),z);
+    return (Math.abs(x1-x0)+1)*(Math.abs(y1-y0)+1);
+  }
   function planOffline(b,zoom,chrome){
     const chromeUrls=[MAP_STYLE].concat(chrome.glyphs, chrome.sprite, chrome.tilejson);
-    const tiles=[]; const zLo=Math.max(10,zoom-2);
+    const zLo=Math.max(10,zoom-2);
+    // Zoomed in past a source's max zoom, still save its top level — the map overzooms those tiles.
+    const zDem=Math.min(zLo,13), zAer=Math.min(zLo,16);
+    // Count first: a zoomed-out view is millions of tiles, and building those URLs freezes the tab.
+    let nv=0, nd=0, na=0;
+    for(const src of chrome.vectorTiles){ const zHi=Math.min(src.maxzoom||14,16); for(let zz=Math.min(zLo,zHi); zz<=zHi; zz++) nv+=countTiles(b,zz)*src.tiles.length; }
+    for(let zz=zDem; zz<=13; zz++) nd+=countTiles(b,zz);
+    for(let zz=zAer; zz<=16; zz++) na+=countTiles(b,zz);
+    const baseBig=nv+nd>MAX_OFFLINE_TILES, aerialBig=nv+nd+na>MAX_OFFLINE_TILES;
+    if(baseBig) return { chromeUrls, tiles:[], dem:[], aerial:[], zLo, counts:{nv,nd,na} };
+    const tiles=[];
     for(const src of chrome.vectorTiles){
       const smax=src.maxzoom||14, zHi=Math.min(smax,16);
-      for(let zz=zLo; zz<=zHi; zz++){ for(const [tz,tx,ty] of tilesForBounds(b,zz)){ for(const tpl of src.tiles) tiles.push(fillTpl(tpl,tz,tx,ty)); } }
+      for(let zz=Math.min(zLo,zHi); zz<=zHi; zz++){ for(const [tz,tx,ty] of tilesForBounds(b,zz)){ for(const tpl of src.tiles) tiles.push(fillTpl(tpl,tz,tx,ty)); } }
     }
-    // terrain DEM tiles (drive hillshade now; feed line-of-sight later). Capped at z13.
+    // terrain DEM tiles (hillshade + 3D terrain). Capped at z13.
     const dem=[];
-    for(let zz=zLo; zz<=13; zz++){ for(const [tz,tx,ty] of tilesForBounds(b,zz)){ dem.push(fillTpl(DEM_TILE,tz,tx,ty)); } }
+    for(let zz=zDem; zz<=13; zz++){ for(const [tz,tx,ty] of tilesForBounds(b,zz)){ dem.push(fillTpl(DEM_TILE,tz,tx,ty)); } }
     // USGS aerial imagery (cacheable; shown offline in place of Esri). Up to z16.
     const aerial=[];
-    for(let zz=zLo; zz<=16; zz++){ for(const [tz,tx,ty] of tilesForBounds(b,zz)){ aerial.push(fillTpl(USGS_IMG,tz,tx,ty)); } }
-    return { chromeUrls, tiles:[...new Set(tiles)], dem:[...new Set(dem)], aerial:[...new Set(aerial)], zLo };
+    if(!aerialBig) for(let zz=zAer; zz<=16; zz++){ for(const [tz,tx,ty] of tilesForBounds(b,zz)){ aerial.push(fillTpl(USGS_IMG,tz,tx,ty)); } }
+    const t=[...new Set(tiles)], d=[...new Set(dem)], a=[...new Set(aerial)];
+    return { chromeUrls, tiles:t, dem:d, aerial:a, zLo, counts:{nv:t.length, nd:d.length, na:aerialBig?na:a.length} };
   }
   let dlBusy=false, dlCancel=false, dlPlan=null, dlBounds=null;
   function showDl(){ $("#dlOverlay").classList.remove("hidden"); }
@@ -2666,7 +2571,7 @@
   function wantAerial(){ const c=$("#dlAerial"); return !!(c&&c.checked); }
   function updateDlEstimate(){
     if(!dlPlan) return;
-    const nv=dlPlan.tiles.length, nd=dlPlan.dem.length, na=wantAerial()?dlPlan.aerial.length:0, total=nv+nd+na;
+    const nv=dlPlan.counts.nv, nd=dlPlan.counts.nd, na=wantAerial()?dlPlan.counts.na:0, total=nv+nd+na;
     if(!total){ $("#dlSub").textContent="Nothing to save for this view."; $("#dlGo").classList.add("hidden"); return; }
     if(total>MAX_OFFLINE_TILES){ $("#dlSub").textContent="Too large ("+total+" tiles) \u2014 zoom in"+(na?" or turn off aerial":"")+"."; $("#dlGo").classList.add("hidden"); return; }
     const mb=Math.max(1,Math.round(nv*0.045 + nd*0.12 + na*0.03));
@@ -2685,7 +2590,7 @@
     let style; try{ style=await fetch(MAP_STYLE,{mode:"cors"}).then(r=>r.json()); }catch(e){ hideDl(); toast("Couldn't reach the map server."); return; }
     const chrome=await gatherStyleResources(style);
     dlPlan=planOffline(dlBounds,zoom,chrome);
-    if(!dlPlan.tiles.length && !dlPlan.dem.length){ hideDl(); toast("Nothing to save for this view."); return; }
+    if(!dlPlan.counts.nv && !dlPlan.counts.nd){ hideDl(); toast("Nothing to save for this view."); return; }
     $("#dlOpt").classList.remove("hidden");
     updateDlEstimate();
   }
@@ -2701,7 +2606,9 @@
     if(withAerial) dlPlan.aerial.forEach(u=>items.push([u,true]));   // raster imagery
     const total=items.length;
     const save=$("#mSave"); if(save) save.classList.add("busy");
-    let done=0, ok=0; const cache=await caches.open(MAPCACHE); const CONC=6;
+    let done=0, ok=0; const CONC=6;
+    let cache; try{ cache=await caches.open(MAPCACHE); }
+    catch(e){ dlBusy=false; if(save) save.classList.remove("busy"); hideDl(); toast("Couldn't open offline storage on this device."); return; }
     for(let i=0;i<items.length && !dlCancel;i+=CONC){
       const batch=items.slice(i,i+CONC);
       await Promise.all(batch.map(async pair=>{
@@ -2778,10 +2685,10 @@
   }
   { const layer=$("#lassoLayer");
     if(layer){
-      layer.addEventListener("pointerdown",e=>{ if(!(lassoOn||zoneDraw))return; e.preventDefault(); lassoDrawing=true; lassoRect=layer.getBoundingClientRect(); lassoPts=[[e.clientX-lassoRect.left,e.clientY-lassoRect.top]]; drawLassoPath(); });
-      layer.addEventListener("pointermove",e=>{ if(!(lassoOn||zoneDraw)||!lassoDrawing)return; e.preventDefault(); lassoPts.push([e.clientX-lassoRect.left,e.clientY-lassoRect.top]); drawLassoPath(); });
-      layer.addEventListener("pointerup",e=>{ if(!(lassoOn||zoneDraw)||!lassoDrawing)return; e.preventDefault(); if(zoneDraw) finishZoneDraw(); else finishLasso(); });
-      layer.addEventListener("pointercancel",()=>{ if(lassoOn) setLasso(false); if(zoneDraw){ lassoDrawing=false; lassoPts=[]; drawLassoPath(); } });
+      layer.addEventListener("pointerdown",e=>{ if(!lassoOn)return; e.preventDefault(); lassoDrawing=true; lassoRect=layer.getBoundingClientRect(); lassoPts=[[e.clientX-lassoRect.left,e.clientY-lassoRect.top]]; drawLassoPath(); });
+      layer.addEventListener("pointermove",e=>{ if(!lassoOn||!lassoDrawing)return; e.preventDefault(); lassoPts.push([e.clientX-lassoRect.left,e.clientY-lassoRect.top]); drawLassoPath(); });
+      layer.addEventListener("pointerup",e=>{ if(!lassoOn||!lassoDrawing)return; e.preventDefault(); finishLasso(); });
+      layer.addEventListener("pointercancel",()=>{ if(lassoOn) setLasso(false); });
     }
   }
   { const lb=$("#mLasso"); if(lb) lb.addEventListener("click",()=>setLasso(!lassoOn)); }
@@ -2908,7 +2815,7 @@
   $("#impCancel").addEventListener("click",reqCloseImport);
 
   (function addSheetCloseButtons(){
-    const closers={ dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, rtSheet:closeRoute, losSheet:closeLos, addSheet:closeAdd, pinSheet:closePinSheet, misSheet:closeMisSheet };
+    const closers={ dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, addSheet:closeAdd, pinSheet:closePinSheet };
     Object.keys(closers).forEach(id=>{
       const sh=document.getElementById(id); if(!sh)return;
       const bar=document.createElement("div"); bar.className="sheettop";
@@ -2932,142 +2839,8 @@
   });
   $("#xKml").addEventListener("click",()=>{ const list=exportList().filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o);}); if(!list.length){ toast("No points with coordinates to export."); return; } download("customers.kml",customersToKML(list),"application/vnd.google-earth.kml+xml"); closeExport(); });
 
-  /* ---------------- route optimizer + hand-off (Phase 5) ---------------- */
-  const ROAD_FACTOR=1.3;
-  let rtState=null, rtToken=0;
-  /* --- elevation sampling from cached/online DEM (terrarium) --- */
-  const ELEV_Z=13, ELEV_STEP_KM=3;
-  const _elevCv=document.createElement("canvas"); _elevCv.width=256; _elevCv.height=256;
-  const _tileCache=new Map();
-  function _demTile(lat,lng,z){ const n=Math.pow(2,z); const lr=lat*Math.PI/180;
-    const xt=Math.floor((lng+180)/360*n);
-    const yt=Math.floor((1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n);
-    const xf=((lng+180)/360*n-xt)*256, yf=((1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n-yt)*256;
-    return {xt,yt,px:Math.min(255,Math.max(0,Math.floor(xf))),py:Math.min(255,Math.max(0,Math.floor(yf)))}; }
-  function _loadImg(url){ return new Promise(res=>{ const img=new Image(); img.crossOrigin="anonymous"; img.onload=()=>res(img); img.onerror=()=>res(null); img.src=url; }); }
-  async function sampleElevation(lat,lng){
-    const t=_demTile(lat,lng,ELEV_Z), key=ELEV_Z+"/"+t.xt+"/"+t.yt;
-    let data=_tileCache.get(key);
-    if(data===undefined){
-      if(_tileCache.size>240) _tileCache.clear();
-      const url=DEM_TILE.replace("{z}",ELEV_Z).replace("{x}",t.xt).replace("{y}",t.yt);
-      const img=await _loadImg(url);
-      if(!img){ data=null; }
-      else{ const ctx=_elevCv.getContext("2d",{willReadFrequently:true}); ctx.clearRect(0,0,256,256); ctx.drawImage(img,0,0,256,256);
-        try{ data=ctx.getImageData(0,0,256,256).data; }catch(e){ data=null; } }
-      _tileCache.set(key,data);
-    }
-    if(!data) return null;
-    const o=(t.py*256+t.px)*4;
-    return (data[o]*256+data[o+1]+data[o+2]/256)-32768;
-  }
-  /* Synchronous read from already-cached DEM tiles. Returns undefined if the tile
-     hasn't been fetched yet (caller falls back to the async path), null if the tile
-     failed to load, else meters. Pure array math -> ~1M reads/sec on a phone. */
-  function sampleElevSync(lat,lng){
-    const t=_demTile(lat,lng,ELEV_Z), key=ELEV_Z+"/"+t.xt+"/"+t.yt;
-    const data=_tileCache.get(key);
-    if(data===undefined) return undefined;
-    if(!data) return null;
-    const o=(t.py*256+t.px)*4;
-    return (data[o]*256+data[o+1]+data[o+2]/256)-32768;
-  }
-  /* Fetch every DEM tile covering a bbox once, so the sync path never misses. */
-  async function prefetchElevBox(laMin,laMax,loMin,loMax){
-    const span=360/Math.pow(2,ELEV_Z), step=span*0.4; // < half a tile in both axes
-    const jobs=[];
-    for(let la=laMin; la<=laMax+step; la+=step)
-      for(let lo=loMin; lo<=loMax+step; lo+=step){
-        const t=_demTile(Math.min(la,laMax),Math.min(lo,loMax),ELEV_Z), key=ELEV_Z+"/"+t.xt+"/"+t.yt;
-        if(!_tileCache.has(key)) jobs.push(sampleElevation(Math.min(la,laMax),Math.min(lo,loMax)));
-      }
-    if(jobs.length) await Promise.all(jobs);
-  }
-  function routeSamplePoints(ordered,start,closed){
-    const path=[]; if(start)path.push(start);
-    ordered.forEach(s=>path.push([parseFloat(s.lat),parseFloat(s.lng)]));
-    if(closed&&start&&ordered.length)path.push(start);
-    let total=0; for(let i=0;i<path.length-1;i++)total+=haversineKm(path[i],path[i+1]);
-    const step=Math.max(ELEV_STEP_KM, total/280);
-    const pts=[];
-    for(let i=0;i<path.length-1;i++){ const A=path[i],B=path[i+1]; const legKm=haversineKm(A,B); const steps=Math.max(1,Math.ceil(legKm/step));
-      for(let j=(i===0?0:1);j<=steps;j++){ const t=j/steps; pts.push([A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t]); } }
-    return pts;
-  }
-  async function computeAscent(samples){
-    const el=[]; for(const [la,lo] of samples){ const e=await sampleElevation(la,lo); if(e==null) return null; el.push(e); }
-    let ascent=0; for(let i=1;i<el.length;i++){ if(el[i]>el[i-1]) ascent+=el[i]-el[i-1]; }
-    return {ascent};
-  }
-  function climbFuelGal(ascentM){ const kg=(parseFloat(store.get("fk_vehweight","4800"))||4800)*0.453592; return (kg*9.81*ascentM)/(1.32e8*0.22); }
-  function fmtFt(m){ const ft=Math.round(m*3.28084/10)*10; return ft.toLocaleString("en-US")+" ft"; }
+  /* ---------------- distance helper ---------------- */
   function haversineKm(a,b){ const R=6371,toR=x=>x*Math.PI/180; const dLa=toR(b[0]-a[0]),dLo=toR(b[1]-a[1]); const s=Math.sin(dLa/2)**2+Math.cos(toR(a[0]))*Math.cos(toR(b[0]))*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.min(1,Math.sqrt(s))); }
-  function rtPathLen(order,pts,start,closed){ let d=0,prev=start; for(const i of order){ if(prev)d+=haversineKm(prev,pts[i]); prev=pts[i]; } if(closed&&start&&order.length)d+=haversineKm(pts[order[order.length-1]],start); return d; }
-  function rtNearest(pts,start){ const n=pts.length,used=new Array(n).fill(false),order=[]; let cur=start; if(!cur){ order.push(0); used[0]=true; cur=pts[0]; } while(order.length<n){ let best=-1,bd=Infinity; for(let i=0;i<n;i++){ if(used[i])continue; const d=haversineKm(cur,pts[i]); if(d<bd){bd=d;best=i;} } order.push(best); used[best]=true; cur=pts[best]; } return order; }
-  function rtTwoOpt(order,pts,start,closed){ let best=order.slice(),bestLen=rtPathLen(best,pts,start,closed),improved=true,guard=0; while(improved&&guard++<60){ improved=false; for(let i=0;i<best.length-1;i++){ for(let k=i+1;k<best.length;k++){ const cand=best.slice(0,i).concat(best.slice(i,k+1).reverse(),best.slice(k+1)); const l=rtPathLen(cand,pts,start,closed); if(l+1e-9<bestLen){ best=cand;bestLen=l;improved=true; } } } } return best; }
-  function optimizeStops(stops,start,closed){ const pts=stops.map(s=>[parseFloat(s.lat),parseFloat(s.lng)]); let order=rtNearest(pts,start); order=rtTwoOpt(order,pts,start,closed); return order.map(i=>stops[i]); }
-  function getPos(timeoutMs){ return new Promise(res=>{ if(!navigator.geolocation){res(null);return;} let done=false; const fin=v=>{ if(!done){done=true;res(v);} }; try{ navigator.geolocation.getCurrentPosition(p=>fin([p.coords.latitude,p.coords.longitude]),()=>fin(null),{enableHighAccuracy:true,timeout:timeoutMs||6000,maximumAge:60000}); }catch(e){ fin(null); } setTimeout(()=>fin(null),(timeoutMs||6000)+600); }); }
-  function fmtDur(h){ const m=Math.max(0,Math.round(h*60)); if(m<60)return m+" min"; return Math.floor(m/60)+"h "+String(m%60).padStart(2,"0")+"m"; }
-  function routeSummaryHTML(climb){
-    const c=rtState.calc; let gal=c.baseGal, extra="";
-    if(climb&&climb.ascentM!=null){ gal+=climbFuelGal(climb.ascentM); extra=" · +"+fmtFt(climb.ascentM)+" climb"; }
-    const cost=gal*c.price, costStr=c.price>0?(" · ~$"+cost.toFixed(2)+" fuel"):"";
-    let sub=rtState.ordered.length+" stops"+(rtState.start?" · from your location":"")+(rtState.closed?" · round trip":"");
-    if(climb==null) sub+=" · checking elevation\u2026";
-    else if(climb.unavailable) sub+=" · elevation data not saved for this area";
-    else sub+=extra;
-    sub+=" · road distance estimated";
-    return "~"+c.roadMi.toFixed(c.roadMi<10?1:0)+" mi · ~"+fmtDur(c.hrs)+costStr+'<span class="rtsub">'+sub+'</span>';
-  }
-  async function updateRouteElevation(){
-    const token=++rtToken, snap=rtState;
-    const samples=routeSamplePoints(snap.ordered,snap.start,snap.closed);
-    let info=null; try{ info=await computeAscent(samples); }catch(e){ info=null; }
-    if(rtToken!==token||rtState!==snap) return;   // a newer route superseded this
-    $("#rtSum").innerHTML=routeSummaryHTML(info?{ascentM:info.ascent}:{unavailable:true});
-  }
-  function renderRoute(){
-    if(!rtState)return;
-    const {ordered,start,closed}=rtState;
-    const pts=ordered.map(s=>[parseFloat(s.lat),parseFloat(s.lng)]);
-    let straightKm=0,prev=start; const legs=[];
-    ordered.forEach((s,i)=>{ const d=prev?haversineKm(prev,pts[i]):0; legs.push(d); straightKm+=d; prev=pts[i]; });
-    if(closed&&start&&ordered.length) straightKm+=haversineKm(pts[pts.length-1],start);
-    const mpg=parseFloat(store.get("fk_mpg","22"))||22, price=parseFloat(store.get("fk_fuelprice","4.75"))||0, mph=parseFloat(store.get("fk_avgspeed","40"))||40;
-    const roadMi=straightKm*ROAD_FACTOR*0.621371;
-    rtState.calc={roadMi,hrs:roadMi/mph,baseGal:roadMi/mpg,price};
-    $("#rtSum").innerHTML=routeSummaryHTML(null);
-    let html="";
-    if(start) html+='<li class="rtstart"><span class="rtn">\u25CE</span><div class="rtmain"><div class="rttitle">Your location</div><div class="rtmeta">start</div></div></li>';
-    ordered.forEach((c,i)=>{ const miLeg=legs[i]*ROAD_FACTOR*0.621371;
-      const meta=(c.name?escapeHtml(truncate(c.name,32))+" · ":"")+((i===0&&!start)?"start":("+"+miLeg.toFixed(miLeg<10?1:0)+" mi"));
-      html+='<li><span class="rtn">'+(i+1)+'</span><div class="rtmain"><div class="rttitle">'+escapeHtml(assetTitle(c))+'</div><div class="rtmeta">'+meta+'</div></div></li>'; });
-    $("#rtList").innerHTML=html;
-    const cap=10;
-    let use=ordered, note="Opens in Google Maps from your current location. Apple Maps users: use the per-site directions on each pin.";
-    if(ordered.length>cap){ use=ordered.slice(0,cap); note="Google Maps takes up to "+cap+" stops per route \u2014 opening the first "+cap+". Build a second route for the remaining "+(ordered.length-cap)+"."; }
-    const coords=use.map(s=>parseFloat(s.lat).toFixed(6)+","+parseFloat(s.lng).toFixed(6));
-    const dest=coords[coords.length-1], wp=coords.slice(0,coords.length-1);
-    rtState.gurl="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination="+encodeURIComponent(dest)+(wp.length?"&waypoints="+encodeURIComponent(wp.join("|")):"");
-    $("#rtNote").textContent=note;
-    updateRouteElevation();
-  }
-  async function openRoute(){
-    const sel=customers.filter(c=>cSel.has(c.id));
-    const list=(sel.length?sel:mapList()).filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o);});
-    if(list.length<2){ toast("Select at least 2 located sites to build a route"); return; }
-    $("#rtSum").textContent="Finding your location and optimizing\u2026"; $("#rtList").innerHTML=""; $("#rtNote").textContent="";
-    $("#rtScrim").classList.add("show"); $("#rtSheet").classList.add("show");
-    const closed=$("#rtRound").checked;
-    const start=await getPos(6000);
-    rtState={src:list,start,closed,ordered:optimizeStops(list,start,closed),gurl:""};
-    renderRoute();
-  }
-  function closeRoute(){ $("#rtScrim").classList.remove("show"); $("#rtSheet").classList.remove("show"); }
-  { const b=$("#mRoute"); if(b) b.addEventListener("click",openRoute); }
-  { const s=$("#rtScrim"); if(s) s.addEventListener("click",closeRoute); }
-  { const r=$("#rtRound"); if(r) r.addEventListener("change",()=>{ if(!rtState)return; rtState.closed=r.checked; rtState.ordered=optimizeStops(rtState.src,rtState.start,rtState.closed); renderRoute(); }); }
-  { const g=$("#rtGoogle"); if(g) g.addEventListener("click",()=>{ if(rtState&&rtState.gurl) window.open(rtState.gurl,"_blank","noopener"); }); }
 
   /* ---------------- measure tool ---------------- */
   let measOn=false, measArea=false, measPts=[];
@@ -3101,8 +2874,6 @@
   }
   function openMeasure(){
     if(!cmap||!cMapReady){ toast("Open the map first"); return; }
-    if(losMode){ toast("Finish line of sight first"); return; }
-    if(zoneDraw||misBusy){ toast("Finish the mission first"); return; }
     pinPlacing=false; $("#pinBanner").classList.add("hidden");
     measOn=true; measPts=[]; measUpdate();
     $("#measBanner").classList.remove("hidden");
@@ -3118,143 +2889,6 @@
   { const b=$("#measX"); if(b) b.addEventListener("click",closeMeasure); }
   { const b=$("#measUndo"); if(b) b.addEventListener("click",()=>{ measPts.pop(); measUpdate(); }); }
   { const b=$("#measModeBtn"); if(b) b.addEventListener("click",()=>{ measArea=!measArea; b.textContent=measArea?"Distance":"Area"; measPts=[]; measUpdate(); }); }
-
-  /* ---------------- roads (OpenStreetMap via Overpass): fetch, graph, snap ---------------- */
-  const OVERPASS_ENDPOINTS=[
-    "https://overpass-api.de/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter",
-    "https://overpass.private.coffee/api/interpreter"
-  ];
-  const _roadCache=new Map();
-  async function _overpassOnce(q,url){
-    const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"data="+encodeURIComponent(q)});
-    if(!r.ok) throw new Error("http "+r.status);
-    const j=await r.json();
-    // Overpass answers 200 with a "remark" when it rate-limits or times out server-side.
-    if(j && j.remark && /timed out|rate_limited|runtime error|error/i.test(j.remark)) throw new Error("overpass busy");
-    return (j.elements||[]).filter(el=>el.type==="way"&&el.geometry&&el.geometry.length>1)
-      .map(el=>({pts:el.geometry.map(g=>[g.lat,g.lon])}));
-  }
-  async function _roadsViaProxy(so,we,no,ea){
-    const px=(store.get("fk_roadsproxy","")||"").trim(); if(!px) return null;
-    const url=px.replace(/\/+$/,"")+"?s="+so+"&w="+we+"&n="+no+"&e="+ea;
-    const r=await fetch(url,{method:"GET"});
-    if(!r.ok) throw new Error("roads proxy http "+r.status);
-    const j=await r.json();
-    if(j && j.error) throw new Error(j.error);
-    return {ways:(j.ways||[]).filter(w=>w&&w.pts&&w.pts.length>1)};
-  }
-  async function fetchRoads(so,we,no,ea){
-    const key=[so.toFixed(3),we.toFixed(3),no.toFixed(3),ea.toFixed(3)].join(",");
-    if(_roadCache.has(key)) return _roadCache.get(key);
-    // 1) your own cached roads proxy first (reliable, not IP-rate-limited)
-    let proxyErr=null;
-    try{
-      const viaProxy=await _roadsViaProxy(so,we,no,ea);
-      if(viaProxy){
-        if(viaProxy.ways.length){ _roadCache.set(key,viaProxy); if(_roadCache.size>12) _roadCache.delete(_roadCache.keys().next().value); }
-        return viaProxy;
-      }
-    }catch(e){ proxyErr=e; } // proxy down/unreachable -> fall through to public mirrors
-    // 2) public Overpass mirrors as fallback
-    const q='[out:json][timeout:25];way[highway~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|service|track|living_street|road)$"]('+so+','+we+','+no+','+ea+');out geom;';
-    let lastErr=proxyErr;
-    for(let i=0;i<OVERPASS_ENDPOINTS.length;i++){
-      try{
-        const ways=await _overpassOnce(q,OVERPASS_ENDPOINTS[i]);
-        const out={ways:ways};
-        if(ways.length){ _roadCache.set(key,out); if(_roadCache.size>12) _roadCache.delete(_roadCache.keys().next().value); }
-        return out;
-      }catch(e){ lastErr=e; if(i<OVERPASS_ENDPOINTS.length-1) await sleep(500*(i+1)); }
-    }
-    const err=new Error("roads unavailable"); err.roadsBusy=true; throw err;
-  }
-  function _rk(p){ return p[0].toFixed(6)+","+p[1].toFixed(6); }
-  function buildRoadGraph(ways){
-    const nodes=new Map();
-    function getN(p){ const k=_rk(p); let n=nodes.get(k); if(!n){ n={p:[p[0],p[1]],adj:[]}; nodes.set(k,n); } return k; }
-    ways.forEach(w=>{ for(let i=0;i<w.pts.length-1;i++){
-      const ka=getN(w.pts[i]), kb=getN(w.pts[i+1]);
-      const d=haversineKm(nodes.get(ka).p,nodes.get(kb).p)*1000;
-      nodes.get(ka).adj.push({k:kb,w:d}); nodes.get(kb).adj.push({k:ka,w:d}); } });
-    return nodes;
-  }
-  function projSeg(p,a,b){
-    const kx=Math.cos(p[0]*Math.PI/180)*111320, ky=110540;
-    const ax=(a[1]-p[1])*kx, ay=(a[0]-p[0])*ky, bx=(b[1]-p[1])*kx, by=(b[0]-p[0])*ky;
-    const dx=bx-ax, dy=by-ay, L2=dx*dx+dy*dy;
-    let t=L2?(-(ax*dx+ay*dy))/L2:0; t=Math.max(0,Math.min(1,t));
-    const x=ax+dx*t, y=ay+dy*t;
-    return {d:Math.hypot(x,y), t:t, p:[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t]};
-  }
-  function snapToWays(ways,pt,maxM){
-    let best=null;
-    for(let wi=0;wi<ways.length;wi++){ const w=ways[wi];
-      for(let i=0;i<w.pts.length-1;i++){ const r=projSeg(pt,w.pts[i],w.pts[i+1]);
-        if(r.d<=(maxM||150)&&(!best||r.d<best.d)) best={d:r.d,pt:r.p,wi:wi,seg:i,t:r.t}; } }
-    return best;
-  }
-  function pathLenM(pts){ let m=0; for(let i=0;i<pts.length-1;i++) m+=haversineKm(pts[i],pts[i+1])*1000; return m; }
-  function samplePath(pts,step){
-    if(pts.length<2) return pts.slice();
-    const out=[pts[0].slice()]; let carry=0;
-    for(let i=0;i<pts.length-1;i++){
-      const a=pts[i], b=pts[i+1], seg=haversineKm(a,b)*1000; if(seg<=0) continue;
-      let d=step-carry, emitted=false;
-      while(d<=seg){ const t=d/seg; out.push([a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t]); d+=step; emitted=true; }
-      carry = emitted ? (seg-(d-step)) : (carry+seg);
-    }
-    const last=pts[pts.length-1];
-    if(haversineKm(out[out.length-1],last)*1000>step*0.3) out.push(last.slice()); else out[out.length-1]=last.slice();
-    return out;
-  }
-  function roadPath(rd,A,B){
-    const ways=rd.ways, g=rd.graph;
-    const sa=snapToWays(ways,A,200), sb=snapToWays(ways,B,200);
-    if(!sa||!sb) return null;
-    if(sa.wi===sb.wi){
-      const w=ways[sa.wi];
-      let i0=sa.seg,t0=sa.t,i1=sb.seg,t1=sb.t,rev=false;
-      if(i1<i0||(i1===i0&&t1<t0)){ const ti=i0,tt=t0; i0=i1; t0=t1; i1=ti; t1=tt; rev=true; }
-      const pts=[[w.pts[i0][0]+(w.pts[i0+1][0]-w.pts[i0][0])*t0, w.pts[i0][1]+(w.pts[i0+1][1]-w.pts[i0][1])*t0]];
-      for(let i=i0+1;i<=i1;i++) pts.push([w.pts[i][0],w.pts[i][1]]);
-      pts.push([w.pts[i1][0]+(w.pts[i1+1][0]-w.pts[i1][0])*t1, w.pts[i1][1]+(w.pts[i1+1][1]-w.pts[i1][1])*t1]);
-      if(rev) pts.reverse();
-      return pts;
-    }
-    const wa=ways[sa.wi], wb=ways[sb.wi];
-    const aN=[_rk(wa.pts[sa.seg]),_rk(wa.pts[sa.seg+1])], bN=[_rk(wb.pts[sb.seg]),_rk(wb.pts[sb.seg+1])];
-    const extra=new Map();
-    function addE(k,e){ if(!extra.has(k)) extra.set(k,[]); extra.get(k).push(e); }
-    aN.forEach(k=>{ const n=g.get(k); if(n){ const w=haversineKm(sa.pt,n.p)*1000; addE("__A",{k:k,w:w}); addE(k,{k:"__A",w:w}); } });
-    bN.forEach(k=>{ const n=g.get(k); if(n){ const w=haversineKm(sb.pt,n.p)*1000; addE("__B",{k:k,w:w}); addE(k,{k:"__B",w:w}); } });
-    const dist=new Map([["__A",0]]), prev=new Map(), Q=[["__A",0]], seen=new Set();
-    function adjOf(k){ const base=(k==="__A"||k==="__B")?[]:((g.get(k)||{}).adj||[]); const ex=extra.get(k)||[]; return ex.length?base.concat(ex):base; }
-    let found=false, guard=0;
-    while(Q.length&&guard++<250000){
-      let bi=0; for(let i=1;i<Q.length;i++) if(Q[i][1]<Q[bi][1]) bi=i;
-      const it=Q.splice(bi,1)[0], k=it[0], d=it[1];
-      if(seen.has(k)) continue; seen.add(k);
-      if(k==="__B"){ found=true; break; }
-      const ad=adjOf(k);
-      for(let i=0;i<ad.length;i++){ const e=ad[i], nd=d+e.w, cur=dist.has(e.k)?dist.get(e.k):Infinity;
-        if(nd<cur){ dist.set(e.k,nd); prev.set(e.k,k); Q.push([e.k,nd]); } }
-    }
-    if(!found) return null;
-    const keys=[]; let cur="__B";
-    while(cur!==undefined){ keys.push(cur); if(cur==="__A") break; cur=prev.get(cur); }
-    if(keys[keys.length-1]!=="__A") return null;
-    keys.reverse();
-    return keys.map(k=>k==="__A"?[sa.pt[0],sa.pt[1]]:(k==="__B"?[sb.pt[0],sb.pt[1]]:[g.get(k).p[0],g.get(k).p[1]]));
-  }
-  function geoInPoly(lat,lng,poly){
-    let inside=false;
-    for(let i=0,j=poly.length-1;i<poly.length;j=i++){
-      const yi=poly[i][0],xi=poly[i][1],yj=poly[j][0],xj=poly[j][1];
-      if(((yi>lat)!==(yj>lat)) && (lng < (xj-xi)*(lat-yi)/(yj-yi)+xi)) inside=!inside;
-    }
-    return inside;
-  }
 
   /* ---------------- custom map pins (non-asset) ---------------- */
   const PIN_TYPES=[
@@ -3302,7 +2936,6 @@
   }
   { const b=$("#mPin"); if(b) b.addEventListener("click",()=>{
       if(!cmap||!cMapReady){ toast("Open the map first"); return; }
-      if(losMode){ toast("Finish line of sight first"); return; }
       pinPlacing=true; $("#pinBanner").classList.remove("hidden"); closeMapPopup();
   }); }
   { const b=$("#pinCancel"); if(b) b.addEventListener("click",()=>{ pinPlacing=false; $("#pinBanner").classList.add("hidden"); }); }
@@ -3310,289 +2943,6 @@
   { const b=$("#pDelete"); if(b) b.addEventListener("click",()=>{ if(editPinId&&confirm("Delete this pin?")){ userPins=userPins.filter(x=>x.id!==editPinId); savePinsStore(); refreshUserPins(); closePinSheet(); toast("Pin deleted"); } }); }
   { const s=$("#pinScrim"); if(s) s.addEventListener("click",closePinSheet); }
 
-  /* ---------------- line of sight (Phase 6) ---------------- */
-  const LOS_REFR=1.13, R_EARTH=6371000;
-  let losMode=false, losPlacing=false, losObs=null, losAssetFt=null, losToken=0, losResults=[];
-  let losScanStage=0, losScanA=null, losScanB=null, losScanActive=false, losScanCands=[], losMaxFt=1500;
-  let losRoads=null, losScanPath=null, losScanSnapped=false;
-  let losStateById=new Map();
-  let losCanopy=false, losCanopyStatus="off", losCanopyManualFt=50, _canopyProbeFailed=false;
-
-  /* --- measured tree-canopy heights from Meta/WRI 1m COGs (Phase 7, opt-in, online) --- */
-  const GEOTIFF_CDN="https://cdn.jsdelivr.net/npm/geotiff@3.0.5/dist-browser/geotiff.js";
-  const CANOPY_QK_Z=9;
-  const CANOPY_URL=qk=>{ const px=(store.get("fk_canopyproxy","")||"").trim(); return px ? (px.replace(/\/+$/,"")+"?qk="+qk) : ("https://dataforgood-fb-data.s3.amazonaws.com/forests/v1/alsgedi_global_v6_float/chm/"+qk+".tif"); };
-  const _cogCache=new Map(); let _geotiffPromise=null;
-  function loadGeoTIFF(){
-    if(window.GeoTIFF) return Promise.resolve(window.GeoTIFF);
-    if(_geotiffPromise) return _geotiffPromise;
-    _geotiffPromise=new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=GEOTIFF_CDN; s.async=true; s.onload=()=>window.GeoTIFF?res(window.GeoTIFF):rej(new Error("no GeoTIFF")); s.onerror=()=>rej(new Error("geotiff load failed")); document.head.appendChild(s); });
-    return _geotiffPromise;
-  }
-  function _tileXY(lng,lat,z){ const n=Math.pow(2,z); const lr=lat*Math.PI/180; return [Math.floor((lng+180)/360*n), Math.floor((1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n)]; }
-  function _quadKey(x,y,z){ let qk=""; for(let i=z;i>0;i--){ let d=0; const m=1<<(i-1); if(x&m)d+=1; if(y&m)d+=2; qk+=""+d; } return qk; }
-  function _merc(lng,lat){ const R=20037508.342789244; const y=Math.log(Math.tan((90+lat)*Math.PI/360))/(Math.PI/180)*R/180; return [lng*R/180, y]; }
-  async function _getCog(qk){
-    if(_cogCache.has(qk)) return _cogCache.get(qk);
-    let out=null;
-    try{ const GT=await loadGeoTIFF(); const tiff=await GT.fromUrl(CANOPY_URL(qk)); const image=await tiff.getImage();
-      out={image, origin:image.getOrigin(), res:image.getResolution(), w:image.getWidth(), h:image.getHeight()}; }
-    catch(e){ out=null; }
-    _cogCache.set(qk,out); return out;
-  }
-  async function sampleCanopyM(lat,lng){
-    const [tx,ty]=_tileXY(lng,lat,CANOPY_QK_Z), qk=_quadKey(tx,ty,CANOPY_QK_Z);
-    const cog=await _getCog(qk); if(!cog) return null;
-    const [mx,my]=_merc(lng,lat);
-    const px=Math.floor((mx-cog.origin[0])/Math.abs(cog.res[0])), py=Math.floor((cog.origin[1]-my)/Math.abs(cog.res[1]));
-    if(px<0||py<0||px>=cog.w||py>=cog.h) return 0;
-    try{ const d=await cog.image.readRasters({window:[px,py,px+1,py+1]}); let v=d[0][0];
-      if(v==null||isNaN(v)||v<0||v>=250) return 0;   /* 255 = nodata (water/built-up/snow) */
-      return v; }
-    catch(e){ return null; }
-  }
-  // Batched: read every point on a sightline in one windowed request per tile
-  // (instead of one request per point). Returns meters parallel to pts, 0 where
-  // nodata/outside/unreadable. Big speed win over per-point reads on mobile.
-  async function sampleCanopyLine(pts){
-    const out=new Array(pts.length).fill(0);
-    const groups=new Map();
-    for(let i=0;i<pts.length;i++){ const [tx,ty]=_tileXY(pts[i][1],pts[i][0],CANOPY_QK_Z); const qk=_quadKey(tx,ty,CANOPY_QK_Z); let a=groups.get(qk); if(!a){a=[];groups.set(qk,a);} a.push(i); }
-    for(const [qk,idxs] of groups){
-      const cog=await _getCog(qk); if(!cog) continue;
-      const pxs=idxs.map(i=>{ const [mx,my]=_merc(pts[i][1],pts[i][0]); return [(mx-cog.origin[0])/Math.abs(cog.res[0]), (cog.origin[1]-my)/Math.abs(cog.res[1])]; });
-      let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
-      for(const [px,py] of pxs){ if(px<minx)minx=px; if(px>maxx)maxx=px; if(py<miny)miny=py; if(py>maxy)maxy=py; }
-      minx=Math.max(0,Math.floor(minx)); miny=Math.max(0,Math.floor(miny)); maxx=Math.min(cog.w,Math.ceil(maxx)+1); maxy=Math.min(cog.h,Math.ceil(maxy)+1);
-      if(maxx<=minx||maxy<=miny) continue;
-      const wpx=maxx-minx, hpx=maxy-miny, CAP=2048;
-      const outW=Math.min(wpx,CAP), outH=Math.min(hpx,CAP), resample=(outW<wpx||outH<hpx);
-      let band;
-      try{ const d=await cog.image.readRasters(resample?{window:[minx,miny,maxx,maxy],width:outW,height:outH}:{window:[minx,miny,maxx,maxy]}); band=d[0]; }
-      catch(e){ continue; }
-      const sx=outW/wpx, sy=outH/hpx;
-      for(let k=0;k<idxs.length;k++){ const [px,py]=pxs[k];
-        let ax=Math.floor((px-minx)*sx), ay=Math.floor((py-miny)*sy);
-        ax=Math.max(0,Math.min(outW-1,ax)); ay=Math.max(0,Math.min(outH-1,ay));
-        let v=band[ay*outW+ax]; if(v==null||isNaN(v)||v<0||v>=250)v=0;
-        out[idxs[k]]=v;
-      }
-    }
-    return out;
-  }
-  function obsHeightM(){ return (parseFloat(store.get("fk_obsft","6.33"))||6.33)*0.3048; }
-  // Area sampler: one windowed read per canopy tile covering a bounding box; returns
-  // a synchronous (lat,lng)->meters function. Used by the road scan so hundreds of
-  // sightlines don't each fire their own network reads.
-  async function makeCanopyBoxSampler(latMin,latMax,lngMin,lngMax){
-    const [xa,ya]=_tileXY(lngMin,latMax,CANOPY_QK_Z), [xb,yb]=_tileXY(lngMax,latMin,CANOPY_QK_Z);
-    const ent=new Map(); let any=false;
-    for(let x=Math.min(xa,xb);x<=Math.max(xa,xb);x++) for(let y=Math.min(ya,yb);y<=Math.max(ya,yb);y++){
-      const qk=_quadKey(x,y,CANOPY_QK_Z);
-      const cog=await _getCog(qk); if(!cog){ ent.set(qk,null); continue; }
-      const [mx0,my0]=_merc(lngMin,latMax), [mx1,my1]=_merc(lngMax,latMin);
-      let minx=Math.max(0,Math.floor((mx0-cog.origin[0])/Math.abs(cog.res[0]))), maxx=Math.min(cog.w,Math.ceil((mx1-cog.origin[0])/Math.abs(cog.res[0]))+1);
-      let miny=Math.max(0,Math.floor((cog.origin[1]-my0)/Math.abs(cog.res[1]))), maxy=Math.min(cog.h,Math.ceil((cog.origin[1]-my1)/Math.abs(cog.res[1]))+1);
-      if(maxx<=minx||maxy<=miny){ ent.set(qk,null); continue; }
-      const wpx=maxx-minx, hpx=maxy-miny, CAP=1024;
-      const outW=Math.min(wpx,CAP), outH=Math.min(hpx,CAP), rs=(outW<wpx||outH<hpx);
-      let band;
-      try{ const d=await cog.image.readRasters(rs?{window:[minx,miny,maxx,maxy],width:outW,height:outH}:{window:[minx,miny,maxx,maxy]}); band=d[0]; }
-      catch(e){ ent.set(qk,null); continue; }
-      ent.set(qk,{cog:cog,band:band,minx:minx,miny:miny,sx:outW/wpx,sy:outH/hpx,outW:outW,outH:outH}); any=true;
-    }
-    if(!any) return null;
-    return function(lat,lng){
-      const [tx,ty]=_tileXY(lng,lat,CANOPY_QK_Z), e=ent.get(_quadKey(tx,ty,CANOPY_QK_Z)); if(!e) return 0;
-      const [mx,my]=_merc(lng,lat);
-      let ax=Math.floor(((mx-e.cog.origin[0])/Math.abs(e.cog.res[0])-e.minx)*e.sx), ay=Math.floor(((e.cog.origin[1]-my)/Math.abs(e.cog.res[1])-e.miny)*e.sy);
-      if(ax<0||ay<0||ax>=e.outW||ay>=e.outH) return 0;
-      let v=e.band[ay*e.outW+ax]; if(v==null||isNaN(v)||v<0||v>=250)v=0; return v;
-    };
-  }
-  async function lineOfSight(obs,obsGround,target,tgtGround,tgtH,canopyMode,manualM,canSamp){
-    const D=haversineKm(obs,target)*1000;
-    const obsE=obsGround+obsHeightM(), tgtE=tgtGround+tgtH, Reff=R_EARTH*LOS_REFR;
-    if(D<1) return {ok:true,blocked:false,clearAglFt:tgtH/0.3048};
-    const step=Math.max(15,D/160), nSteps=Math.max(2,Math.ceil(D/step));
-    const pts=[]; for(let i=1;i<nSteps;i++){ const t=i/nSteps; pts.push([obs[0]+(target[0]-obs[0])*t, obs[1]+(target[1]-obs[1])*t]); }
-    let canopyVals=null;
-    if(canopyMode==="measured" && !canSamp) canopyVals=await sampleCanopyLine(pts);
-    let blocked=false, reqTgtE=tgtE;
-    for(let i=1;i<nSteps;i++){ const t=i/nSteps; const p=pts[i-1];
-      let terr=await sampleElevation(p[0],p[1]); if(terr==null) return {ok:false};
-      if(canopyMode==="measured"){ const cp=canSamp?canSamp(p[0],p[1]):(canopyVals?canopyVals[i-1]:0); if(cp>0) terr+=cp; }
-      else if(canopyMode==="manual"){ terr+=manualM; }
-      const di=D*t, drop=(di*(D-di))/(2*Reff), sight=obsE+(tgtE-obsE)*t;
-      if(sight-drop<terr) blocked=true;
-      const needE=obsE+(terr+drop-obsE)/t; if(needE>reqTgtE) reqTgtE=needE;
-    }
-    return {ok:true, blocked, clearAglFt:Math.max(0,reqTgtE-tgtGround)/0.3048};
-  }
-  /* Synchronous LOS over prefetched tiles. Same math as lineOfSight; `coarse` uses a
-     wider sample step for cheap first-pass scoring. Returns {missing:true} if a tile
-     wasn't prefetched (caller retries via the async version). */
-  function lineOfSightSync(obs,obsGround,target,tgtGround,tgtH,canopyMode,manualM,canSamp,coarse){
-    const D=haversineKm(obs,target)*1000;
-    const obsE=obsGround+obsHeightM(), tgtE=tgtGround+tgtH, Reff=R_EARTH*LOS_REFR;
-    if(D<1) return {ok:true,blocked:false,clearAglFt:tgtH/0.3048};
-    const step=coarse?Math.max(30,D/48):Math.max(15,D/160), nSteps=Math.max(2,Math.ceil(D/step));
-    let blocked=false, reqTgtE=tgtE;
-    for(let i=1;i<nSteps;i++){
-      const t=i/nSteps, pla=obs[0]+(target[0]-obs[0])*t, plo=obs[1]+(target[1]-obs[1])*t;
-      let terr=sampleElevSync(pla,plo);
-      if(terr===undefined) return {missing:true};
-      if(terr==null) return {ok:false};
-      if(canopyMode==="measured"&&canSamp){ const cp=canSamp(pla,plo); if(cp>0) terr+=cp; }
-      else if(canopyMode==="manual"){ terr+=manualM; }
-      const di=D*t, drop=(di*(D-di))/(2*Reff), sight=obsE+(tgtE-obsE)*t;
-      if(sight-drop<terr) blocked=true;
-      const needE=obsE+(terr+drop-obsE)/t; if(needE>reqTgtE) reqTgtE=needE;
-    }
-    return {ok:true, blocked, clearAglFt:Math.max(0,reqTgtE-tgtGround)/0.3048};
-  }
-  /* sync first, async fallback for the rare unprefetched tile */
-  async function losCheck(obs,g,T,tg,tgtH,canopyMode,manualM,canSamp,coarse){
-    const r=lineOfSightSync(obs,g,T,tg,tgtH,canopyMode,manualM,canSamp,coarse);
-    if(!r.missing) return r;
-    return await lineOfSight(obs,g,T,tg,tgtH,canopyMode,manualM,canSamp);
-  }
-  function clearLosOverlays(){ if(losStateById.size){ losStateById=new Map(); refreshMarks(); } if(cmap){ ["los-lines","los-observer","los-cands"].forEach(sr=>{ try{cmap.getSource(sr).setData({type:"FeatureCollection",features:[]});}catch(e){} }); } }
-  async function computeLos(){
-    const token=++losToken, obs=losObs; if(!obs) return;
-    const obsGround=await sampleElevation(obs[0],obs[1]); if(losToken!==token) return;
-    const sel=customers.filter(c=>cSel.has(c.id));
-    let assets=(sel.length?sel:mapList()).filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o);});
-    if(losScanActive){ const mm=(losMaxFt||1500)*0.3048; assets=assets.filter(c=>haversineKm(obs,[+c.lat,+c.lng])*1000<=mm); }
-    const tgtH=(losAssetFt||40)*0.3048, noElev=(obsGround==null);
-    // canopy: try measured (Meta COG); fall back to a manual typical height if it can't be read
-    let canopyMode=null; losCanopyStatus = losCanopy ? "checking" : "off";
-    if(losCanopy && !noElev){
-      let probe=null;
-      if(!_canopyProbeFailed){ probe=await sampleCanopyM(obs[0],obs[1]); if(losToken!==token) return; if(probe==null) _canopyProbeFailed=true; }
-      if(probe!=null){ canopyMode="measured"; losCanopyStatus="measured"; }
-      else if((losCanopyManualFt||0)>0){ canopyMode="manual"; losCanopyStatus="manual"; }
-      else { canopyMode=null; losCanopyStatus="unavailable"; }
-    }
-    const manualM=(losCanopyManualFt||0)*0.3048;
-    const results=[], feats=[];
-    for(const c of assets){ const T=[parseFloat(c.lat),parseFloat(c.lng)];
-      let r;
-      if(noElev) r={ok:false};
-      else { const tg=await sampleElevation(T[0],T[1]); if(losToken!==token) return; r=(tg==null)?{ok:false}:await lineOfSight(obs,obsGround,T,tg,tgtH,canopyMode,manualM); if(losToken!==token) return; }
-      const state=!r.ok?"unknown":(r.blocked?"blocked":"clear");
-      results.push({c,state,clearAglFt:r.clearAglFt});
-      feats.push({type:"Feature",properties:{state},geometry:{type:"LineString",coordinates:[[obs[1],obs[0]],[T[1],T[0]]]}});
-    }
-    if(losToken!==token) return;
-    losResults=results;
-    losStateById=new Map(results.map(x=>[x.c.id,x.state])); refreshMarks();
-    try{ cmap.getSource("los-lines").setData({type:"FeatureCollection",features:feats}); }catch(e){}
-    renderLosResults();
-  }
-  /* ---- road scan: test candidate parking spots along a segment ---- */
-  async function runScan(){
-    const token=++losToken, path=losScanPath; if(!path||path.length<2) return;
-    $("#losSum").textContent="Scanning the road\u2026"; $("#losList").innerHTML=""; $("#losScanList").innerHTML=""; $("#losScanMeta").textContent="";
-    $("#losScanWrap").classList.remove("hidden");
-    $("#losSheet").classList.remove("loscol");
-    $("#losScrim").classList.add("show"); $("#losSheet").classList.add("show");
-    const segM=pathLenM(path);
-    const maxM=(losMaxFt||1500)*0.3048, tgtH=(losAssetFt||40)*0.3048;
-    // assets near the path (corridor prefilter)
-    const sel=customers.filter(c=>cSel.has(c.id));
-    let assets=(sel.length?sel:mapList()).filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o);});
-    const corridor=samplePath(path,Math.max(40,segM/12));
-    assets=assets.filter(c=>{const P=[+c.lat,+c.lng]; return corridor.some(q=>haversineKm(q,P)*1000<=maxM);});
-    if(!assets.length){
-      losScanActive=false; $("#losScanWrap").classList.add("hidden");
-      $("#losSum").innerHTML='No sites within '+(losMaxFt||1500)+' ft of that stretch<span class="rtsub">Raise the max distance or scan a road closer to the assets.</span>';
-      $("#losNote").textContent="";
-      return;
-    }
-    if(assets.length>40) assets=assets.slice(0,40);
-    // candidate spots along the path; adaptive step, hard perf cap
-    let step=Math.max(25, segM/80);
-    let candPts=samplePath(path,step);
-    while(candPts.length>81 || candPts.length*assets.length>3600){ step*=1.3; candPts=samplePath(path,step); }
-    // canopy mode (probe path midpoint; area sampler if measured)
-    const mid=candPts[Math.floor(candPts.length/2)];
-    const midGround=await sampleElevation(mid[0],mid[1]); if(losToken!==token) return;
-    let canopyMode=null, sampler=null; losCanopyStatus=losCanopy?"checking":"off";
-    if(losCanopy && midGround!=null){
-      let probe=null;
-      if(!_canopyProbeFailed){ probe=await sampleCanopyM(mid[0],mid[1]); if(losToken!==token) return; if(probe==null) _canopyProbeFailed=true; }
-      if(probe!=null){
-        let laMin=90,laMax=-90,loMin=180,loMax=-180;
-        candPts.concat(assets.map(c=>[+c.lat,+c.lng])).forEach(P=>{ if(P[0]<laMin)laMin=P[0]; if(P[0]>laMax)laMax=P[0]; if(P[1]<loMin)loMin=P[1]; if(P[1]>loMax)loMax=P[1]; });
-        const pad=0.002;
-        sampler=await makeCanopyBoxSampler(laMin-pad,laMax+pad,loMin-pad,loMax+pad); if(losToken!==token) return;
-        if(sampler){ canopyMode="measured"; losCanopyStatus="measured"; }
-        else if((losCanopyManualFt||0)>0){ canopyMode="manual"; losCanopyStatus="manual"; }
-        else losCanopyStatus="unavailable";
-      }
-      else if((losCanopyManualFt||0)>0){ canopyMode="manual"; losCanopyStatus="manual"; }
-      else losCanopyStatus="unavailable";
-    }
-    const manualM=(losCanopyManualFt||0)*0.3048;
-    { // prefetch every elevation tile the scan can touch, then LOS is synchronous
-      let laMin=90,laMax=-90,loMin=180,loMax=-180;
-      candPts.concat(assets.map(c=>[+c.lat,+c.lng])).forEach(P=>{ if(P[0]<laMin)laMin=P[0]; if(P[0]>laMax)laMax=P[0]; if(P[1]<loMin)loMin=P[1]; if(P[1]>loMax)loMax=P[1]; });
-      try{ await prefetchElevBox(laMin-0.003,laMax+0.003,loMin-0.003,loMax+0.003); }catch(e){}
-      if(losToken!==token) return;
-    }
-    const ag=new Map();
-    for(const c of assets){ const g=await sampleElevation(+c.lat,+c.lng); if(losToken!==token) return; ag.set(c.id,g); }
-    const cands=[];
-    for(let i=0;i<candPts.length;i++){
-      const P=candPts[i];
-      const gS=sampleElevSync(P[0],P[1]);
-      const g=(gS===undefined)?await sampleElevation(P[0],P[1]):gS; if(losToken!==token) return;
-      if(g==null) continue;
-      let vis=0, inR=0, sumD=0;
-      for(const c of assets){
-        const T=[+c.lat,+c.lng], d=haversineKm(P,T)*1000; if(d>maxM) continue;
-        inR++;
-        const tg=ag.get(c.id); if(tg==null) continue;
-        const r=await losCheck(P,g,T,tg,tgtH,canopyMode,manualM,sampler,false); if(losToken!==token) return;
-        if(r.ok&&!r.blocked){ vis++; sumD+=d; }
-      }
-      cands.push({pt:P, vis:vis, inR:inR, avgD:vis?sumD/vis:1e9});
-      if(i%20===19) await sleep(0);
-    }
-    if(!cands.length){
-      losScanActive=false; $("#losScanWrap").classList.add("hidden");
-      $("#losSum").textContent="No elevation data along that road \u2014 save this area offline, or go online.";
-      $("#losNote").textContent="";
-      return;
-    }
-    cands.sort((a,b)=> b.vis-a.vis || b.inR-a.inR || a.avgD-b.avgD);
-    const kept=[]; const minSep=Math.max(30, segM/candPts.length);
-    for(const cd of cands){ if(kept.length>=5) break; if(kept.every(k=>haversineKm(k.pt,cd.pt)*1000>=minSep)) kept.push(cd); }
-    losScanCands=kept; losScanActive=true;
-    $("#losScanMeta").textContent=fmtDistM(segM)+" of road \u00B7 "+candPts.length+" spots tested \u00B7 "+(losScanSnapped?"snapped to roads":"straight line (roads unavailable here)");
-    const feats=[{type:"Feature",properties:{kind:"seg"},geometry:{type:"LineString",coordinates:path.map(P=>[P[1],P[0]])}}];
-    kept.forEach((k,i)=>feats.push({type:"Feature",properties:{kind:"cand",rank:String(i+1),best:i===0?1:0},geometry:{type:"Point",coordinates:[k.pt[1],k.pt[0]]}}));
-    try{ cmap.getSource("los-cands").setData({type:"FeatureCollection",features:feats}); }catch(e){}
-    previewCand(0);
-  }
-  function fmtFtD(m){ const ft=m/0.3048; return ft>=1000?((ft/1000).toFixed(1).replace(/\.0$/,"")+"k ft"):(Math.round(ft/10)*10+" ft"); }
-  function renderScanList(activeIdx){
-    $("#losScanList").innerHTML=losScanCands.map((k,i)=>{
-      const badge='<span class="rtn" style="background:'+(i===0?"var(--amber)":"var(--line2)")+';color:'+(i===0?"#10141a":"var(--muted)")+'">'+(i+1)+'</span>';
-      const rec=i===0?' \u2605':'';
-      const meta=(i===activeIdx?"showing on map":"tap to preview")+(k.vis&&k.avgD<1e9?(" \u00B7 avg "+fmtFtD(k.avgD)+" out"):"");
-      return '<li data-cand="'+i+'" class="'+(i===activeIdx?"candon":"")+'">'+badge+'<div class="rtmain"><div class="rttitle">Sees '+k.vis+' of '+k.inR+' in range'+rec+'</div><div class="rtmeta">'+meta+'</div></div></li>';
-    }).join("");
-    $("#losScanList").querySelectorAll("[data-cand]").forEach(el=>el.addEventListener("click",()=>previewCand(+el.dataset.cand)));
-  }
-  function previewCand(i){
-    const k=losScanCands[i]; if(!k) return;
-    renderScanList(i);
-    losObs=k.pt;
-    try{ cmap.getSource("los-observer").setData({type:"FeatureCollection",features:[{type:"Feature",properties:{},geometry:{type:"Point",coordinates:[k.pt[1],k.pt[0]]}}]}); }catch(e){}
-    computeLos();
-  }
   /* ---------------- property lines (Regrid parcels via proxy) ---------------- */
   let parcelsOn=false, parcelSelId=null;
   function parcelsAvailable(){ return !!(store.get("fk_parcelsproxy","")||"").trim() && cmap && cmap.getLayer && cmap.getLayer("parcels-line"); }
@@ -3627,404 +2977,13 @@
   }
   { const b=$("#mParcels"); if(b) b.addEventListener("click",()=>setParcels(!parcelsOn)); }
 
-  /* ---------------- mission planner: zones -> best spots -> route ---------------- */
-  let misMode=false, zoneDraw=false, misZones=[], misStops=[], misToken=0, misBusy=false, misRoadMi=0, misStart=null;
-  const MIS_PARK_M=915; /* ~3000 ft: how far mission will look for a parking spot from the assets */
-  function misGeo(){
-    const f=[];
-    misZones.forEach(z=>{ const ring=z.poly.map(P=>[P[1],P[0]]); if(ring.length>2){ ring.push(ring[0]); f.push({type:"Feature",properties:{k:"zone"},geometry:{type:"Polygon",coordinates:[ring]}}); } });
-    if(misStops.length>1) f.push({type:"Feature",properties:{k:"rt"},geometry:{type:"LineString",coordinates:misStops.map(st=>[st.pt[1],st.pt[0]])}});
-    misStops.forEach((st,i)=>f.push({type:"Feature",properties:{k:"stop",rank:String(i+1)},geometry:{type:"Point",coordinates:[st.pt[1],st.pt[0]]}}));
-    return {type:"FeatureCollection",features:f};
-  }
-  function refreshMission(){ if(cmap&&cMapReady){ try{ cmap.getSource("mission").setData(misGeo()); }catch(e){} } }
-  function updateZoneCt(){
-    const t=$("#misBannerText"); if(!t) return;
-    if(zoneDraw){ t.textContent="Draw a loop around the zone \u2014 the map is locked while drawing"; }
-    else if(misZones.length){ t.textContent="Zones: "+misZones.length+" \u00B7 tap Draw zone for another, or Done"; }
-    else { t.textContent="Move the map to a zone, then tap Draw zone"; }
-    const db=$("#misDraw"); if(db) db.classList.toggle("on",zoneDraw);
-  }
-  function armZoneDraw(){
-    if(!misMode) return;
-    zoneDraw=true; lassoDrawing=false; lassoPts=[];
-    const layer=$("#lassoLayer"); if(layer) layer.classList.remove("hidden");
-    const p=$("#lassoPath"); if(p) p.setAttribute("points","");
-    updateZoneCt();
-  }
-  function disarmZoneDraw(){
-    zoneDraw=false; lassoDrawing=false; lassoPts=[];
-    const layer=$("#lassoLayer"); if(layer&&!lassoOn) layer.classList.add("hidden");
-    const p=$("#lassoPath"); if(p) p.setAttribute("points","");
-    updateZoneCt();
-  }
-  function finishZoneDraw(){
-    lassoDrawing=false;
-    const raw=lassoPts.slice(); lassoPts=[]; drawLassoPath();
-    if(raw.length<8) return;
-    const poly=[];
-    for(let i=0;i<raw.length;i+=2){ try{ const ll=cmap.unproject([raw[i][0],raw[i][1]]); poly.push([ll.lat,ll.lng]); }catch(e){} }
-    if(poly.length<3){ disarmZoneDraw(); return; }
-    misZones.push({poly:poly});
-    refreshMission(); disarmZoneDraw();
-  }
-  function openMission(){
-    if(!cmap||!cMapReady){ toast("Open the map first"); return; }
-    if(misMode){ $("#misScrim").classList.add("show"); $("#misSheet").classList.add("show"); return; }
-    if(losMode) closeLos();
-    if(measOn) closeMeasure();
-    pinPlacing=false; $("#pinBanner").classList.add("hidden");
-    misMode=true; zoneDraw=false; misZones=[]; misStops=[]; misRoadMi=0; refreshMission();
-    const layer=$("#lassoLayer"); if(layer) layer.classList.add("hidden");
-    $("#misBanner").classList.remove("hidden"); updateZoneCt();
-    $("#mMission").classList.add("on");
-  }
-  function closeMisSheet(){ $("#misScrim").classList.remove("show"); $("#misSheet").classList.remove("show"); }
-  function closeMission(){
-    misToken++; misMode=false; misBusy=false; zoneDraw=false; misZones=[]; misStops=[]; misRoadMi=0; misStart=null;
-    { const nb=$("#misNav"); if(nb) nb.style.display="none"; } { const nn=$("#misNavNote"); if(nn) nn.style.display="none"; }
-    refreshMission(); closeMisSheet();
-    $("#misBanner").classList.add("hidden");
-    const layer=$("#lassoLayer"); if(layer&&!lassoOn) layer.classList.add("hidden");
-    { const b=$("#mMission"); if(b) b.classList.remove("on"); }
-    clearLosOverlays();
-  }
-  async function runMission(){
-    const token=++misToken; misBusy=true; misStops=[]; misRoadMi=0; refreshMission();
-    $("#misSum").textContent="Planning\u2026"; $("#misList").innerHTML=""; $("#misProg").textContent="";
-    if(losAssetFt==null) losAssetFt=parseFloat(store.get("fk_los_ft","40"))||40;
-    losMaxFt=parseFloat(store.get("fk_los_maxft","1500"))||1500;
-    losCanopy=store.get("fk_los_canopy","0")==="1";
-    losCanopyManualFt=parseFloat(store.get("fk_los_canopy_ft","50")); if(isNaN(losCanopyManualFt)) losCanopyManualFt=50;
-    _canopyProbeFailed=false;
-    const maxM=losMaxFt*0.3048, tgtH=losAssetFt*0.3048, manualM=(losCanopyManualFt||0)*0.3048;
-    const prog=t=>{ const e=$("#misProg"); if(e) e.textContent=t; };
-    // 4A fallback: no road data for this zone -> still produce a stop, placed at the
-    // asset with the best line of sight to the rest of the cluster (no road snapping).
-    async function fallbackStop(assets,zi,candR2,canopyMode,manualM,sampler){
-      let laN=90,laX=-90,loN=180,loX=-180;
-      assets.forEach(c=>{const a=+c.lat,o=+c.lng; if(a<laN)laN=a; if(a>laX)laX=a; if(o<loN)loN=o; if(o>loX)loX=o;});
-      try{ await prefetchElevBox(laN-0.003,laX+0.003,loN-0.003,loX+0.003); }catch(e){}
-      if(misToken!==token) return null;
-      const ag=new Map();
-      for(const c of assets){ const g=await sampleElevation(+c.lat,+c.lng); if(misToken!==token) return null; ag.set(c.id,g); }
-      let best=null;
-      for(const s0 of assets){
-        const P=[+s0.lat,+s0.lng], g=ag.get(s0.id); if(g==null) continue;
-        let vis=0,inR=0,sumD=0;
-        for(const c of assets){ if(c.id===s0.id){ vis++; inR++; continue; }
-          const T=[+c.lat,+c.lng], d=haversineKm(P,T)*1000; if(d>candR2) continue; inR++;
-          const tg=ag.get(c.id); if(tg==null) continue;
-          const r=await losCheck(P,g,T,tg,tgtH,canopyMode,manualM,sampler,false); if(misToken!==token) return null;
-          if(r.ok&&!r.blocked){ vis++; sumD+=d; }
-        }
-        if(!best || vis>best.vis || (vis===best.vis&&sumD<best._sd)) best={pt:P,vis:vis,inR:inR,_sd:sumD};
-      }
-      if(!best){ const c0=assets[0]; best={pt:[+c0.lat,+c0.lng],vis:1,inR:assets.length}; }
-      // sightline features for preview
-      const g0=await sampleElevation(best.pt[0],best.pt[1]); if(misToken!==token) return null;
-      const lines=[];
-      for(const c of assets){ const T=[+c.lat,+c.lng], d=haversineKm(best.pt,T)*1000; if(d>candR2) continue;
-        const tg=ag.get(c.id); let st="unknown";
-        if(g0!=null&&tg!=null){ const r=await losCheck(best.pt,g0,T,tg,tgtH,canopyMode,manualM,sampler,false); if(misToken!==token) return null; st=!r.ok?"unknown":(r.blocked?"blocked":"clear"); }
-        lines.push({type:"Feature",properties:{state:st},geometry:{type:"LineString",coordinates:[[best.pt[1],best.pt[0]],[T[1],T[0]]]}});
-      }
-      return {pt:best.pt,vis:best.vis,inR:best.inR,lines:lines,zone:zi+1,noRoads:true};
-    }
-    const zn=misZones.length;
-    for(let zi=0; zi<zn; zi++){
-      if(misToken!==token) return;
-      const z=misZones[zi]; z.best=null; z.note="";
-      prog("Zone "+(zi+1)+"/"+zn+" \u2014 finding assets\u2026");
-      let assets=customers.filter(c=>{ const a=parseFloat(c.lat),o=parseFloat(c.lng); return !isNaN(a)&&!isNaN(o)&&geoInPoly(a,o,z.poly); });
-      if(!assets.length){ z.note="no assets inside this zone"; continue; }
-      let laMin=90,laMax=-90,loMin=180,loMax=-180;
-      z.poly.forEach(P=>{ if(P[0]<laMin)laMin=P[0]; if(P[0]>laMax)laMax=P[0]; if(P[1]<loMin)loMin=P[1]; if(P[1]>loMax)loMax=P[1]; });
-      const ctr=[(laMin+laMax)/2,(loMin+loMax)/2];
-      if(assets.length>40){ assets.sort((a,b)=>haversineKm([+a.lat,+a.lng],ctr)-haversineKm([+b.lat,+b.lng],ctr)); assets=assets.slice(0,40); }
-      // You park NEAR the assets: cap the parking-search radius (regardless of the LOS
-      // max-distance, which may be very large just for counting what's visible from a spot).
-      const candR=Math.min(maxM, MIS_PARK_M);
-      const padLa=candR/111000, padLo=candR/(111320*Math.cos(ctr[0]*Math.PI/180));
-      prog("Zone "+(zi+1)+"/"+zn+" \u2014 loading roads\u2026");
-      let rd=null, roadsBusy=false;
-      try{ rd=await fetchRoads(laMin-padLa, loMin-padLo, laMax+padLa, loMax+padLo); }catch(e){ rd=null; roadsBusy=!!(e&&e.roadsBusy); }
-      if(misToken!==token) return;
-      // canopy setup is needed for both the normal and fallback paths; do it up front
-      let canopyMode=null, sampler=null;
-      if(losCanopy){
-        let probe=null;
-        if(!_canopyProbeFailed){ try{ probe=await sampleCanopyM(ctr[0],ctr[1]); }catch(e){ probe=null; } if(misToken!==token) return; if(probe==null) _canopyProbeFailed=true; }
-        if(probe!=null){
-          sampler=await makeCanopyBoxSampler(laMin-padLa-0.002,laMax+padLa+0.002,loMin-padLo-0.002,loMax+padLo+0.002);
-          if(misToken!==token) return;
-          if(sampler) canopyMode="measured"; else if(manualM>0) canopyMode="manual";
-        } else if(manualM>0) canopyMode="manual";
-      }
-      // If roads couldn't be loaded (proxy + mirrors down, offline, or genuinely
-      // none nearby) DON'T skip the zone — place a stop at the best-visibility asset
-      // so the zone still appears in the route, clearly flagged as un-snapped.
-      let cand=[];
-      if(rd&&rd.ways.length){
-        rd.ways.forEach(w=>{ cand=cand.concat(samplePath(w.pts,40)); });
-        cand=cand.filter(P=>assets.some(c=>haversineKm(P,[+c.lat,+c.lng])*1000<=candR));
-        if(cand.length>140){ const stride=Math.ceil(cand.length/140); cand=cand.filter((_,i)=>i%stride===0); }
-      }
-      if(!cand.length){
-        const why = !rd ? (roadsBusy?"road service busy":"couldn't reach road service")
-                        : (rd.ways.length?("no roads within "+Math.round(candR/0.3048)+" ft"):"no mapped roads");
-        prog("Zone "+(zi+1)+"/"+zn+" \u2014 no roads, placing a stop at the assets\u2026");
-        const fb=await fallbackStop(assets,zi,candR,canopyMode,manualM,sampler);
-        if(misToken!==token) return;
-        if(fb){ fb.note=why; z.best=fb; z.note=""; } else { z.note="no elevation data here"; }
-        continue;
-      }
-      // keep the spot-count x asset-count product bounded (like the road scan)
-      if(cand.length*assets.length>4200){ const stride=Math.ceil(cand.length*assets.length/4200); cand=cand.filter((_,i)=>i%stride===0); }
-      prog("Zone "+(zi+1)+"/"+zn+" \u2014 loading terrain\u2026");
-      // pull every elevation tile for this zone once, then all LOS math is synchronous
-      try{ await prefetchElevBox(laMin-padLa, laMax+padLa, loMin-padLo, loMax+padLo); }catch(e){}
-      if(misToken!==token) return;
-      const ag=new Map();
-      for(const c of assets){ const g=await sampleElevation(+c.lat,+c.lng); if(misToken!==token) return; ag.set(c.id,g); }
-      prog("Zone "+(zi+1)+"/"+zn+" \u2014 checking "+cand.length+" spots\u2026");
-      async function scoreCand(P,coarse){
-        const g=sampleElevSync(P[0],P[1]);
-        const g2=(g===undefined)?await sampleElevation(P[0],P[1]):g;
-        if(g2==null) return null;
-        let vis=0,inR=0,sumD=0;
-        for(const c of assets){
-          const T=[+c.lat,+c.lng], d=haversineKm(P,T)*1000; if(d>candR) continue;
-          inR++;
-          const tg=ag.get(c.id); if(tg==null) continue;
-          const r=await losCheck(P,g2,T,tg,tgtH,canopyMode,manualM,sampler,coarse);
-          if(r.ok&&!r.blocked){ vis++; sumD+=d; }
-        }
-        return {pt:P,vis:vis,inR:inR,avgD:vis?sumD/vis:1e9};
-      }
-      // pass 1: coarse-sampled score for every candidate (cheap, all-sync)
-      const scored=[];
-      for(let i=0;i<cand.length;i++){
-        const sc=await scoreCand(cand[i],true); if(misToken!==token) return;
-        if(sc) scored.push(sc);
-        if(i%25===24){ await sleep(0); prog("Zone "+(zi+1)+"/"+zn+" \u2014 checking spots "+(i+1)+"/"+cand.length+"\u2026"); }
-      }
-      if(!scored.length){ z.note="no elevation data here"; continue; }
-      scored.sort((a,b)=> b.vis-a.vis || b.inR-a.inR || a.avgD-b.avgD);
-      // pass 2: full-resolution rescore of the front-runners only
-      let best=null;
-      const finals=scored.slice(0,Math.min(12,scored.length));
-      for(const f of finals){
-        const sc=await scoreCand(f.pt,false); if(misToken!==token) return;
-        if(sc && (!best || sc.vis>best.vis || (sc.vis===best.vis&&(sc.inR>best.inR||(sc.inR===best.inR&&sc.avgD<best.avgD))))) best=sc;
-      }
-      if(!best){ z.note="no elevation data here"; continue; }
-      // sightline features for this best spot (for preview)
-      const g0=await sampleElevation(best.pt[0],best.pt[1]); if(misToken!==token) return;
-      const lines=[];
-      for(const c of assets){
-        const T=[+c.lat,+c.lng], d=haversineKm(best.pt,T)*1000; if(d>candR) continue;
-        const tg=ag.get(c.id);
-        let st="unknown";
-        if(g0!=null&&tg!=null){ const r=await losCheck(best.pt,g0,T,tg,tgtH,canopyMode,manualM,sampler,false); if(misToken!==token) return; st=!r.ok?"unknown":(r.blocked?"blocked":"clear"); }
-        lines.push({type:"Feature",properties:{state:st},geometry:{type:"LineString",coordinates:[[best.pt[1],best.pt[0]],[T[1],T[0]]]}});
-      }
-      z.best={pt:best.pt,vis:best.vis,inR:best.inR,lines:lines,zone:zi+1};
-    }
-    if(misToken!==token) return;
-    const stops=misZones.filter(z=>z.best).map(z=>z.best);
-    const skipped=misZones.filter(z=>!z.best);
-    if(!stops.length){
-      $("#misSum").textContent="No workable stops"; $("#misProg").textContent=skipped.map((z,i)=>"Zone: "+z.note).join(" \u00B7 ");
-      misBusy=false; return;
-    }
-    prog("Ordering the route\u2026");
-    const start=await getPos(3500); if(misToken!==token) return;
-    const ordered=optimizeStops(stops.map(b=>({lat:b.pt[0],lng:b.pt[1],b:b})), start, false).map(o=>o.b);
-    misStops=ordered; misStart=start||null;
-    let straightKm=0, prev=start;
-    ordered.forEach(b=>{ if(prev) straightKm+=haversineKm(prev,b.pt); prev=b.pt; });
-    misRoadMi=straightKm*ROAD_FACTOR*0.621371;
-    refreshMission();
-    $("#misSum").innerHTML=misStops.length+" stop"+(misStops.length===1?"":"s")+" \u00B7 ~"+misRoadMi.toFixed(1)+" mi drive"+'<span class="rtsub">'+(start?"from your location \u00B7 ":"")+"asset "+losAssetFt+" ft \u00B7 within "+losMaxFt+" ft"+(skipped.length?(" \u00B7 "+skipped.length+" zone"+(skipped.length===1?"":"s")+" skipped"):"")+"</span>";
-    $("#misProg").textContent=skipped.length?skipped.map(z=>"Skipped zone: "+z.note).join(" \u00B7 "):"";
-    renderMisList(-1);
-    updateMisNav();
-    misBusy=false;
-  }
-  // Build a single Google Maps directions URL for the whole ordered mission:
-  // origin (your location, if known) -> waypoints (middle stops) -> destination (last stop).
-  function misRouteUrl(){
-    if(!misStops.length) return null;
-    const ll=b=>(+b.pt[0]).toFixed(6)+","+(+b.pt[1]).toFixed(6);
-    const MAXW=9; // Google consumer URL supports ~9 waypoints (excludes origin/dest)
-    let pts=misStops.slice();
-    let trimmed=0;
-    // origin + waypoints + destination must fit; waypoints = all but the last stop.
-    if(pts.length-1>MAXW){ const keep=MAXW+1; trimmed=pts.length-keep; pts=pts.slice(0,keep); }
-    const dest=pts[pts.length-1];
-    const mids=pts.slice(0,pts.length-1);
-    let url="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination="+encodeURIComponent(ll(dest));
-    if(misStart) url+="&origin="+encodeURIComponent((+misStart[0]).toFixed(6)+","+(+misStart[1]).toFixed(6));
-    if(mids.length) url+="&waypoints="+mids.map(ll).map(encodeURIComponent).join("|");
-    return {url:url, trimmed:trimmed};
-  }
-  function updateMisNav(){
-    const btn=$("#misNav"), note=$("#misNavNote"); if(!btn) return;
-    if(misStops.length<1){ btn.style.display="none"; if(note) note.style.display="none"; return; }
-    btn.style.display=""; btn.textContent = misStops.length===1 ? "Navigate to the stop (Google Maps)" : "Start full route \u00B7 "+misStops.length+" stops (Google Maps)";
-    const info=misRouteUrl();
-    if(note){
-      if(info && info.trimmed>0){ note.style.display=""; note.textContent="Google Maps allows ~10 stops per link; the last "+info.trimmed+" will be dropped from this route. Use the per-stop links below for those."; }
-      else { note.style.display="none"; note.textContent=""; }
-    }
-  }
-  { const b=$("#misNav"); if(b) b.addEventListener("click",()=>{ const info=misRouteUrl(); if(info&&info.url){ try{ window.open(info.url,"_blank","noopener"); }catch(e){ location.href=info.url; } } }); }
-  function renderMisList(active){
-    $("#misList").innerHTML=misStops.map((b,i)=>{
-      const badge='<span class="rtn" style="background:'+(i===active?"var(--amber)":"var(--line2)")+';color:'+(i===active?"#10141a":"var(--muted)")+'">'+(i+1)+'</span>';
-      const flag=b.noRoads?' \u00B7 <span style="color:var(--gold)">no road data \u2014 at the assets</span>':'';
-      return '<li data-mis="'+i+'" class="'+(i===active?"misOn":"")+'">'+badge+'<div class="rtmain"><div class="rttitle">Sees '+b.vis+' of '+b.inR+' in range</div><div class="rtmeta">Zone '+b.zone+flag+' \u00B7 tap to preview \u00B7 '+navLinks(b.pt[0],b.pt[1]).replace(/<div[^>]*>|<\/div>/g,"")+'</div></div></li>';
-    }).join("");
-    $("#misList").querySelectorAll("[data-mis]").forEach(el=>el.addEventListener("click",ev=>{ if(ev.target&&ev.target.tagName==="A") return; previewMisStop(+el.dataset.mis,false); }));
-  }
-  function previewMisStop(i,fromMap){
-    const b=misStops[i]; if(!b) return;
-    renderMisList(i);
-    try{ cmap.getSource("los-lines").setData({type:"FeatureCollection",features:b.lines}); }catch(e){}
-    try{ cmap.getSource("los-observer").setData({type:"FeatureCollection",features:[{type:"Feature",properties:{},geometry:{type:"Point",coordinates:[b.pt[1],b.pt[0]]}}]}); }catch(e){}
-    if(!fromMap){ closeMisSheet(); try{ cmap.easeTo({center:[b.pt[1],b.pt[0]],duration:500}); }catch(e){} }
-  }
-  { const b=$("#mMission"); if(b) b.addEventListener("click",openMission); }
+  /* ---------------- map control dock (show / hide) ---------------- */
   { const dt=$("#dockToggle"), dk=$("#mapDock"), lbl=$("#dockToggleLabel");
     if(dt&&dk){
       const setC=c=>{ dk.classList.toggle("collapsed",c); if(lbl) lbl.textContent=c?"Controls":"Hide"; store.set("fk_dock_collapsed",c?"1":"0"); };
       if(store.get("fk_dock_collapsed","0")==="1") setC(true);
       dt.addEventListener("click",()=>setC(!dk.classList.contains("collapsed")));
     } }
-  { const b=$("#misDraw"); if(b) b.addEventListener("click",()=>{ if(zoneDraw) disarmZoneDraw(); else armZoneDraw(); }); }
-  { const b=$("#misDone"); if(b) b.addEventListener("click",()=>{
-      if(!misZones.length){ toast("Draw at least one zone first"); return; }
-      zoneDraw=false; $("#misBanner").classList.add("hidden");
-      const layer=$("#lassoLayer"); if(layer&&!lassoOn) layer.classList.add("hidden");
-      $("#misScrim").classList.add("show"); $("#misSheet").classList.add("show");
-      runMission();
-  }); }
-  { const b=$("#misX"); if(b) b.addEventListener("click",closeMission); }
-  { const b=$("#misClear"); if(b) b.addEventListener("click",closeMission); }
-  { const b=$("#misOk"); if(b) b.addEventListener("click",closeMisSheet); }
-  { const sc=$("#misScrim"); if(sc) sc.addEventListener("click",closeMisSheet); }
-
-  function renderLosResults(){
-    const r=losResults||[];
-    const clear=r.filter(x=>x.state==="clear").length, blocked=r.filter(x=>x.state==="blocked").length, unk=r.filter(x=>x.state==="unknown").length;
-    let sum;
-    if(!losObs) sum="Tap the map to set your parking point.";
-    else if(r.length===0) sum="No located sites to check.";
-    else if(unk===r.length) sum='Elevation data not available here<span class="rtsub">Save this area offline, or go online, to check line of sight.</span>';
-    else{
-      const canopyTag = losCanopyStatus==="measured" ? " · with tree canopy (measured)" : losCanopyStatus==="manual" ? (" · with ~"+(losCanopyManualFt||0)+" ft canopy") : losCanopyStatus==="unavailable" ? " · canopy N/A here" : "";
-      const scanTag = losScanActive ? (" · within "+(losMaxFt||1500)+" ft") : "";
-      sum='<b style="color:var(--green)">'+clear+"</b> visible · <b style=\"color:var(--red)\">"+blocked+"</b> blocked"+(unk?(" · "+unk+" unknown"):"")+'<span class="rtsub">of '+r.length+" sites · your height "+store.get("fk_obsft","6.33")+" ft · asset "+(losAssetFt||40)+" ft"+canopyTag+scanTag+"</span>";
-    }
-    $("#losSum").innerHTML=sum;
-    let html="";
-    r.forEach(x=>{
-      const badge=x.state==="clear"?'<span class="rtn" style="background:var(--green);color:#0b2417">\u2713</span>':x.state==="blocked"?'<span class="rtn" style="background:var(--red);color:#fff">\u2715</span>':'<span class="rtn" style="background:var(--line2);color:var(--muted)">?</span>';
-      const meta=x.state==="clear"?"visible":x.state==="blocked"?("blocked · clears above ~"+(Math.round((x.clearAglFt||0)/5)*5).toLocaleString("en-US")+" ft"):"no elevation data";
-      html+='<li>'+badge+'<div class="rtmain"><div class="rttitle">'+escapeHtml(assetTitle(x.c))+'</div><div class="rtmeta">'+meta+'</div></div></li>';
-    });
-    $("#losList").innerHTML=html;
-    $("#losFt").value=losAssetFt||40;
-    { const t=$("#losCanopy"); if(t) t.checked=losCanopy; }
-    $("#losNote").textContent = losCanopyStatus==="unavailable"
-      ? "Tree-canopy data couldn't be reached and no typical height is set — showing bare terrain."
-      : losCanopyStatus==="manual"
-        ? ("Assumes ~"+(losCanopyManualFt||0)+" ft of tree canopy along each sightline (live 1 m data needs signal). Buildings aren't included — keep eyes on the aircraft.")
-        : (losCanopyStatus==="measured"
-          ? "Includes measured tree-canopy height. Green = clear, red = blocked; blocked sites show the drone height that clears it. Buildings aren't included."
-          : "Green = clear view, red = terrain blocks it. Blocked sites show the drone height that clears the terrain.");
-  }
-  function setObserver(lat,lng){
-    losObs=[lat,lng]; losPlacing=false;
-    $("#losBanner").classList.add("hidden");
-    try{ cmap.getSource("los-observer").setData({type:"FeatureCollection",features:[{type:"Feature",properties:{},geometry:{type:"Point",coordinates:[lng,lat]}}]}); }catch(e){}
-    $("#losSum").textContent="Checking line of sight\u2026"; $("#losList").innerHTML="";
-    if(!losScanActive) $("#losScanWrap").classList.add("hidden");
-    $("#losSheet").classList.remove("loscol");
-    $("#losScrim").classList.add("show"); $("#losSheet").classList.add("show");
-    computeLos();
-  }
-  function openLos(){
-    if(!cmap||!cMapReady){ toast("Open the map first"); return; }
-    losMode=true; losPlacing=true; losObs=null; losResults=[]; _canopyProbeFailed=false;
-    losScanStage=0; losScanA=null; losScanB=null; losScanActive=false; losScanCands=[]; losScanPath=null; losScanSnapped=false;
-    { const mEl=$("#losScanMeta"); if(mEl) mEl.textContent=""; }
-    if(measOn) closeMeasure();
-    pinPlacing=false; $("#pinBanner").classList.add("hidden");
-    losMaxFt=parseFloat(store.get("fk_los_maxft","1500"))||1500; { const e=$("#losMaxFt"); if(e) e.value=losMaxFt; }
-    $("#losScanWrap").classList.add("hidden"); $("#losScanList").innerHTML="";
-    $("#losBannerText").textContent="Tap the map to set your parking point";
-    { const sb=$("#losScanBtn"); if(sb) sb.classList.remove("hidden"); }
-    if(losAssetFt==null) losAssetFt=parseFloat(store.get("fk_los_ft","40"))||40;
-    losCanopy=store.get("fk_los_canopy","0")==="1"; losCanopyManualFt=parseFloat(store.get("fk_los_canopy_ft","50")); if(isNaN(losCanopyManualFt))losCanopyManualFt=50;
-    { const t=$("#losCanopy"); if(t) t.checked=losCanopy; } { const f=$("#losCanopyFt"); if(f) f.value=losCanopyManualFt; } { const row=$("#losCanopyRow"); if(row) row.classList.toggle("hidden",!losCanopy); }
-    clearLosOverlays();
-    $("#losBanner").classList.remove("hidden");
-    $("#mLos").classList.add("on");
-  }
-  function closeLos(){
-    losToken++;
-    losMode=false; losPlacing=false; losObs=null;
-    losScanStage=0; losScanA=null; losScanB=null; losScanActive=false; losScanCands=[]; losScanPath=null; losScanSnapped=false;
-    { const mEl=$("#losScanMeta"); if(mEl) mEl.textContent=""; }
-    $("#losScanWrap").classList.add("hidden");
-    $("#losBanner").classList.add("hidden");
-    $("#losScrim").classList.remove("show"); $("#losSheet").classList.remove("show","loscol");
-    $("#mLos").classList.remove("on");
-    clearLosOverlays();
-  }
-  function losSetFt(ft){ losAssetFt=ft; store.set("fk_los_ft",String(ft)); $("#losFt").value=ft; if(losObs) computeLos(); }
-  { const b=$("#mLos"); if(b) b.addEventListener("click",openLos); }
-  { const b=$("#losCancel"); if(b) b.addEventListener("click",closeLos); }
-  { const b=$("#losDone"); if(b) b.addEventListener("click",closeLos); }
-  { const b=$("#losScrim"); if(b) b.addEventListener("click",closeLos); }
-  { const b=$("#losMove"); if(b) b.addEventListener("click",()=>{
-      losScanStage=0; losScanA=null; losScanB=null; losScanActive=false; losScanCands=[]; losScanPath=null; losScanSnapped=false;
-      { const mEl=$("#losScanMeta"); if(mEl) mEl.textContent=""; }
-      $("#losScanWrap").classList.add("hidden");
-      try{ cmap.getSource("los-cands").setData({type:"FeatureCollection",features:[]}); }catch(e){}
-      $("#losBannerText").textContent="Tap the map to set your parking point";
-      { const sb=$("#losScanBtn"); if(sb) sb.classList.remove("hidden"); }
-      losPlacing=true; $("#losScrim").classList.remove("show"); $("#losSheet").classList.remove("show"); $("#losBanner").classList.remove("hidden");
-  }); }
-  { const b=$("#losScanBtn"); if(b) b.addEventListener("click",async()=>{
-      losPlacing=false; losScanStage=0; losScanA=null; losScanB=null; losScanPath=null; losScanSnapped=false;
-      b.classList.add("hidden");
-      $("#losBannerText").textContent="Loading nearby roads\u2026";
-      losRoads=null;
-      try{
-        const bd=cmap.getBounds();
-        const pla=(bd.getNorth()-bd.getSouth())*0.3, plo=(bd.getEast()-bd.getWest())*0.3;
-        const r=await fetchRoads(bd.getSouth()-pla, bd.getWest()-plo, bd.getNorth()+pla, bd.getEast()+plo);
-        if(r&&r.ways.length) losRoads={ways:r.ways, graph:buildRoadGraph(r.ways)};
-      }catch(e){}
-      if(!losMode){ return; }
-      losScanStage=1;
-      $("#losBannerText").textContent=losRoads?"Tap the START of the road stretch (snaps to the road)":"Roads unavailable \u2014 tap the START point";
-  }); }
-  { const e=$("#losMaxFt"); if(e) e.addEventListener("change",()=>{
-      let v=parseFloat(e.value); if(isNaN(v)||v<100) v=1500; losMaxFt=v; e.value=v; store.set("fk_los_maxft",String(v));
-      if(losScanActive&&losScanA&&losScanB) runScan();
-  }); }
-  { const b=$("#losFt"); if(b) b.addEventListener("change",()=>losSetFt(parseFloat($("#losFt").value)||40)); }
-  { const b=$("#losPreDist"); if(b) b.addEventListener("click",()=>losSetFt(40)); }
-  { const b=$("#losPreTx"); if(b) b.addEventListener("click",()=>losSetFt(100)); }
-  { const b=$("#losCanopy"); if(b) b.addEventListener("change",()=>{ losCanopy=b.checked; store.set("fk_los_canopy",losCanopy?"1":"0"); { const row=$("#losCanopyRow"); if(row) row.classList.toggle("hidden",!losCanopy); } if(losObs){ $("#losSum").textContent="Checking line of sight\u2026"; computeLos(); } }); }
-  { const f=$("#losCanopyFt"); if(f) f.addEventListener("change",()=>{ let v=parseFloat(f.value); if(isNaN(v)||v<0)v=0; losCanopyManualFt=v; store.set("fk_los_canopy_ft",String(v)); if(losObs&&losCanopy){ $("#losSum").textContent="Checking line of sight\u2026"; computeLos(); } }); }
-  function losToggleCollapse(){ $("#losSheet").classList.toggle("loscol"); }
-  { const w=$("#losSumWrap"); if(w) w.addEventListener("click",losToggleCollapse); }
-  { const g=$("#losSheet .grab"); if(g){ g.style.cursor="pointer"; g.addEventListener("click",losToggleCollapse); } }
 
   /* init DB */
   (async function(){
