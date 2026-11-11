@@ -134,6 +134,16 @@
   .maplegend{display:flex;flex-wrap:wrap;gap:5px 12px;font:500 11px var(--ui);color:var(--muted)}
   .maplegend span{display:flex;align-items:center;gap:5px;white-space:nowrap}
   .maplegend i{width:9px;height:9px;border-radius:50%;border:1.5px solid #0E1116;flex:none}
+  .maplegend i.ovsw{width:13px;height:0;border-radius:0;border:0;border-top:2.5px solid}
+  .maplegend i.ovsw.dash{border-top-style:dashed}
+  #custMap .maplibregl-popup{z-index:9}   /* above the basemap switcher and map buttons */
+  .ovpop{max-height:46vh;overflow:auto;font-family:var(--ui);font-size:12.5px;line-height:1.4}
+  .ovhd{font:700 10.5px var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:2px 0 5px}
+  .ovhd:not(:first-child){margin-top:10px}
+  .ovitem{display:flex;gap:8px;align-items:flex-start;margin:0 0 7px}
+  .ovitem>i{flex:none;width:9px;height:9px;border-radius:2px;margin-top:4px}
+  .ovln{color:#C9D1DC;margin-top:1px}
+  .ovfoot{border-top:1px solid var(--line2);margin-top:8px;padding-top:6px;color:var(--muted);font-size:11px}
   .mapdock .mapdockbody{display:flex;flex-direction:column;gap:9px;overflow:hidden;transition:max-height .26s cubic-bezier(.2,.8,.2,1),opacity .2s,margin .2s;max-height:640px;opacity:1}
   .mapdock.collapsed .mapdockbody{max-height:0;opacity:0;margin-top:-9px;pointer-events:none}
   .mapdock .dockToggle{position:absolute;top:-30px;right:12px;z-index:7;display:inline-flex;align-items:center;gap:5px;background:rgba(14,17,22,.92);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid var(--line2);border-bottom:0;color:var(--muted);border-radius:10px 10px 0 0;padding:5px 12px;font:600 12px var(--ui);cursor:pointer}
@@ -674,6 +684,7 @@
       <span><i style="background:#41D88B"></i>Scheduled</span>
       <span><i style="background:#FF4D4D"></i>Access issue</span>
     </div>
+    <div class="maplegend hidden" id="ovLegend"></div>
     <div class="mapbar-row">
       <span class="mapcount" id="mNote"></span>
       <span class="mapbar-helpers">
@@ -688,6 +699,10 @@
     </div>
     <div class="mapbar-row main">
       <button class="btn ghost" id="mParcels" type="button">Property lines: off</button>
+    </div>
+    <div class="mapbar-row main">
+      <button class="btn ghost" id="mAirspace" type="button">Airspace: off</button>
+      <button class="btn ghost" id="mEnv" type="button">Protected areas: off</button>
     </div>
     <div class="mapbar-row main">
       <button class="btn ghost issue" id="mFlag" type="button">Mark access issue</button>
@@ -897,7 +912,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v55";
+  const APP_VER="v56";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -2414,6 +2429,7 @@
         cmap.addLayer({id:"osm",type:"raster",source:"osm-src",layout:{visibility:"none"}});
         cmap.addSource("usgs-src",{type:"raster",tiles:[USGS_IMG],tileSize:256,maxzoom:16,attribution:"Imagery: USGS"});
         cmap.addLayer({id:"usgs",type:"raster",source:"usgs-src",layout:{visibility:"none"}});
+        addOverlayLayers(cmap);
         cmap.addSource("sites",{type:"geojson",data:sitesGeo(cShown),cluster:true,clusterRadius:48,clusterMaxZoom:14});
         cmap.addLayer({id:"clusters",type:"circle",source:"sites",filter:["has","point_count"],paint:{
           "circle-color":["step",["get","point_count"],"#46566b",10,"#5d7392",50,"#9a7b35"],
@@ -2467,6 +2483,11 @@
           const la=ev.lngLat.lat, lo=ev.lngLat.lng;
           if(measOn){ measPts.push([la,lo]); measUpdate(); return; }
           if(pinPlacing){ pinPlacing=false; $("#pinBanner").classList.add("hidden"); openPinSheet(null,la,lo); return; }
+          if(airOn||envOn){
+            const pins=["sites-pts","clusters","user-pins"].filter(L=>cmap.getLayer(L));
+            const onParcel=parcelsOn&&cmap.getLayer("parcels-fill")&&cmap.queryRenderedFeatures(ev.point,{layers:["parcels-fill"]}).length;
+            if(!onParcel&&!cmap.queryRenderedFeatures(ev.point,{layers:pins}).length) showOverlayPopup(ev);   // parcel popup includes it
+          }
         });
         cmap.on("click","sites-pts",ev=>{
           if(pinPlacing||measOn) return;
@@ -2479,6 +2500,8 @@
         cMapReady=true;
         applyBasemap(store.get("fk_basemap","Dark"));
         if(store.get("fk_parcels_on","0")==="1" && (store.get("fk_parcelsproxy","")||"").trim()) setParcels(true);
+        setOverlay("air",store.get("fk_air_on","0")==="1",true); setOverlay("env",store.get("fk_env_on","0")==="1",true);
+        cmap.on("moveend",()=>{ if(airOn||envOn) ovRefresh(); });
         applyTerrain();
         fitToSites();
         setTimeout(()=>{ if(cmap) try{cmap.resize();}catch(e){} },140);
@@ -2497,7 +2520,7 @@
     if(!window.maplibregl){ const note=$("#mNote"); if(note) note.textContent="No internet \u2014 the map needs a connection"; return; }
     setTimeout(()=>{ if($("#mSheet").classList.contains("show")&&!cmap) buildMap(); },80);
   }
-  function closeMapSheet(){ try{setLasso(false);}catch(e){} $("#mSheet").classList.remove("show"); if(cmap){ try{cmap.remove();}catch(e){} cmap=null; cMapReady=false; } renderCustomers(); }
+  function closeMapSheet(){ try{setLasso(false);}catch(e){} try{ovAbortAll();}catch(e){} $("#mSheet").classList.remove("show"); if(cmap){ try{cmap.remove();}catch(e){} cmap=null; cMapReady=false; } renderCustomers(); }
   $("#mapBtn").addEventListener("click",openMapSheet);
   { const x=$("#mClose"); if(x) x.addEventListener("click",closeMapSheet); }
   { const sw=$("#mBasemaps"); if(sw) sw.addEventListener("click",ev=>{ const b=ev.target.closest("button"); if(b&&b.dataset.bm) applyBasemap(b.dataset.bm); }); }
@@ -2973,9 +2996,291 @@
     if(acres) rows.push('<div class="note" style="margin:0">'+(parseFloat(acres)?parseFloat(acres).toFixed(2)+" ac":escapeHtml(String(acres)))+'</div>');
     if(!rows.length) rows.push('<div class="note" style="margin:0">Parcel (no details in this tile)</div>');
     closeMapPopup();
-    mapPopup=new maplibregl.Popup({offset:12}).setLngLat(ev.lngLat).setHTML('<div style="min-width:150px">'+rows.join("")+'</div>').addTo(cmap);
+    const ov=overlayHTML(ev.point);
+    mapPopup=new maplibregl.Popup({offset:12,maxWidth:"300px"}).setLngLat(ev.lngLat).setHTML('<div style="min-width:150px">'+rows.join("")+'</div>'+(ov?'<div style="margin-top:8px">'+ov+'</div>':"")).addTo(cmap);
   }
   { const b=$("#mParcels"); if(b) b.addEventListener("click",()=>setParcels(!parcelsOn)); }
+
+  /* ---------------- airspace + protected-area overlays (FAA AIS / USGS PAD-US, online) ---------------- */
+  const FAA_FS="https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/";
+  // one GeoJSON source per FAA/USGS layer; each loads for the current view once zoomed in past `minz`
+  const OV_SRC={
+    "ov-class":{group:"air", minz:7, url:FAA_FS+"Class_Airspace/FeatureServer/0",
+      // B/C/D and surface-area E only: Class A (18,000 ft MSL+) and E5/E6 (700 ft+ floors) sit above drone altitudes
+      where:"CLASS IN ('B','C','D') OR LOCAL_TYPE IN ('CLASS_E2','CLASS_E3','CLASS_E4')",
+      fields:"NAME,CLASS,LOCAL_TYPE,LOWER_VAL,LOWER_UOM,LOWER_CODE,UPPER_VAL,UPPER_UOM,UPPER_CODE,WKHR_CODE,WKHR_RMK"},
+    "ov-sua":{group:"air", minz:6, url:FAA_FS+"Special_Use_Airspace/FeatureServer/0", where:"1=1",
+      fields:"NAME,TYPE_CODE,LOWER_VAL,LOWER_UOM,LOWER_CODE,UPPER_VAL,UPPER_UOM,UPPER_CODE,TIMESOFUSE,CONT_AGENT"},
+    "ov-nsr":{group:"air", minz:7, url:FAA_FS+"DoD_Mar_13/FeatureServer/0", where:"1=1",
+      fields:"Facility,Base,Branch,Reason,Floor,Ceiling"},
+    "ov-nsrpt":{group:"air", minz:7, url:FAA_FS+"Part_Time_National_Security_UAS_Flight_Restrictions/FeatureServer/0", where:"1=1",
+      fields:"Facility,Base,Branch,Reason,Floor,Ceiling,ADVISENOTE"},
+    "ov-uasfm":{group:"air", minz:11, url:FAA_FS+"FAA_UAS_FacilityMap_Data/FeatureServer/0", where:"1=1",
+      fields:"CEILING,APT1_NAME,APT1_ICAO,APT1_LAANC,MAP_EFF"},
+    "ov-env":{group:"env", minz:8, url:"https://services.arcgis.com/v01gqwM5QqNysAAi/arcgis/rest/services/Manager_Name_PADUS/FeatureServer/0",
+      where:"Mang_Name IN ('NPS','FWS') OR Des_Tp IN ('NWR','WPA','WA','WSA','MPA') OR (Mang_Type='STAT' AND (Mang_Name IN ('SPR','SFW') OR Des_Tp IN ('SP','SREC','SW')))",
+      fields:"Unit_Nm,Des_Tp,Mang_Name,Mang_Type"}
+  };
+  const OV_AIR_LAYERS=["ov-uasfm-fill","ov-uasfm-line","ov-uasfm-lbl","ov-sua-fill","ov-sua-line","ov-class-fill","ov-class-line","ov-class-dash","ov-nsr-fill","ov-nsr-line","ov-nsrpt-fill","ov-nsrpt-line"];
+  const OV_ENV_LAYERS=["ov-env-fill","ov-env-line"];
+  const OV_HIT_AIR=["ov-class-fill","ov-sua-fill","ov-nsr-fill","ov-nsrpt-fill","ov-uasfm-fill"];
+  const CLASS_COLORS={B:"#3B7BFF",C:"#D6336C",D:"#4DABF7",E:"#E64980"};
+  const SUA_INFO={
+    P:{c:"#FF3B3B",L:"Prohibited area",t:"No flight of any kind."},
+    R:{c:"#FF6B6B",L:"Restricted area",t:"Don't fly while it's active without the controlling agency's approval."},
+    MOA:{c:"#B197FC",L:"Military Operations Area",t:"Drones may fly, but expect fast, low military aircraft."},
+    W:{c:"#FFA94D",L:"Warning area",t:"Offshore military hazard area."},
+    A:{c:"#FFA94D",L:"Alert area",t:"High volume of pilot training or unusual aerial activity."},
+    D:{c:"#FFA94D",L:"Danger area",t:"Hazardous activity area."}
+  };
+  const ENV_INFO={
+    nps:{c:"#F08C00",L:"National Park Service",t:"Launching, landing or operating a drone on park land or water is prohibited without the superintendent's approval."},
+    fws:{c:"#2FB344",L:"National Wildlife Refuge",t:"Unauthorized aircraft operation, including drone takeoff and landing, is prohibited on refuges (50 CFR 27.34); a special use permit is required."},
+    wild:{c:"#12B886",L:"Wilderness",t:"No motorized equipment or aircraft landings — no drone takeoff or landing inside wilderness."},
+    stpark:{c:"#C0EB75",L:"State park / recreation area",t:"Drone rules vary by state; many state parks ban drones or require a permit. Check the park's rules."},
+    stwild:{c:"#82C91E",L:"State fish & wildlife area",t:"Many state wildlife areas prohibit drones or disturbing wildlife. Check with the managing agency."},
+    mpa:{c:"#22B8CF",L:"Marine protected area",t:"Some marine protected areas and sanctuaries restrict low overflight. Check before flying."}
+  };
+  function envCat(p){ const d=p.Des_Tp, m=p.Mang_Name;
+    if(d==="WA"||d==="WSA") return "wild";
+    if(m==="FWS"||d==="NWR"||d==="WPA") return "fws";
+    if(m==="NPS") return "nps";
+    if(d==="MPA") return "mpa";
+    if(m==="SFW") return "stwild";
+    return "stpark"; }
+  let airOn=false, envOn=false, ovTimer=null, ovFailToast=0;
+  const ovFailed={}, ovRetry={};
+  const ovEmpty=()=>({type:"FeatureCollection",features:[]});
+
+  function addOverlayLayers(map){
+    Object.keys(OV_SRC).forEach(id=>{ map.addSource(id,{type:"geojson",data:ovEmpty()}); delete ovWant[id]; delete ovFailed[id]; delete ovRetry[id]; });
+    const hide={visibility:"none"};
+    // protected areas sit lowest, airspace on top of them, site pins above everything
+    const envColor=["match",["get","cat"],"nps",ENV_INFO.nps.c,"fws",ENV_INFO.fws.c,"wild",ENV_INFO.wild.c,"stwild",ENV_INFO.stwild.c,"mpa",ENV_INFO.mpa.c,ENV_INFO.stpark.c];
+    map.addLayer({id:"ov-env-fill",type:"fill",source:"ov-env",layout:hide,paint:{"fill-color":envColor,"fill-opacity":0.15}});
+    map.addLayer({id:"ov-env-line",type:"line",source:"ov-env",layout:hide,paint:{"line-color":envColor,"line-width":1.6,"line-opacity":0.9}});
+    // LAANC grid: colour by the max altitude that can be auto-approved
+    const ceilColor=["step",["to-number",["get","CEILING"],0],"#FA5252",50,"#FD7E14",150,"#FCC419",250,"#94D82D",350,"#40C057"];
+    map.addLayer({id:"ov-uasfm-fill",type:"fill",source:"ov-uasfm",layout:hide,paint:{"fill-color":ceilColor,"fill-opacity":0.13}});
+    map.addLayer({id:"ov-uasfm-line",type:"line",source:"ov-uasfm",layout:hide,paint:{"line-color":ceilColor,"line-width":0.6,"line-opacity":0.5}});
+    map.addLayer({id:"ov-uasfm-lbl",type:"symbol",source:"ov-uasfm",minzoom:12.5,layout:Object.assign({},hide,{"text-field":["to-string",["get","CEILING"]],"text-font":["Noto Sans Regular"],"text-size":11}),
+      paint:{"text-color":"#F2F5F9","text-halo-color":"#0a0d12","text-halo-width":1.4}});
+    const suaColor=["match",["get","TYPE_CODE"],"P",SUA_INFO.P.c,"R",SUA_INFO.R.c,"MOA",SUA_INFO.MOA.c,"#FFA94D"];
+    map.addLayer({id:"ov-sua-fill",type:"fill",source:"ov-sua",layout:hide,paint:{"fill-color":suaColor,"fill-opacity":["match",["get","TYPE_CODE"],["P","R"],0.12,0.05]}});
+    map.addLayer({id:"ov-sua-line",type:"line",source:"ov-sua",layout:hide,paint:{"line-color":suaColor,"line-width":2,"line-dasharray":[3,1.5]}});
+    // controlled airspace in sectional-chart style: B/C solid, D and surface E dashed
+    const clsColor=["match",["get","CLASS"],"B",CLASS_COLORS.B,"C",CLASS_COLORS.C,"D",CLASS_COLORS.D,CLASS_COLORS.E];
+    const solid=["in",["get","CLASS"],["literal",["B","C"]]];
+    map.addLayer({id:"ov-class-fill",type:"fill",source:"ov-class",layout:hide,paint:{"fill-color":clsColor,"fill-opacity":["match",["get","CLASS"],"E",0.04,0.07]}});
+    map.addLayer({id:"ov-class-line",type:"line",source:"ov-class",filter:solid,layout:hide,paint:{"line-color":clsColor,"line-width":2.2}});
+    map.addLayer({id:"ov-class-dash",type:"line",source:"ov-class",filter:["!",solid],layout:hide,paint:{"line-color":clsColor,"line-width":2,"line-dasharray":[2.5,1.5]}});
+    // national-security drone restrictions: no drones
+    ["ov-nsr","ov-nsrpt"].forEach(id=>{
+      map.addLayer({id:id+"-fill",type:"fill",source:id,layout:hide,paint:{"fill-color":"#FF2D2D","fill-opacity":0.2}});
+      map.addLayer({id:id+"-line",type:"line",source:id,layout:hide,paint:{"line-color":"#FF2D2D","line-width":2}});
+    });
+  }
+
+  /* Overlays load in fixed web-map tiles with resultType=tile + cacheHint, so identical requests are
+     served from ArcGIS's CDN: that keeps us under the services' "large geometry" rate limit
+     (60 uncached requests/min) and lets panning back reuse tiles already fetched. */
+  const OV_TILE_CAP=300, OV_VIEW_TILES=16;
+  const ovTiles={}, ovPending={}, ovWant={};
+  let ovGen=0, ovBusyUntil=0;
+  function ovTileBounds(x,y,z){ const n=Math.pow(2,z), lat=t=>Math.atan(Math.sinh(Math.PI*(1-2*t/n)))*180/Math.PI;
+    return {w:x/n*360-180, e:(x+1)/n*360-180, n:lat(y), s:lat(y+1)}; }
+  async function ovFetchTile(src,x,y,tz){
+    const b=ovTileBounds(x,y,tz), px=360/(256*Math.pow(2,tz));   // ~1 pixel at this tile zoom: simplify to what can be seen
+    const q="where="+encodeURIComponent(src.where)+"&geometry="+[b.w,b.s,b.e,b.n].map(v=>v.toFixed(6)).join(",")+
+      "&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=OBJECTID,"+src.fields+
+      "&outSR=4326&geometryPrecision=6&maxAllowableOffset="+px.toFixed(7)+"&resultType=tile&cacheHint=true&f=geojson";
+    const feats=[];
+    for(let page=0, off=0; page<4; page++){
+      const r=await fetch(src.url+"/query?"+q+(off?"&resultOffset="+off:""));
+      if(!r.ok){ const e=new Error("HTTP "+r.status); e.code=r.status; throw e; }
+      const gj=await r.json();
+      if(gj.error){ const e=new Error(gj.error.message||"query failed"); e.code=gj.error.code; throw e; }
+      const fs=gj.features||[]; fs.forEach(f=>feats.push(f)); off+=fs.length;
+      if(!fs.length||!((gj.properties&&gj.properties.exceededTransferLimit)||gj.exceededTransferLimit)) break;
+    }
+    return feats;
+  }
+  function ovRender(id){
+    const source=cmap&&cmap.getSource(id), want=ovWant[id], cache=ovTiles[id]; if(!source||!want||!cache) return;
+    const seen=new Set(), feats=[];
+    want.keys.forEach(k=>{ (cache.get(k)||[]).forEach(f=>{ const oid=f.id!=null?f.id:(f.properties&&f.properties.OBJECTID); if(oid!=null){ if(seen.has(oid)) return; seen.add(oid); } feats.push(f); }); });
+    source.setData({type:"FeatureCollection",features:feats});
+  }
+  function ovRefresh(){ clearTimeout(ovTimer); ovTimer=setTimeout(ovLoad,350); }
+  function ovAbortAll(){ clearTimeout(ovTimer); ovGen++; Object.keys(ovWant).forEach(k=>delete ovWant[k]); }
+  function ovLoad(){
+    if(!cmap||!cMapReady) return;
+    const z=cmap.getZoom(), bb=cmap.getBounds(), gen=ovGen;
+    Object.keys(OV_SRC).forEach(id=>{
+      const src=OV_SRC[id], on=src.group==="air"?airOn:envOn, source=cmap.getSource(id); if(!source) return;
+      if(!on || z<src.minz){ if(ovWant[id]){ delete ovWant[id]; source.setData(ovEmpty()); } return; }
+      // tiles one zoom coarser than the view (2-4 per screen), never finer than z12
+      const tz=Math.max(src.minz-1, Math.min(12, Math.floor(z)-1));
+      const x0=clampT(lon2tile(bb.getWest(),tz),tz), x1=clampT(lon2tile(bb.getEast(),tz),tz);
+      const y0=clampT(lat2tile(bb.getNorth(),tz),tz), y1=clampT(lat2tile(bb.getSouth(),tz),tz);
+      const keys=[];
+      for(let x=x0;x<=x1;x++) for(let y=y0;y<=y1;y++) keys.push(tz+"/"+x+"/"+y);
+      if(keys.length>OV_VIEW_TILES) keys.length=OV_VIEW_TILES;   // tilted 3D views can reach the horizon
+      ovWant[id]={keys};
+      const cache=ovTiles[id]||(ovTiles[id]=new Map()), pend=ovPending[id]||(ovPending[id]=new Set());
+      ovRender(id);
+      if(Date.now()<ovBusyUntil) return;
+      keys.filter(k=>!cache.has(k)&&!pend.has(k)).forEach(k=>{
+        const [tz2,x,y]=k.split("/").map(Number); pend.add(k);
+        ovFetchTile(src,x,y,tz2).then(feats=>{
+          pend.delete(k);
+          if(id==="ov-env") feats.forEach(f=>{ f.properties=f.properties||{}; f.properties.cat=envCat(f.properties); });
+          cache.set(k,feats); if(cache.size>OV_TILE_CAP) cache.delete(cache.keys().next().value);
+          delete ovFailed[id]; delete ovRetry[id];
+          if(gen===ovGen&&ovWant[id]&&ovWant[id].keys.includes(k)) ovRender(id);
+          ovStatus();
+        }).catch(err=>{
+          pend.delete(k); ovFailed[id]=true;
+          if(err&&err.code===429) ovBusyUntil=Date.now()+45000;   // over the server's rate limit: back off
+          ovStatus();
+          if(gen!==ovGen) return;
+          if(navigator.onLine && (ovRetry[id]||0)<2){ ovRetry[id]=(ovRetry[id]||0)+1; setTimeout(()=>{ if(ovFailed[id]&&gen===ovGen) ovLoad(); }, err&&err.code===429?46000:4000*ovRetry[id]); return; }
+          if(Date.now()-ovFailToast>15000){ ovFailToast=Date.now(); toast(navigator.onLine?"Couldn't load "+(src.group==="air"?"airspace":"protected areas")+" — try again in a moment.":"Airspace and protected areas need a connection."); }
+        });
+      });
+    });
+    ovStatus();
+  }
+  // button labels double as status: on / zoom in / no signal
+  function ovStatus(){
+    const z=cmap?cmap.getZoom():0;
+    const lbl=(group,on,name,minz)=>{
+      if(!on) return name+": off";
+      if(z<minz) return name+": zoom in";
+      const ids=Object.keys(OV_SRC).filter(k=>OV_SRC[k].group===group&&z>=OV_SRC[k].minz);
+      if(ids.length&&ids.every(k=>ovFailed[k])) return name+(!navigator.onLine?": no signal":Date.now()<ovBusyUntil?": busy, retrying":": unavailable");
+      return name+": on";
+    };
+    const a=$("#mAirspace"), v=$("#mEnv");
+    if(a){ a.textContent=lbl("air",airOn,"Airspace",7); a.classList.toggle("on",airOn); }
+    if(v){ v.textContent=lbl("env",envOn,"Protected areas",8); v.classList.toggle("on",envOn); }
+    const lg=$("#ovLegend"); if(!lg) return;
+    const sw=(c,t,dash)=>'<span><i class="ovsw'+(dash?" dash":"")+'" style="border-color:'+c+'"></i>'+t+'</span>';
+    let h="";
+    if(airOn) h+=sw(CLASS_COLORS.B,"B")+sw(CLASS_COLORS.C,"C")+sw(CLASS_COLORS.D,"D",1)+sw(CLASS_COLORS.E,"E surface",1)+sw("#FF3B3B","No drones / restricted")+sw(SUA_INFO.MOA.c,"MOA",1)+(z>=11?sw("#FCC419","LAANC grid (ft)"):"");
+    if(envOn) h+=sw(ENV_INFO.nps.c,"Nat'l park")+sw(ENV_INFO.fws.c,"Wildlife refuge")+sw(ENV_INFO.wild.c,"Wilderness")+sw(ENV_INFO.stpark.c,"State park")+sw(ENV_INFO.stwild.c,"State wildlife");
+    lg.innerHTML=h; lg.classList.toggle("hidden",!h);
+  }
+  function setOverlay(group,on,quiet){
+    if(group==="air") airOn=on; else envOn=on;
+    store.set(group==="air"?"fk_air_on":"fk_env_on", on?"1":"0");
+    if(cmap&&cMapReady){
+      (group==="air"?OV_AIR_LAYERS:OV_ENV_LAYERS).forEach(L=>{ if(cmap.getLayer(L)) cmap.setLayoutProperty(L,"visibility",on?"visible":"none"); });
+      if(on&&!quiet){ const minz=group==="air"?7:8; if(cmap.getZoom()<minz) toast("Zoom in to see "+(group==="air"?"airspace":"protected areas")); }
+      else closeMapPopup();
+      ovLoad();
+    }
+    ovStatus();
+  }
+
+  /* --- tap details --- */
+  function fmtAlt(val,uom,code){
+    const c=String(code||"").toUpperCase(), v=parseFloat(val);
+    if(c==="SFC"||(!c&&v===0)) return "surface";
+    if(c==="UNL"||c==="UNLTD") return "unlimited";
+    if(isNaN(v)) return String(val||"?");
+    if(v<=-9000) return "the airspace above";
+    if(c==="STD") return "FL"+Math.round(v/100);
+    return v.toLocaleString("en-US")+" "+(String(uom||"FT").toUpperCase()==="FT"?"ft":String(uom).toLowerCase())+(c?" "+c:"");
+  }
+  function floorNote(p){
+    const c=String(p.LOWER_CODE||"").toUpperCase(), v=parseFloat(p.LOWER_VAL);
+    if(c==="SFC"||!(v>0)) return "";
+    if(c==="AGL") return v>400 ? "Starts "+v.toLocaleString("en-US")+" ft above the ground — above a drone at 400 ft." : "";
+    if(c==="STD") return "Starts at FL"+Math.round(v/100)+" — far above drone altitudes.";
+    return "Starts at "+v.toLocaleString("en-US")+" ft MSL — a drone at 400 ft AGL is below it unless the ground here is above about "+Math.max(0,v-400).toLocaleString("en-US")+" ft MSL.";
+  }
+  // NSUFR floors/ceilings come as text ("Surface", "400' AGL") or bare numbers
+  function nsrAlt(v){ const t=String(v).trim(); return /^\d+(\.\d+)?$/.test(t)?Number(t).toLocaleString("en-US")+" ft":t; }
+  function classInfo(p){
+    const lt=String(p.LOCAL_TYPE||""), c=String(p.CLASS||"");
+    if(c==="B") return {c:CLASS_COLORS.B,L:"Class B",t:"Busiest airports. Drones need FAA authorization (LAANC or DroneZone)."};
+    if(c==="C") return {c:CLASS_COLORS.C,L:"Class C",t:"Drones need FAA authorization (LAANC or DroneZone)."};
+    if(c==="D") return {c:CLASS_COLORS.D,L:"Class D",t:"Towered airport. Drones need FAA authorization (LAANC or DroneZone)."};
+    if(lt==="CLASS_E2") return {c:CLASS_COLORS.E,L:"Class E surface area",t:"Controlled from the ground up. Drones need FAA authorization."};
+    return {c:CLASS_COLORS.E,L:"Class E extension",t:"Surface extension of controlled airspace. Drones need FAA authorization."};
+  }
+  function ovItem(color,title,lines){
+    return '<div class="ovitem"><i style="background:'+color+'"></i><div><b>'+escapeHtml(title)+'</b>'+lines.filter(Boolean).map(l=>'<div class="ovln">'+l+'</div>').join("")+'</div></div>';
+  }
+  function overlayHTML(point){
+    if(!cmap||!(airOn||envOn)) return "";
+    const z=cmap.getZoom(), parts=[];
+    if(airOn){
+      if(z<7) parts.push('<div class="ovhd">Airspace</div><div class="ovln">Zoom in to load airspace.</div>');
+      else{
+        const L=OV_HIT_AIR.filter(id=>cmap.getLayer(id)), fs=L.length?cmap.queryRenderedFeatures(point,{layers:L}):[], seen=new Set(), items=[];
+        let controlled=false, inClass=false, grid=null;
+        fs.forEach(f=>{ const p=f.properties||{}, src=f.source;
+          if(src==="ov-uasfm"){ if(!grid) grid=p; return; }
+          let key, html;
+          if(src==="ov-class"){ const ci=classInfo(p), fl=floorNote(p); if(!fl){ controlled=true; inClass=true; }
+            key="c|"+p.NAME+"|"+p.LOWER_VAL+"|"+p.UPPER_VAL;
+            const hrs=p.WKHR_CODE&&p.WKHR_CODE!=="H24" ? "Hours: "+escapeHtml(p.WKHR_RMK||p.WKHR_CODE)+(p.CLASS==="D"?" (outside tower hours it reverts to E or G)":"") : "";
+            html=ovItem(ci.c,ci.L+(p.NAME?" · "+p.NAME:""),[escapeHtml(fmtAlt(p.LOWER_VAL,p.LOWER_UOM,p.LOWER_CODE)+" to "+fmtAlt(p.UPPER_VAL,p.UPPER_UOM,p.UPPER_CODE)),escapeHtml(fl||ci.t),fl?"":hrs]);
+          } else if(src==="ov-sua"){ const si=SUA_INFO[p.TYPE_CODE]||{c:"#FFA94D",L:"Special use airspace",t:""}, fl=floorNote(p); if((p.TYPE_CODE==="P"||p.TYPE_CODE==="R")&&!fl) controlled=true;
+            key="s|"+p.NAME;
+            html=ovItem(si.c,si.L+(p.NAME?" · "+p.NAME:""),[escapeHtml(fmtAlt(p.LOWER_VAL,p.LOWER_UOM,p.LOWER_CODE)+" to "+fmtAlt(p.UPPER_VAL,p.UPPER_UOM,p.UPPER_CODE)),escapeHtml(fl||si.t),p.TIMESOFUSE?"Active: "+escapeHtml(p.TIMESOFUSE):"",p.CONT_AGENT?"Controlled by "+escapeHtml(p.CONT_AGENT):""]);
+          } else { controlled=true; const part=src==="ov-nsrpt";
+            key="n|"+p.Facility+"|"+src;
+            html=ovItem("#FF2D2D","National security UAS flight restriction"+(part?" (part-time)":""),[escapeHtml([p.Facility,p.Base].map(v=>String(v||"").trim()).filter(Boolean).join(" · ")),
+              escapeHtml("No drones"+(part?" while active":"")+" (14 CFR 99.7)."+(p.Floor!=null&&p.Ceiling!=null?" "+nsrAlt(p.Floor)+" to "+nsrAlt(p.Ceiling)+".":"")),part&&p.ADVISENOTE?escapeHtml(p.ADVISENOTE):""]);
+          }
+          if(!seen.has(key)){ seen.add(key); items.push(html); }
+        });
+        if(!controlled) items.unshift(ovItem("#9aa4b0","Class G (uncontrolled) at drone altitudes",[grid?"This spot is just outside controlled airspace, but this LAANC square overlaps it — stay outside the boundary line or get authorization.":"No FAA authorization needed below 400 ft AGL."]));
+        if(grid){ const ft=parseInt(grid.CEILING,10);
+          items.push(ovItem("#FCC419","LAANC grid: "+(isNaN(ft)?"?":ft)+" ft AGL",[ft===0?"No automatic approval here — request authorization through FAA DroneZone.":"Automatic approval up to "+ft+" ft AGL through a LAANC app.",
+            escapeHtml([grid.APT1_NAME,grid.APT1_ICAO].filter(Boolean).join(" · "))]));
+        } else if(inClass&&z<11) items.push('<div class="ovln">Zoom in further to see the LAANC altitude grid.</div>');
+        parts.push('<div class="ovhd">Airspace</div>'+items.join(""));
+      }
+    }
+    if(envOn){
+      if(z<8) parts.push('<div class="ovhd">Protected areas</div><div class="ovln">Zoom in to load protected areas.</div>');
+      else{
+        const fs=cmap.getLayer("ov-env-fill")?cmap.queryRenderedFeatures(point,{layers:["ov-env-fill"]}):[], seen=new Set(), items=[];
+        fs.forEach(f=>{ const p=f.properties||{}, ei=ENV_INFO[p.cat]||ENV_INFO.stpark, key=p.cat+"|"+p.Unit_Nm;
+          if(seen.has(key)) return; seen.add(key);
+          items.push(ovItem(ei.c,p.Unit_Nm||ei.L,[escapeHtml(ei.L),escapeHtml(ei.t)])); });
+        if(!items.length) items.push('<div class="ovln">None mapped at this spot.</div>');
+        parts.push('<div class="ovhd">Protected areas</div>'+items.join(""));
+      }
+    }
+    if(!parts.length) return "";
+    return '<div class="ovpop">'+parts.join("")+'<div class="ovfoot">TFRs and NOTAMs aren’t shown — check B4UFLY or tfr.faa.gov before flying.</div></div>';
+  }
+  let ovTapTimer=null;
+  function showOverlayPopup(ev){
+    clearTimeout(ovTapTimer);
+    const map=cmap, cancel=()=>clearTimeout(ovTapTimer);
+    map.once("movestart",cancel);
+    ovTapTimer=setTimeout(()=>{ map.off("movestart",cancel); if(cmap===map) openOverlayPopup(ev); },300);
+  }
+  function openOverlayPopup(ev){
+    const html=overlayHTML(ev.point); if(!html) return;
+    closeMapPopup();
+    mapPopup=new maplibregl.Popup({offset:8,maxWidth:"min(300px, 86vw)"}).setLngLat(ev.lngLat).setHTML(html).addTo(cmap);
+    // on a phone a tap near the edge can push the popup off screen: nudge the map so all of it shows
+    const pop=mapPopup;
+    requestAnimationFrame(()=>{ if(mapPopup!==pop||!cmap) return; const el=pop.getElement(); if(!el) return;
+      const r=el.getBoundingClientRect(), m=cmap.getContainer().getBoundingClientRect(), pad=10;
+      const dx=r.right>m.right-pad ? r.right-(m.right-pad) : (r.left<m.left+pad ? r.left-(m.left+pad) : 0);
+      const dy=r.top<m.top+pad ? r.top-(m.top+pad) : 0;
+      if(dx||dy) cmap.panBy([dx,dy],{duration:250}); });
+  }
+  { const b=$("#mAirspace"); if(b) b.addEventListener("click",()=>setOverlay("air",!airOn)); }
+  { const b=$("#mEnv"); if(b) b.addEventListener("click",()=>setOverlay("env",!envOn)); }
 
   /* ---------------- map control dock (show / hide) ---------------- */
   { const dt=$("#dockToggle"), dk=$("#mapDock"), lbl=$("#dockToggleLabel");

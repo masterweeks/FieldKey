@@ -165,6 +165,34 @@ manually** on the main screen creates a fresh record.)
   **Backups**, and they deliberately stay out of everything asset-related — they never
   join selections, exports, or access requests. Made for things
   like the entrance to an off-road path, a staging area, or a locked gate.
+- **Airspace** — the **Airspace** toggle in the map dock draws FAA airspace over the
+  map (from the FAA's public AIS data, online): **Class B** (solid blue), **Class C**
+  (solid magenta), **Class D** (dashed blue) and **Class E surface areas** (dashed
+  magenta), plus special-use airspace (**prohibited / restricted** in red, **MOAs** in
+  purple, warning/alert areas in orange) and **national-security UAS flight
+  restrictions** (solid red — no drones). It loads once you're zoomed to about county
+  level; zoom in to street level and the **LAANC grid** appears, each square labeled
+  with the altitude (ft AGL) that can be auto-approved there. **Tap anywhere** on the
+  map for a details card: every airspace at that spot with its class, floor and
+  ceiling, tower hours, and what it means for a drone — including shelves that start
+  well above 400 ft (it tells you you're beneath them), **Class G** when nothing
+  controlled reaches drone altitude, and the LAANC ceiling for that square. Class A
+  (18,000 ft MSL and up) and Class E starting at 700 ft or higher aren't drawn —
+  they're above drone altitudes. **TFRs and NOTAMs are not included** — always check
+  B4UFLY or tfr.faa.gov before flying.
+- **Protected areas** — the **Protected areas** toggle shows land where drone flight
+  is commonly banned or restricted (from the USGS Protected Areas Database, online):
+  **National Park Service** units (orange), **National Wildlife Refuges** (green),
+  **Wilderness and Wilderness Study Areas** (teal), **state parks and recreation
+  areas** (light green), **state fish & wildlife areas** (olive) and **marine protected
+  areas** (cyan). Tap inside one to see its name, who manages it, and the general drone
+  rule (e.g. no takeoff or landing on refuges without a permit). Rules vary — treat
+  it as a heads-up and confirm with the managing agency.
+
+  Both layers stay on (or off) the next time you open the map, need a connection
+  (they aren't part of **Save offline**), and add their colors to the map legend.
+  With **Property lines** on, tapping a parcel shows the airspace and protected-area
+  details under the parcel info.
 - **Select & export** — every row has a circle on the left; tap it to pick
   specific assets (a bar shows how many are selected). This is the same selection
   you build by tapping pins on the **Map**, and the **Selected** filter shows it.
