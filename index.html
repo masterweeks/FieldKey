@@ -143,6 +143,9 @@
   .ovitem{display:flex;gap:8px;align-items:flex-start;margin:0 0 7px}
   .ovitem>i{flex:none;width:9px;height:9px;border-radius:2px;margin-top:4px}
   .ovln{color:#C9D1DC;margin-top:1px}
+  .ovbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .ovbtn{appearance:none;border:1px solid var(--line2);background:var(--bg3);color:var(--ink);border-radius:8px;padding:6px 9px;font:600 12px var(--ui);cursor:pointer}
+  .ovbtn.pri{background:var(--amber);border-color:var(--amber);color:#1a1300}
   .ovfoot{border-top:1px solid var(--line2);margin-top:8px;padding-top:6px;color:var(--muted);font-size:11px}
   .mapdock .mapdockbody{display:flex;flex-direction:column;gap:9px;overflow:hidden;transition:max-height .26s cubic-bezier(.2,.8,.2,1),opacity .2s,margin .2s;max-height:640px;opacity:1}
   .mapdock.collapsed .mapdockbody{max-height:0;opacity:0;margin-top:-9px;pointer-events:none}
@@ -912,7 +915,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v56";
+  const APP_VER="v57";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -2430,14 +2433,7 @@
         cmap.addSource("usgs-src",{type:"raster",tiles:[USGS_IMG],tileSize:256,maxzoom:16,attribution:"Imagery: USGS"});
         cmap.addLayer({id:"usgs",type:"raster",source:"usgs-src",layout:{visibility:"none"}});
         addOverlayLayers(cmap);
-        cmap.addSource("sites",{type:"geojson",data:sitesGeo(cShown),cluster:true,clusterRadius:48,clusterMaxZoom:14});
-        cmap.addLayer({id:"clusters",type:"circle",source:"sites",filter:["has","point_count"],paint:{
-          "circle-color":["step",["get","point_count"],"#46566b",10,"#5d7392",50,"#9a7b35"],
-          "circle-radius":["step",["get","point_count"],15,10,19,50,25],
-          "circle-stroke-width":2,"circle-stroke-color":"#0E1116","circle-opacity":.92}});
-        cmap.addLayer({id:"cluster-count",type:"symbol",source:"sites",filter:["has","point_count"],
-          layout:{"text-field":["get","point_count_abbreviated"],"text-font":["Noto Sans Regular"],"text-size":13},
-          paint:{"text-color":"#F2F5F9","text-halo-color":"#0E1116","text-halo-width":1.2}});
+        cmap.addSource("sites",{type:"geojson",data:sitesGeo(cShown)});   // no clustering: every site is its own pin at every zoom
         const pinAnchor=ensurePinImages(cmap);
         const pinColorKey=["case",
           ["==",["get","flag"],1],"issue",
@@ -2446,8 +2442,9 @@
           ["==",["get","st"],"texted"],"texted",
           ["==",["get","st"],"done"],"done",
           "new"];
-        cmap.addLayer({id:"sites-pts",type:"symbol",source:"sites",filter:["!",["has","point_count"]],
+        cmap.addLayer({id:"sites-pts",type:"symbol",source:"sites",
           layout:{
+            "symbol-sort-key":["get","sel"],   // selected pins draw on top of the pile
             "icon-image":["concat","pin_",pinColorKey,["case",["==",["get","sel"],1],"_sel",""]],
             "icon-size":1,"icon-anchor":pinAnchor,
             "icon-allow-overlap":true,"icon-ignore-placement":true}});
@@ -2478,13 +2475,12 @@
           }
         }
         ["user-pins"].forEach(L=>{ cmap.on("mouseenter",L,()=>{cmap.getCanvas().style.cursor="pointer";}); cmap.on("mouseleave",L,()=>{cmap.getCanvas().style.cursor="";}); });
-        cmap.on("click","clusters",ev=>{ const f=ev.features[0]; cmap.getSource("sites").getClusterExpansionZoom(f.properties.cluster_id).then(z=>cmap.easeTo({center:f.geometry.coordinates,zoom:z})).catch(()=>{}); });
         cmap.on("click",ev=>{
           const la=ev.lngLat.lat, lo=ev.lngLat.lng;
           if(measOn){ measPts.push([la,lo]); measUpdate(); return; }
           if(pinPlacing){ pinPlacing=false; $("#pinBanner").classList.add("hidden"); openPinSheet(null,la,lo); return; }
           if(airOn||envOn){
-            const pins=["sites-pts","clusters","user-pins"].filter(L=>cmap.getLayer(L));
+            const pins=["sites-pts","user-pins"].filter(L=>cmap.getLayer(L));
             const onParcel=parcelsOn&&cmap.getLayer("parcels-fill")&&cmap.queryRenderedFeatures(ev.point,{layers:["parcels-fill"]}).length;
             if(!onParcel&&!cmap.queryRenderedFeatures(ev.point,{layers:pins}).length) showOverlayPopup(ev);   // parcel popup includes it
           }
@@ -2496,7 +2492,7 @@
           cSel.add(id); refreshMarks();
           showPinPopup(f.geometry.coordinates, f.properties);
         });
-        ["clusters","sites-pts"].forEach(L=>{ cmap.on("mouseenter",L,()=>{cmap.getCanvas().style.cursor="pointer";}); cmap.on("mouseleave",L,()=>{cmap.getCanvas().style.cursor="";}); });
+        ["sites-pts"].forEach(L=>{ cmap.on("mouseenter",L,()=>{cmap.getCanvas().style.cursor="pointer";}); cmap.on("mouseleave",L,()=>{cmap.getCanvas().style.cursor="";}); });
         cMapReady=true;
         applyBasemap(store.get("fk_basemap","Dark"));
         if(store.get("fk_parcels_on","0")==="1" && (store.get("fk_parcelsproxy","")||"").trim()) setParcels(true);
@@ -3048,7 +3044,7 @@
     if(d==="MPA") return "mpa";
     if(m==="SFW") return "stwild";
     return "stpark"; }
-  let airOn=false, envOn=false, ovTimer=null, ovFailToast=0;
+  let airOn=false, envOn=false, ovTimer=null, ovFailToast=0, ovLaanc=null;
   const ovFailed={}, ovRetry={};
   const ovEmpty=()=>({type:"FeatureCollection",features:[]});
 
@@ -3239,9 +3235,13 @@
           if(!seen.has(key)){ seen.add(key); items.push(html); }
         });
         if(!controlled) items.unshift(ovItem("#9aa4b0","Class G (uncontrolled) at drone altitudes",[grid?"This spot is just outside controlled airspace, but this LAANC square overlaps it — stay outside the boundary line or get authorization.":"No FAA authorization needed below 400 ft AGL."]));
-        if(grid){ const ft=parseInt(grid.CEILING,10);
-          items.push(ovItem("#FCC419","LAANC grid: "+(isNaN(ft)?"?":ft)+" ft AGL",[ft===0?"No automatic approval here — request authorization through FAA DroneZone.":"Automatic approval up to "+ft+" ft AGL through a LAANC app.",
-            escapeHtml([grid.APT1_NAME,grid.APT1_ICAO].filter(Boolean).join(" · "))]));
+        if(grid){ const ft=parseInt(grid.CEILING,10), ll=cmap.unproject(point);
+          // auto-approval needs a non-zero ceiling at a LAANC-enabled airport; otherwise it's a DroneZone request
+          const auto=ft>0 && String(grid.APT1_LAANC)==="1";
+          ovLaanc={lat:ll.lat, lng:ll.lng, ft:isNaN(ft)?null:ft, auto, apt:grid.APT1_NAME&&grid.APT1_ICAO?grid.APT1_NAME+" ("+grid.APT1_ICAO+")":(grid.APT1_NAME||grid.APT1_ICAO||""), eff:grid.MAP_EFF||""};
+          items.push(ovItem("#FCC419","LAANC grid: "+(isNaN(ft)?"?":ft)+" ft AGL",[auto?"Automatic approval up to "+ft+" ft AGL through a LAANC provider.":ft===0?"No automatic approval here — request authorization through FAA DroneZone.":"This airport isn't LAANC-enabled — request authorization through FAA DroneZone.",
+            escapeHtml([grid.APT1_NAME,grid.APT1_ICAO].filter(Boolean).join(" · ")),
+            '<span class="ovbtns"><button type="button" class="ovbtn" data-laanc="copy">Copy for LAANC</button><button type="button" class="ovbtn pri" data-laanc="open">'+(auto?"Open Airspace Link":"Open FAA DroneZone")+'</button></span>']));
         } else if(inClass&&z<11) items.push('<div class="ovln">Zoom in further to see the LAANC altitude grid.</div>');
         parts.push('<div class="ovhd">Airspace</div>'+items.join(""));
       }
@@ -3279,6 +3279,21 @@
       const dy=r.top<m.top+pad ? r.top-(m.top+pad) : 0;
       if(dx||dy) cmap.panBy([dx,dy],{duration:250}); });
   }
+  const LAANC_URL="https://portal.airspacelink.com/", DRONEZONE_URL="https://faadronezone-access.faa.gov/";
+  function laancText(L){
+    return ["Drone airspace authorization request",
+      "Location: "+L.lat.toFixed(5)+", "+L.lng.toFixed(5),
+      L.ft!=null ? "Facility map ceiling: "+L.ft+" ft AGL"+(L.auto?" (LAANC auto-approval)":" (no auto-approval)") : "",
+      L.apt ? "Airport: "+L.apt : "",
+      L.eff ? "UAS facility map effective "+L.eff : ""].filter(Boolean).join("\n");
+  }
+  // popups are rebuilt on every tap, so listen once on the map container
+  { const mc=$("#custMap"); if(mc) mc.addEventListener("click",e=>{
+      const b=e.target&&e.target.closest?e.target.closest("[data-laanc]"):null; if(!b||!ovLaanc) return;
+      e.stopPropagation();
+      if(b.dataset.laanc==="copy"){ copyText(laancText(ovLaanc)); toast("Copied — paste into your LAANC app"); }
+      else { copyText(laancText(ovLaanc)); window.open(ovLaanc.auto?LAANC_URL:DRONEZONE_URL,"_blank","noopener"); }
+    }); }
   { const b=$("#mAirspace"); if(b) b.addEventListener("click",()=>setOverlay("air",!airOn)); }
   { const b=$("#mEnv"); if(b) b.addEventListener("click",()=>setOverlay("env",!envOn)); }
 

@@ -121,9 +121,9 @@ manually** on the main screen creates a fresh record.)
   **Hybrid** (the same aerial imagery with a **street map drawn on top** — road
   lines plus labels — the best of both for tracing an access road across the
   imagery; the street overlay streams live, so offline Hybrid falls back to plain
-  imagery just like Aerial), or **Streets**. Your choice is remembered. On the **Dark** basemap the map shows **terrain shading** (hillshade relief) so ridges and canyons read at a glance. For a stronger sense of the land, the **3D** button (top-left) tilts into a 3-D view — drag up with two fingers and the terrain physically rises, on any basemap (try it over **Aerial** for a draped-satellite view). 3D is on by default and remembered; tap the button to switch back to a flat map. Both are useful for sizing up access and approach in hilly country. When many sites sit close together they
-  **cluster** into a single numbered circle — tap it to zoom in and split it apart.
-  Individual pins are **colored by status** (grey = new, amber = texted, blue =
+  imagery just like Aerial), or **Streets**. Your choice is remembered. On the **Dark** basemap the map shows **terrain shading** (hillshade relief) so ridges and canyons read at a glance. For a stronger sense of the land, the **3D** button (top-left) tilts into a 3-D view — drag up with two fingers and the terrain physically rises, on any basemap (try it over **Aerial** for a draped-satellite view). 3D is on by default and remembered; tap the button to switch back to a flat map. Both are useful for sizing up access and approach in hilly country. Every site always gets its own pin, at every zoom level — nothing is
+  grouped — so sites close together sit side by side; zoom in to spread them out.
+  Pins are **colored by status** (grey = new, amber = texted, blue =
   replied, green = scheduled, red = access issue), with a legend along the bottom; a
   selected pin gets a bright gold ring. Pins are drawn as **3-D markers**, and under
   **Settings → Map pins** you can change their **shape** (Pin, Dot, Square, or
@@ -141,8 +141,8 @@ manually** on the main screen creates a fresh record.)
   on the map to grab every site inside it at once (drag to draw, lift to select — tap
   **Lasso** again to cancel; it adds to whatever's already selected, so **Clear**
   first if you want a fresh set). **Select visible** is the quick "grab everything on
-  screen" shortcut. Lasso works even when sites are bunched into clusters, since it
-  selects by location, not by visible pin. Then hit **Export KML** — of the pins you
+  screen" shortcut. Lasso works even when pins are stacked on top of each other, since
+  it selects by location, not by visible pin. Then hit **Export KML** — of the pins you
   picked, or, if you haven't picked
   any, of everything shown on the map. Or tap **Build request email** to generate
   the access-request text (Requestor details from Settings + each site's SAP and
@@ -180,6 +180,16 @@ manually** on the main screen creates a fresh record.)
   (18,000 ft MSL and up) and Class E starting at 700 ft or higher aren't drawn —
   they're above drone altitudes. **TFRs and NOTAMs are not included** — always check
   B4UFLY or tfr.faa.gov before flying.
+
+  **Requesting LAANC:** when you tap inside a LAANC square, the card has two buttons.
+  **Copy for LAANC** copies the request details — the spot's coordinates, the square's
+  ceiling, the airport and the facility-map date — so you can paste them into your
+  LAANC app. The second button copies the same details and opens where to file: **Open
+  Airspace Link** (their free AirHub portal, an FAA-approved LAANC provider) when the
+  square allows automatic approval, or **Open FAA DroneZone** when the ceiling is 0 ft
+  or the airport isn't LAANC-enabled. FieldKey can't submit the request to the FAA
+  itself — only FAA-approved LAANC providers can — so the authorization is filed and
+  approved in that app or site, and the approval comes to you from there.
 - **Protected areas** — the **Protected areas** toggle shows land where drone flight
   is commonly banned or restricted (from the USGS Protected Areas Database, online):
   **National Park Service** units (orange), **National Wildlife Refuges** (green),
