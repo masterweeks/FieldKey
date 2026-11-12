@@ -876,7 +876,7 @@
   <div class="sgroup pinprev"><canvas id="pinPreview" width="252" height="120"></canvas></div>
 
   <h2 style="margin-top:22px">Property lines</h2>
-  <div class="sgroup"><label class="label">Parcels proxy URL (optional)</label><input type="url" id="sParcelsProxy" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://….supabase.co/functions/v1/parcels" /><p class="note">Turns on the <b>Property lines</b> overlay (Regrid parcel boundaries). Paste your parcels proxy endpoint. Takes effect next time you open the map. Leave blank to hide the feature.</p></div>
+  <div class="sgroup"><label class="label">Parcels proxy URL (optional)</label><input type="url" id="sParcelsProxy" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://….supabase.co/functions/v1/parcels" /><p class="note"><b>Property lines</b> work without this: they use Regrid's free boundary tiles (lines only, zoom in close). Paste a parcels proxy endpoint here only if you have a paid Regrid key and want owner, parcel number and acreage when you tap a lot. Takes effect next time you open the map.</p></div>
   <p class="note" style="text-align:center;margin-top:14px">FieldKey · <span id="sAppVer">v54</span> · runs offline once added to your Home Screen</p>
   <div class="sgroup"><button class="btn ghost sm" id="sCheckUpdate" type="button">Check for update</button></div>
 </div>
@@ -915,7 +915,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v57";
+  const APP_VER="v58";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -2472,6 +2472,12 @@
               cmap.on("mouseleave","parcels-fill",()=>{cmap.getCanvas().style.cursor="";});
               cmap.on("click","parcels-fill",ev=>{ if(measOn||pinPlacing) return; if(!parcelsOn) return; showParcelPopup(ev); });
             }catch(e){}
+          } else {
+            // No proxy: Regrid's free nationwide boundary tiles (lines only, no owner details; z15+)
+            try{
+              cmap.addSource("parcels-free",{type:"raster",tiles:[PARCEL_FREE_TILES],tileSize:256,minzoom:15,maxzoom:17,attribution:"Parcels © Regrid"});
+              cmap.addLayer({id:"parcels-raster",type:"raster",source:"parcels-free",minzoom:14.5,layout:{visibility:"none"},paint:{"raster-brightness-min":0.8,"raster-opacity":0.95,"raster-fade-duration":150}},"meas-fill");
+            }catch(e){}
           }
         }
         ["user-pins"].forEach(L=>{ cmap.on("mouseenter",L,()=>{cmap.getCanvas().style.cursor="pointer";}); cmap.on("mouseleave",L,()=>{cmap.getCanvas().style.cursor="";}); });
@@ -2495,7 +2501,8 @@
         ["sites-pts"].forEach(L=>{ cmap.on("mouseenter",L,()=>{cmap.getCanvas().style.cursor="pointer";}); cmap.on("mouseleave",L,()=>{cmap.getCanvas().style.cursor="";}); });
         cMapReady=true;
         applyBasemap(store.get("fk_basemap","Dark"));
-        if(store.get("fk_parcels_on","0")==="1" && (store.get("fk_parcelsproxy","")||"").trim()) setParcels(true);
+        if(store.get("fk_parcels_on","0")==="1") setParcels(true);
+        cmap.on("zoomend",parcelBtn);
         setOverlay("air",store.get("fk_air_on","0")==="1",true); setOverlay("env",store.get("fk_env_on","0")==="1",true);
         cmap.on("moveend",()=>{ if(airOn||envOn) ovRefresh(); });
         applyTerrain();
@@ -2962,20 +2969,25 @@
   { const b=$("#pDelete"); if(b) b.addEventListener("click",()=>{ if(editPinId&&confirm("Delete this pin?")){ userPins=userPins.filter(x=>x.id!==editPinId); savePinsStore(); refreshUserPins(); closePinSheet(); toast("Pin deleted"); } }); }
   { const s=$("#pinScrim"); if(s) s.addEventListener("click",closePinSheet); }
 
-  /* ---------------- property lines (Regrid parcels via proxy) ---------------- */
+  /* ---------------- property lines ----------------
+     Default: Regrid's free nationwide parcel-boundary tiles (lines only, zoom 15+).
+     With a Parcels proxy URL in Settings: Regrid vector parcels with owner / APN / acreage. */
+  const PARCEL_FREE_TILES="https://tiles.arcgis.com/tiles/KzeiCaQsMoeCfoCq/arcgis/rest/services/Regrid_Nationwide_Parcel_Boundaries_v1/MapServer/tile/{z}/{y}/{x}";
+  const PARCEL_LAYERS=["parcels-fill","parcels-line","parcels-lbl","parcels-raster"];
   let parcelsOn=false, parcelSelId=null;
-  function parcelsAvailable(){ return !!(store.get("fk_parcelsproxy","")||"").trim() && cmap && cmap.getLayer && cmap.getLayer("parcels-line"); }
+  function parcelsAvailable(){ return !!(cmap && cmap.getLayer && (cmap.getLayer("parcels-line")||cmap.getLayer("parcels-raster"))); }
+  function parcelBtn(){
+    const btn=$("#mParcels"); if(!btn) return;
+    const minz=cmap&&cmap.getLayer("parcels-raster")?15:10, far=parcelsOn&&cmap&&cmap.getZoom()<minz-0.5;
+    btn.textContent="Property lines: "+(parcelsOn?(far?"on · zoom in":"on"):"off"); btn.classList.toggle("on",parcelsOn);
+  }
   function setParcels(on){
-    const btn=$("#mParcels");
-    if(on && !parcelsAvailable()){
-      if(!((store.get("fk_parcelsproxy","")||"").trim())) toast("Add a Parcels proxy URL in Settings to use property lines.");
-      else toast("Property lines need internet (or a saved offline area).");
-      return;
-    }
+    if(on && !parcelsAvailable()){ toast("Property lines need the map to finish loading."); return; }
     parcelsOn=on;
-    ["parcels-fill","parcels-line","parcels-lbl"].forEach(L=>{ if(cmap.getLayer(L)) cmap.setLayoutProperty(L,"visibility",on?"visible":"none"); });
-    if(btn){ btn.textContent="Property lines: "+(on?"on":"off"); btn.classList.toggle("on",on); }
+    PARCEL_LAYERS.forEach(L=>{ if(cmap.getLayer(L)) cmap.setLayoutProperty(L,"visibility",on?"visible":"none"); });
+    parcelBtn();
     if(!on) closeMapPopup();
+    else if(cmap.getZoom()<14.5 && cmap.getLayer("parcels-raster")) toast("Zoom in to see property lines.");
     store.set("fk_parcels_on", on?"1":"0");
   }
   function showParcelPopup(ev){

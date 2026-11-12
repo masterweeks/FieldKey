@@ -203,6 +203,12 @@ manually** on the main screen creates a fresh record.)
   (they aren't part of **Save offline**), and add their colors to the map legend.
   With **Property lines** on, tapping a parcel shows the airspace and protected-area
   details under the parcel info.
+- **Property lines** — the **Property lines** toggle draws parcel boundaries for the
+  whole US from Regrid's free tile layer. Zoom in to street level (the button says
+  "zoom in" until you're close enough). The free layer is lines only; to get owner,
+  parcel number and acreage when you tap a lot, add a paid Regrid **Parcels proxy URL**
+  in Settings. Property lines need a connection and aren't part of **Save offline**,
+  though areas you've already viewed are kept for later.
 - **Select & export** — every row has a circle on the left; tap it to pick
   specific assets (a bar shows how many are selected). This is the same selection
   you build by tapping pins on the **Map**, and the **Selected** filter shows it.
