@@ -203,6 +203,15 @@ manually** on the main screen creates a fresh record.)
   (they aren't part of **Save offline**), and add their colors to the map legend.
   With **Property lines** on, tapping a parcel shows the airspace and protected-area
   details under the parcel info.
+- **Radar** — the **Radar** toggle shows live NOAA weather radar (rain and snow falling
+  now, updated every few minutes). The bar under the legend shows when the image is from;
+  tap **Loop last hour** to animate the last hour and see which way storms are moving.
+- **Rain forecast** — the **Rain forecast** toggle shades how much rain the National
+  Weather Service expects, from its Weather Prediction Center forecast. Pick the period
+  in the bar under the legend: 6-hour blocks out to 24 hours, single days out to Day 3,
+  or 3- and 7-day totals; the times beside it are in your local time. Tap the map to see
+  the expected amount at that spot. Both weather layers cover the US, need a connection,
+  and are free — no key or account.
 - **Property lines** — the **Property lines** toggle draws parcel boundaries for the
   whole US from Regrid's free tile layer. Zoom in to street level (the button says
   "zoom in" until you're close enough). The free layer is lines only; to get owner,
