@@ -215,6 +215,12 @@ manually** on the main screen creates a fresh record.)
   return, or a contact added by hand. Under the search box and filters, four tiles
   open **Request**, **Map**, **Export** and **Text guide** (guided texting). When sites
   are selected, a bar offers Request, Issue (mark or clear an access issue) and clear.
+- **Asset panel** — tapping a site opens its panel with four tiles at the top: **Text**,
+  **Call**, **Directions** (your phone's maps app; Google Maps is linked just below) and
+  **Flag issue** (red **Issue** once flagged). Tiles dim when there's no phone number or
+  location. Below are phones, access, the issue reason, record details, a status picker,
+  the texts-sent counter, notes and **Delete asset**. Every panel uses the same Lucide icons
+  on its headings and buttons.
 - **Map controls** — the panel under the map is a grid of icon tiles: **Parcels**,
   **Airspace**, **Protected**, **Radar**, **Rain**, **Issue**, **Pin** and **KML**, with
   **Build request** below. A tile turns amber when it's on, and its second line shows
