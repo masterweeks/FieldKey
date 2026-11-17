@@ -133,7 +133,18 @@ manually** on the main screen creates a fresh record.)
   any basemap: they appear once you zoom in close (street level) and read best with the
   map tilted. They come from the same free OpenStreetMap data as the Dark map, so saved
   offline areas include them. Heights are approximate, and rural buildings without a
-  recorded height show as low blocks. On the **Dark** basemap the map shows **terrain shading** (hillshade relief) so ridges and canyons read at a glance. For a stronger sense of the land, the **3D** button (top-left) tilts into a 3-D view — drag up with two fingers and the terrain physically rises, on any basemap (try it over **Aerial** for a draped-satellite view). 3D is on by default and remembered; tap the button to switch back to a flat map. Both are useful for sizing up access and approach in hilly country. Every site always gets its own pin, at every zoom level — nothing is
+  recorded height show as low blocks.
+- **3D view** — Google's **Photorealistic 3D Tiles** (real textured buildings, trees and
+  poles) in a full-screen panel. Open it from the **3D view** button on the map's left edge
+  (the map center), **3D view** in a site's map pop-up, or the **3D view** link under a
+  site's tiles. It uses the Google key from Settings → Address lookup; enable the **Map
+  Tiles API** for that key in Google Cloud (billing must be set up on the project).
+  Google bills one session per opening (a session covers up to 3 hours) and gives 1,000
+  free a month. FieldKey keeps one session going while the panel stays loaded, counts
+  sessions per phone, and stops at the **Monthly 3D session limit** in Settings (default
+  900, never more than 1,000). For a hard cap across every phone, set the Map Tiles API
+  quota for root tileset requests to 30 per day in Google Cloud. Needs a connection; the
+  tiles are never saved offline. On the **Dark** basemap the map shows **terrain shading** (hillshade relief) so ridges and canyons read at a glance. For a stronger sense of the land, the **3D** button (top-left) tilts into a 3-D view — drag up with two fingers and the terrain physically rises, on any basemap (try it over **Aerial** for a draped-satellite view). 3D is on by default and remembered; tap the button to switch back to a flat map. Both are useful for sizing up access and approach in hilly country. Every site always gets its own pin, at every zoom level — nothing is
   grouped — so sites close together sit side by side; zoom in to spread them out.
   Pins are **colored by status** (grey = new, amber = texted, blue =
   replied, green = scheduled, red = access issue), with a legend along the bottom; a
