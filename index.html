@@ -176,6 +176,14 @@
   .mapsave.busy{color:var(--amber);border-color:var(--amber)}
   .mapterr{top:calc(env(safe-area-inset-top) + 138px)}
   .mapmeas{top:calc(env(safe-area-inset-top) + 178px)}
+  .mapfly{top:calc(env(safe-area-inset-top) + 218px)}
+  .flyfull{position:fixed;inset:0;z-index:95;background:#0a0e13;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .22s ease;visibility:hidden}
+  .flyfull.show{transform:none;visibility:visible}
+  .flybar{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;background:#0E1116;border-bottom:1px solid var(--line)}
+  .flybar .t{font:700 15px var(--ui);color:var(--ink);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .flybar .x{appearance:none;border:1px solid var(--line2);background:var(--bg3);color:var(--ink);border-radius:9px;padding:7px 12px;font:600 13px var(--ui);cursor:pointer}
+  .flyfull iframe{flex:1;width:100%;border:0;background:#0a0e13}
+  .popfly{appearance:none;border:1px solid var(--line2);background:var(--bg3);color:var(--ink);border-radius:8px;padding:5px 9px;margin-top:6px;font:600 12px var(--ui);cursor:pointer}
   #misList li,#losScanList li{cursor:pointer}
   #misList li.misOn .rttitle{color:var(--amber)}
   .mapsave.on{color:var(--amber);border-color:var(--amber)}
@@ -446,6 +454,7 @@
     <svg class="glyph" viewBox="0 0 48 60" aria-hidden="true"><path d="M24 4a17 17 0 0 1 17 17c0 11-17 33-17 33S7 32 7 21A17 17 0 0 1 24 4z" fill="#FFB000"/><circle cx="24" cy="20" r="9" fill="#0E1116"/><rect x="22" y="20" width="4" height="9" rx="2" fill="#0E1116"/></svg>
     <span class="title">Field<b>Key</b></span>
     <span class="spacer"></span>
+    <button class="iconbtn" id="flyBtn" aria-label="Flyability drone weather" title="Flyability"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="18" r="2.4"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.2"/><path d="M7.6 7.6 9.6 9.6M16.4 7.6 14.4 9.6M7.6 16.4 9.6 14.4M16.4 16.4 14.4 14.4"/></svg></button>
     <button class="iconbtn" id="settingsBtn" aria-label="Settings">⚙</button>
   </div>
   <div class="readout" style="display:none">
@@ -656,6 +665,10 @@
 
 <!-- map + KML export sheet -->
 <div class="scrim" id="mScrim"></div>
+<div class="flyfull" id="flySheet" role="dialog" aria-label="Flyability">
+  <div class="flybar"><span class="t" id="flyTitle">Flyability</span><button class="x" id="flyClose" type="button">Close</button></div>
+  <iframe id="flyFrame" title="Flyability drone weather" allow="geolocation"></iframe>
+</div>
 <div class="mapfull" id="mSheet" role="dialog" aria-label="Map">
   <div id="custMap"></div>
   <div class="lasso hidden" id="lassoLayer"><svg id="lassoSvg"><polygon id="lassoPath" points="" /></svg></div>
@@ -669,6 +682,7 @@
   <button class="mapsave" id="mSave" type="button" aria-label="Save this area offline">&#8675; Save offline</button>
   <button class="mapsave mapterr" id="mTerr" type="button" aria-label="Toggle 3D terrain">&#9968; 3D</button>
   <button class="mapsave mapmeas" id="mMeasure" type="button" aria-label="Measure distance or area">&#10231; Measure</button>
+  <button class="mapsave mapfly" id="mFly" type="button" aria-label="Flyability weather for the map center">&#9729;&#xFE0E; Flyability</button>
   <div class="losbanner hidden" id="pinBanner"><span>Tap the map to place a pin</span><button class="losbanx" id="pinCancel" type="button">Cancel</button></div>
   <div class="losbanner hidden" id="measBanner"><b id="measVal" style="font-family:var(--mono);font-size:13px">0 ft</b><span class="note" id="measHint" style="margin:0">tap points</span><button class="losbanscan" id="measModeBtn" type="button">Area</button><button class="losbanx" id="measUndo" type="button">Undo</button><button class="losbanx" id="measX" type="button">Done</button></div>
   <div class="dloverlay hidden" id="dlOverlay">
@@ -926,7 +940,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v59";
+  const APP_VER="v60";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -2241,7 +2255,8 @@
   function updateMCount(){ const e=$("#mNote"); if(e) e.textContent=mapCountLine(); const ex=$("#mExport"); if(ex) ex.textContent="Export KML"; updateBulkButtons(); }
   function refreshMarks(){ if(cmap&&cMapReady&&cmap.getSource("sites")) cmap.getSource("sites").setData(sitesGeo(cShown)); updateMCount(); updateSelBar(); }
   function closeMapPopup(){ if(mapPopup){ try{mapPopup.remove();}catch(e){} mapPopup=null; } }
-  function popupFullHTML(p){ return "<b>"+escapeHtml(p.title)+"</b>"+(p.sub?"<br>"+escapeHtml(p.sub):"")+(p.axs?"<br>"+escapeHtml(p.axs):"")+(p.issue?'<br><span class="popissue">\u26A0\uFE0E '+escapeHtml(p.issue)+'</span>':"")+navLinks(p.lat,p.lng); }
+  function popupFullHTML(p){ return "<b>"+escapeHtml(p.title)+"</b>"+(p.sub?"<br>"+escapeHtml(p.sub):"")+(p.axs?"<br>"+escapeHtml(p.axs):"")+(p.issue?'<br><span class="popissue">\u26A0\uFE0E '+escapeHtml(p.issue)+'</span>':"")+navLinks(p.lat,p.lng)+
+    (p.lat!=null&&p.lng!=null?'<br><button type="button" class="popfly" data-fly="'+(+p.lat)+","+(+p.lng)+'" data-flyname="'+escapeHtml(p.title||"")+'">Flyability here ▸</button>':""); }
   function showPinPopup(coords,p){
     closeMapPopup();
     mapPopup=new maplibregl.Popup({offset:12}).setLngLat(coords).setHTML('<div class="popmin"><b>'+escapeHtml(p.title)+'</b><button class="popmore" type="button" aria-label="Show details">details \u25B8</button></div>').addTo(cmap);
@@ -3480,6 +3495,29 @@
       bar.addEventListener("change",e=>{ if(e.target&&e.target.id==="wxPer") setRainPeriod(e.target.value); });
     } }
   window.addEventListener("online",wxStatus); window.addEventListener("offline",wxStatus);
+
+  /* ---------------- Flyability (drone weather go / no-go): its own page, shown in a full-screen panel ---------------- */
+  let flyLoaded=false;
+  function openFly(lat,lng,name){
+    const sh=$("#flySheet"), fr=$("#flyFrame"); if(!sh||!fr) return;
+    const has=lat!=null&&lng!=null&&isFinite(+lat)&&isFinite(+lng);
+    const nm=has?String(name||(+lat).toFixed(3)+", "+(+lng).toFixed(3)).slice(0,80):"";
+    if(!flyLoaded){
+      fr.src="flyability.html"+(has?"?lat="+(+lat).toFixed(5)+"&lon="+(+lng).toFixed(5)+"&name="+encodeURIComponent(nm):"");
+      flyLoaded=true;
+    } else if(has){ try{ fr.contentWindow.postMessage({type:"fk-fly",lat:+lat,lon:+lng,name:nm},location.origin); }catch(e){} }
+    $("#flyTitle").textContent=has?"Flyability · "+nm:"Flyability";
+    sh.classList.add("show");
+  }
+  function closeFly(){ const sh=$("#flySheet"); if(sh) sh.classList.remove("show"); }
+  { const b=$("#flyBtn"); if(b) b.addEventListener("click",()=>openFly()); }
+  { const b=$("#flyClose"); if(b) b.addEventListener("click",closeFly); }
+  { const b=$("#mFly"); if(b) b.addEventListener("click",()=>{ if(!cmap) return; const c=cmap.getCenter(); openFly(c.lat,c.lng,"Map center "+c.lat.toFixed(3)+", "+c.lng.toFixed(3)); }); }
+  { const mc=$("#custMap"); if(mc) mc.addEventListener("click",e=>{
+      const b=e.target&&e.target.closest?e.target.closest("[data-fly]"):null; if(!b) return;
+      e.stopPropagation(); const [la,lo]=b.dataset.fly.split(",").map(Number); openFly(la,lo,b.dataset.flyname||"");
+    }); }
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#flySheet")&&$("#flySheet").classList.contains("show")) closeFly(); });
 
   /* ---------------- map control dock (show / hide) ---------------- */
   { const dt=$("#dockToggle"), dk=$("#mapDock"), lbl=$("#dockToggleLabel");

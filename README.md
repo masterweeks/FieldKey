@@ -203,6 +203,12 @@ manually** on the main screen creates a fresh record.)
   (they aren't part of **Save offline**), and add their colors to the map legend.
   With **Property lines** on, tapping a parcel shows the airspace and protected-area
   details under the parcel info.
+- **Flyability** — FieldKey includes the Flyability drone-weather checker (go /
+  caution / no-go from wind, gusts, rain chance, visibility, temperature and the Kp
+  index, plus a 7-day outlook, wind by altitude and charts). Open it from the drone
+  button at the top of the home screen (your location), the **Flyability** button on
+  the map (the spot at the map's center), or **Flyability here** in a site's map
+  details. Weather comes from Open-Meteo and NOAA, so it needs a connection.
 - **Radar** — the **Radar** toggle shows live NOAA weather radar (rain and snow falling
   now, updated every few minutes). The bar under the legend shows when the image is from;
   tap **Loop last hour** to animate the last hour and see which way storms are moving.
