@@ -211,9 +211,12 @@ manually** on the main screen creates a fresh record.)
   details. Weather comes from two forecasts at once — Open-Meteo and the National Weather
   Service (US) — and wind, gusts, rain chance and visibility use the worse of the two,
   so one service being down doesn't stop it. It needs a connection.
-- **Radar** — the **Radar** toggle shows live NOAA weather radar (rain and snow falling
-  now, updated every few minutes). The bar under the legend shows when the image is from;
-  tap **Loop last hour** to animate the last hour and see which way storms are moving.
+- **Radar** — the **Radar** toggle shows a timeline under the legend: the last hour
+  of live NOAA radar, then **forecast radar** from NOAA's HRRR weather model (via the
+  Iowa Environmental Mesonet) out to about 14–16 hours ahead — every 30 minutes for the
+  first 3 hours, then hourly. Drag the slider to any time, or tap **Play** to animate
+  forward from now. Forecast frames are the model's simulated radar: storms can arrive
+  earlier, later or miss, so treat them as a guide. Continental US only.
 - **Rain forecast** — the **Rain forecast** toggle shades how much rain the National
   Weather Service expects, from its Weather Prediction Center forecast. Pick the period
   in the bar under the legend: 6-hour blocks out to 24 hours, single days out to Day 3,

@@ -149,6 +149,14 @@
   .wxrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .wxlbl{font:500 12px var(--ui);color:var(--muted)}
   .wxsel{width:auto;flex:none;appearance:auto;background:var(--bg3);color:var(--ink);border:1px solid var(--line2);border-radius:8px;padding:5px 6px;font:600 12px var(--ui)}
+  .wxbox{display:flex;flex-direction:column;gap:6px}
+  .wxbox:empty{display:none}
+  .wxslider{width:100%;margin:0;accent-color:var(--amber)}
+  .wxticks{position:relative;height:13px;font:600 10px var(--ui);color:var(--muted)}
+  .wxticks span{position:absolute;top:0;white-space:nowrap}
+  .wxticks span.now{transform:translateX(-50%);color:var(--ink)}
+  .wxnote{font:500 11px var(--ui);color:var(--muted);line-height:1.35}
+  .wxlbl b{color:var(--ink)} .wxlbl b.wxfc{color:var(--amber)}
   .wxscale{display:flex;align-items:center;gap:6px;font:500 11px var(--ui);color:var(--muted)}
   .wxscale>i{flex:1;max-width:220px;height:7px;border-radius:4px}
   .ovbtn.pri{background:var(--amber);border-color:var(--amber);color:#1a1300}
@@ -940,7 +948,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v61";
+  const APP_VER="v62";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -3348,7 +3356,7 @@
   const WX_FRAMES=7, WX_STEP_MIN=10;            // loop: last hour, one frame every ~10 min
   const WX_PERIODS=[["13","Hours 0–6"],["14","Hours 6–12"],["15","Hours 12–18"],["16","Hours 18–24"],["1","Day 1 (24 hrs)"],["2","Day 2"],["3","Day 3"],["9","Days 1–3 total"],["11","Days 1–7 total"]];
   const WX_QPF_BANDS=[[0.01,"#7FFF00"],[0.1,"#00FF00"],[0.25,"#088B00"],[0.5,"#104E8B"],[0.75,"#1E90FF"],[1,"#00B2EE"],[1.5,"#8968CD"],[2,"#8B008B"],[3,"#FF0000"],[5,"#FF7F00"],[10,"#FFD700"]];
-  let radarOn=false, rainOn=false, wxTimes=[], wxFrame=0, wxPlay=null, wxRefresh=null, wxRainPer=store.get("fk_rain_layer","13"), wxRainInfo=null, wxFail={};
+  let radarOn=false, rainOn=false, wxPlay=null, wxRefresh=null, wxRainPer=store.get("fk_rain_layer","13"), wxRainInfo=null, wxFail={};
   if(!WX_PERIODS.some(p=>p[0]===wxRainPer)) wxRainPer="13";
   function wxRadarUrl(t){ return WX_RADAR_WMS+"?service=WMS&version=1.3.0&request=GetMap&layers=base_reflectivity_mosaic&styles=&format=image/png&transparent=true&crs=EPSG:3857&width=256&height=256&bbox={bbox-epsg-3857}"+(t?"&time="+t:"&_="+Math.floor(Date.now()/240000)); }
   function wxQpfUrl(id){ const h=new Date().toISOString().slice(0,13);   // new URL each hour so a fresh forecast is picked up
@@ -3357,16 +3365,34 @@
     // sits under airspace / protected areas / pins; radar frames are added on demand just above it
     map.addSource("wx-rain",{type:"raster",tiles:[wxQpfUrl(wxRainPer)],tileSize:256,maxzoom:9,attribution:"Rain forecast: NWS WPC"});
     map.addLayer({id:"wx-rain",type:"raster",source:"wx-rain",layout:{visibility:"none"},paint:{"raster-opacity":0.45,"raster-fade-duration":0}});
-    map.on("error",e=>{ const id=e&&e.sourceId; if(id&&/^wx-/.test(id)){ wxFail[/^wx-radar/.test(id)?"radar":"rain"]=Date.now(); wxStatus(); } });
+    map.on("error",e=>{ const id=e&&e.sourceId; if(id&&/^wx-(radar-o|rain)/.test(id)){ wxFail[/^wx-radar/.test(id)?"radar":"rain"]=Date.now(); wxStatus(); } });   // missing forecast frames are skipped quietly
   }
-  function wxRadarIds(){ const out=[]; if(!cmap) return out; for(let i=0;i<WX_FRAMES;i++) if(cmap.getLayer("wx-radar-"+i)) out.push(i); return out; }
-  function wxClearRadar(){ wxRadarIds().forEach(i=>{ try{ cmap.removeLayer("wx-radar-"+i); cmap.removeSource("wx-radar-"+i); }catch(e){} }); }
-  function wxAddFrame(i,t,opacity){
-    if(cmap.getSource("wx-radar-"+i)) return;
-    cmap.addSource("wx-radar-"+i,{type:"raster",tiles:[wxRadarUrl(t)],tileSize:256,maxzoom:10,attribution:"Radar: NOAA nowCOAST"});
+  /* radar timeline: the last hour of real radar (NOAA nowCOAST), then the HRRR model's simulated radar
+     going forward (tiles from the Iowa Environmental Mesonet: 15-minute steps, 18 hours from each run,
+     usually ~3 hours behind the clock, so roughly 14 hours ahead of now). One raster layer per frame,
+     created when needed; only frames near the one on screen are kept. */
+  const WX_HRRR_TILE="https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/hrrr::REFD-F{m}-0/{z}/{x}/{y}.png";
+  const WX_HRRR_META="https://mesonet.agron.iastate.edu/data/gis/images/4326/hrrr/refd_0000.json";
+  let wxFrames=[], wxIdx=0, wxNowIdx=0, wxInit=null;
+  const wxLayerId=f=>"wx-radar-"+f.key;
+  function wxRadarIds(){ return cmap?cmap.getStyle().layers.map(l=>l.id).filter(id=>/^wx-radar-/.test(id)):[]; }
+  function wxDrop(id){ try{ if(cmap.getLayer(id)) cmap.removeLayer(id); if(cmap.getSource(id)) cmap.removeSource(id); }catch(e){} }
+  function wxClearRadar(){ wxRadarIds().forEach(wxDrop); }
+  function wxEnsure(f){
+    const id=wxLayerId(f); if(cmap.getSource(id)) return id;
+    cmap.addSource(id,{type:"raster",tiles:[f.url],tileSize:256,maxzoom:f.kind==="fc"?8:10,attribution:f.kind==="fc"?"Forecast radar: NOAA HRRR via Iowa Environmental Mesonet":"Radar: NOAA nowCOAST"});
     // directly above the rain forecast, below every other overlay
     const order=cmap.getStyle().layers.map(l=>l.id), at=order.indexOf("wx-rain"), before=at>=0?order[at+1]:undefined;
-    cmap.addLayer({id:"wx-radar-"+i,type:"raster",source:"wx-radar-"+i,paint:{"raster-opacity":opacity,"raster-opacity-transition":{duration:0},"raster-fade-duration":0}},before);
+    cmap.addLayer({id,type:"raster",source:id,paint:{"raster-opacity":0,"raster-opacity-transition":{duration:0},"raster-fade-duration":0}},before);
+    return id;
+  }
+  function wxShow(i){
+    if(!cmap||!wxFrames.length) return;
+    wxIdx=Math.max(0,Math.min(wxFrames.length-1,i));
+    const keep=new Set();
+    for(let k=wxIdx-1;k<=wxIdx+2;k++) if(wxFrames[k]) keep.add(wxEnsure(wxFrames[k]));   // the next frames load invisibly
+    wxRadarIds().forEach(id=>{ if(!keep.has(id)) wxDrop(id); else cmap.setPaintProperty(id,"raster-opacity",id===wxLayerId(wxFrames[wxIdx])?0.75:0); });
+    wxStatus();
   }
   // radar frame times come from the WMS capabilities (about 40 KB)
   async function wxLoadTimes(){
@@ -3374,53 +3400,64 @@
       const r=await fetch(WX_RADAR_WMS+"?service=WMS&version=1.3.0&request=GetCapabilities&_="+Math.floor(Date.now()/240000));
       const x=await r.text(), i=x.indexOf("<Name>conus_base_reflectivity_mosaic</Name>"), m=i>=0?x.slice(i).match(/<Dimension[^>]*name="time"[^>]*>([^<]*)</):null;
       const all=m?m[1].split(",").map(s=>s.trim()).filter(Boolean):[];
-      if(!all.length) return false;
       const pick=[]; let next=Infinity;
       for(let k=all.length-1;k>=0&&pick.length<WX_FRAMES;k--){ const ms=Date.parse(all[k]); if(ms<=next){ pick.unshift(all[k]); next=ms-(WX_STEP_MIN-2)*60000; } }
-      wxTimes=pick; return true;
-    }catch(e){ return false; }
+      return pick;
+    }catch(e){ return []; }
+  }
+  async function wxLoadInit(){
+    try{ const j=await (await fetch(WX_HRRR_META+"?_="+Math.floor(Date.now()/300000))).json(); const t=Date.parse(j.model_init_utc); return isFinite(t)?t:null; }
+    catch(e){ return null; }
+  }
+  function wxBuildFrames(times,init){
+    const fr=[];
+    if(times.length) times.forEach(t=>fr.push({kind:"obs",t:Date.parse(t),key:"o"+t.replace(/\D/g,""),url:wxRadarUrl(t)}));
+    else fr.push({kind:"obs",t:Date.now(),key:"olatest"+Math.floor(Date.now()/240000),url:wxRadarUrl("")});
+    const nowI=fr.length-1, last=fr[nowI].t, now=Date.now();
+    if(init){
+      for(let m=0;m<=1080;m+=15){
+        const v=init+m*60000, ahead=v-now;
+        if(v<=last+5*60000) continue;
+        if(ahead<=3*3600000?m%30!==0:m%60!==0) continue;   // every 30 min for 3 hours, then hourly
+        fr.push({kind:"fc",t:v,key:"f"+init+"_"+m,url:WX_HRRR_TILE.replace("{m}",String(m).padStart(4,"0"))+"?run="+init});
+      }
+    }
+    return {fr,nowI};
   }
   async function wxShowRadar(){
     if(!cmap||!cMapReady||!radarOn) return;
-    const map=cmap, ok=await wxLoadTimes(); if(cmap!==map||!radarOn) return;
-    if(!ok) wxTimes=[];
-    const latest=ok?wxTimes[wxTimes.length-1]:"";
-    const cur=cmap.getSource("wx-radar-"+(WX_FRAMES-1));
-    if(cur&&ok&&cur._fkT===latest){ wxStatus(); return; }
-    const playing=!!wxPlay; if(wxPlay){ clearInterval(wxPlay); wxPlay=null; }
-    wxClearRadar();
-    wxAddFrame(WX_FRAMES-1,latest,0.75); const s=cmap.getSource("wx-radar-"+(WX_FRAMES-1)); if(s) s._fkT=latest;
-    wxFrame=WX_FRAMES-1;
-    if(playing) wxStartLoop();
-    wxStatus();
+    const map=cmap, [times,init]=await Promise.all([wxLoadTimes(),wxLoadInit()]); if(cmap!==map||!radarOn) return;
+    const {fr,nowI}=wxBuildFrames(times,init);
+    const same=fr.length===wxFrames.length&&fr.every((f,k)=>f.key===wxFrames[k].key);
+    if(same&&wxRadarIds().length){ wxStatus(); return; }
+    // keep the viewer on the same moment (or "now") across a refresh
+    const cur=wxFrames[wxIdx], wasNow=!cur||wxIdx===wxNowIdx;
+    wxFrames=fr; wxNowIdx=nowI; wxInit=init;
+    let target=nowI;
+    if(!wasNow&&cur){ let best=Infinity; fr.forEach((f,k)=>{ const d=Math.abs(f.t-cur.t); if(d<best){best=d;target=k;} }); }
+    wxShow(target);
   }
   function wxStartLoop(){
-    if(!cmap||wxTimes.length<2){ toast("Radar loop isn't available right now — showing the latest image."); return; }
-    const n=wxTimes.length, base=WX_FRAMES-n;
-    for(let k=0;k<n-1;k++) wxAddFrame(base+k,wxTimes[k],0);   // older frames load invisibly
-    wxFrame=WX_FRAMES-1; let hold=0;
+    if(!cmap||wxFrames.length<2){ toast("No radar timeline right now — showing the latest image."); return; }
+    if(wxIdx>=wxFrames.length-1) wxShow(wxNowIdx);
+    let hold=0, wait=0;
     wxPlay=setInterval(()=>{
       if(!cmap){ wxAbort(); return; }
-      if(wxFrame===WX_FRAMES-1&&hold<3){ hold++; return; }      // linger on the latest frame
-      hold=0;
-      const prev=wxFrame; wxFrame=wxFrame>=WX_FRAMES-1?base:wxFrame+1;
-      if(cmap.getLayer("wx-radar-"+prev)) cmap.setPaintProperty("wx-radar-"+prev,"raster-opacity",0);
-      if(cmap.getLayer("wx-radar-"+wxFrame)) cmap.setPaintProperty("wx-radar-"+wxFrame,"raster-opacity",0.75);
-      wxStatus();
-    },650);
+      const last=wxFrames.length-1;
+      if((wxIdx===last||wxIdx===wxNowIdx)&&hold<2){ hold++; return; }     // pause on "now" and at the end
+      const next=wxIdx>=last?wxNowIdx:wxIdx+1, id=wxEnsure(wxFrames[next]);
+      if(!cmap.isSourceLoaded(id)&&wait<3){ wait++; return; }            // let the next frame finish loading
+      hold=0; wait=0; wxShow(next);
+    },700);
     wxStatus();
   }
-  function wxStopLoop(){
-    if(wxPlay){ clearInterval(wxPlay); wxPlay=null; }
-    if(cmap) wxRadarIds().forEach(i=>{ if(i===WX_FRAMES-1) cmap.setPaintProperty("wx-radar-"+i,"raster-opacity",0.75); else { try{ cmap.removeLayer("wx-radar-"+i); cmap.removeSource("wx-radar-"+i); }catch(e){} } });
-    wxFrame=WX_FRAMES-1;
-  }
+  function wxStopLoop(){ if(wxPlay){ clearInterval(wxPlay); wxPlay=null; } }
   function wxAbort(){ if(wxPlay){ clearInterval(wxPlay); wxPlay=null; } clearInterval(wxRefresh); wxRefresh=null; }
   function setRadar(on){
     radarOn=on; store.set("fk_radar_on",on?"1":"0"); delete wxFail.radar;
     if(cmap&&cMapReady){
-      if(on){ wxShowRadar(); clearInterval(wxRefresh); wxRefresh=setInterval(()=>{ if(radarOn&&!document.hidden) wxShowRadar(); },5*60000); }
-      else { wxStopLoop(); wxClearRadar(); clearInterval(wxRefresh); wxRefresh=null; }
+      if(on){ wxFrames=[]; wxShowRadar(); clearInterval(wxRefresh); wxRefresh=setInterval(()=>{ if(radarOn&&!document.hidden) wxShowRadar(); },5*60000); }
+      else { wxStopLoop(); wxClearRadar(); wxFrames=[]; clearInterval(wxRefresh); wxRefresh=null; }
     }
     wxStatus();
   }
@@ -3453,25 +3490,48 @@
     return withDay?d.toLocaleDateString([],{weekday:"short"})+" "+s:s; }
   function wxRange(a,b){ const A=wxUtc(a), B=wxUtc(b); if(!A||!B) return ""; return wxFmt(A,true)+" – "+wxFmt(B,A.toDateString()!==B.toDateString()); }
   function wxAgo(t){ const ms=Date.now()-Date.parse(t); if(isNaN(ms)) return ""; const m=Math.max(0,Math.round(ms/60000)); return m<1?"just now":m<60?m+" min ago":Math.round(m/60)+" hr ago"; }
+  function wxInLabel(ms){ const m=Math.round(ms/60000); if(m<60) return "in "+m+" min"; const h=Math.floor(m/60), r=m%60; return "in "+h+" hr"+(r?" "+r+" min":""); }
   function wxStatus(){
     const rb=$("#mRadar"), fb=$("#mRain"), bar=$("#wxBar");
     const off=!navigator.onLine, bad=k=>wxFail[k]&&Date.now()-wxFail[k]<60000;
     if(rb){ rb.textContent="Radar: "+(!radarOn?"off":off?"no signal":bad("radar")?"unavailable":"on"); rb.classList.toggle("on",radarOn); }
     if(fb){ fb.textContent="Rain forecast: "+(!rainOn?"off":off?"no signal":bad("rain")?"unavailable":"on"); fb.classList.toggle("on",rainOn); }
     if(!bar) return;
-    let h="";
+    // two boxes, updated in place, so the slider and the period picker aren't rebuilt under your finger
+    let rbox=$("#wxRadarBox"), fbox=$("#wxRainBox");
+    if(!rbox||!fbox){ bar.innerHTML='<div class="wxbox" id="wxRadarBox"></div><div class="wxbox" id="wxRainBox"></div>'; rbox=$("#wxRadarBox"); fbox=$("#wxRainBox"); }
     if(radarOn){
-      const t=wxTimes.length?(wxPlay?wxTimes[wxFrame-(WX_FRAMES-wxTimes.length)]:wxTimes[wxTimes.length-1]):"";
-      h+='<div class="wxrow"><button type="button" class="ovbtn" id="wxPlayBtn">'+(wxPlay?"❚❚ Pause":"▶ Loop last hour")+'</button><span class="wxlbl">Radar '+(t?escapeHtml(wxFmt(new Date(t))+" · "+wxAgo(t)):"· latest")+'</span></div>'+
-         '<div class="wxscale"><span>Light</span><i style="background:linear-gradient(90deg,#9bf0ff,#04e9e7,#019ff4,#02fd02,#01c501,#fdf802,#fd9500,#fd0000,#d40000,#f800fd)"></i><span>Heavy</span></div>';
-    }
+      if(!rbox.firstChild) rbox.innerHTML=
+        '<div class="wxrow"><button type="button" class="ovbtn" id="wxPlayBtn"></button><span class="wxlbl" id="wxRLbl"></span></div>'+
+        '<input type="range" class="wxslider" id="wxSlider" min="0" max="0" step="1" value="0" aria-label="Radar time">'+
+        '<div class="wxticks" id="wxTicks"></div>'+
+        '<div class="wxnote hidden" id="wxRNote">Forecast frames are the HRRR weather model’s simulated radar — storms can arrive earlier, later or miss.</div>'+
+        '<div class="wxscale"><span>Light</span><i style="background:linear-gradient(90deg,#9bf0ff,#04e9e7,#019ff4,#02fd02,#01c501,#fdf802,#fd9500,#fd0000,#d40000,#f800fd)"></i><span>Heavy</span></div>';
+      const n=wxFrames.length, f=wxFrames[wxIdx], sl=$("#wxSlider");
+      $("#wxPlayBtn").textContent=wxPlay?"❚❚ Pause":"▶ Play";
+      sl.max=String(Math.max(0,n-1)); sl.value=String(wxIdx); sl.disabled=n<2;
+      let lbl="Radar · loading…";
+      if(f&&f.kind==="obs") lbl="<b>Radar</b> · "+escapeHtml(wxFmt(new Date(f.t))+" · "+wxAgo(new Date(f.t).toISOString()));
+      else if(f) lbl='<b class="wxfc">Forecast</b> · '+escapeHtml(wxFmt(new Date(f.t),new Date(f.t).toDateString()!==new Date().toDateString())+" · "+wxInLabel(f.t-Date.now()));
+      $("#wxRLbl").innerHTML=lbl;
+      $("#wxRNote").classList.toggle("hidden",!(f&&f.kind==="fc"));
+      if(n>1){
+        const first=wxFrames[0], last=wxFrames[n-1], pos=k=>(k/(n-1)*100).toFixed(1)+"%";
+        const ago=Math.round((Date.now()-first.t)/60000), ahead=Math.round((last.t-Date.now())/3600000);
+        $("#wxTicks").innerHTML='<span style="left:0">−'+(ago>=60?Math.round(ago/60)+" hr":ago+" min")+'</span>'+
+          '<span class="now" style="left:'+pos(wxNowIdx)+'">Now</span>'+
+          (n-1>wxNowIdx?'<span style="right:0">+'+ahead+' hr</span>':'<span style="right:0">forecast unavailable</span>');
+      } else $("#wxTicks").innerHTML="";
+    } else if(rbox.firstChild) rbox.innerHTML="";
     if(rainOn){
       const info=wxRainInfo&&wxRainInfo.per===wxRainPer?wxRainInfo:null;
-      h+='<div class="wxrow"><select id="wxPer" class="wxsel" aria-label="Forecast period">'+WX_PERIODS.map(p=>'<option value="'+p[0]+'"'+(p[0]===wxRainPer?" selected":"")+'>'+p[1]+'</option>').join("")+'</select><span class="wxlbl">'+
+      const sig=wxRainPer+"|"+(!info?"l":info.err?"e":info.none?"n":info.start+info.end);
+      if(fbox._sig!==sig){ fbox._sig=sig; fbox.innerHTML=
+        '<div class="wxrow"><select id="wxPer" class="wxsel" aria-label="Forecast period">'+WX_PERIODS.map(p=>'<option value="'+p[0]+'"'+(p[0]===wxRainPer?" selected":"")+'>'+p[1]+'</option>').join("")+'</select><span class="wxlbl">'+
         (!info?"Loading…":info.err?"Couldn't load times":info.none?"No rain forecast":escapeHtml(wxRange(info.start,info.end)))+'</span></div>'+
-        '<div class="wxscale"><span>Trace</span><i style="background:linear-gradient(90deg,'+WX_QPF_BANDS.map((b,k)=>b[1]+" "+(k*100/WX_QPF_BANDS.length).toFixed(1)+"% "+((k+1)*100/WX_QPF_BANDS.length).toFixed(1)+"%").join(",")+')"></i><span>10"+</span></div>';
-    }
-    bar.innerHTML=h; bar.classList.toggle("hidden",!h);
+        '<div class="wxscale"><span>Trace</span><i style="background:linear-gradient(90deg,'+WX_QPF_BANDS.map((b,k)=>b[1]+" "+(k*100/WX_QPF_BANDS.length).toFixed(1)+"% "+((k+1)*100/WX_QPF_BANDS.length).toFixed(1)+"%").join(",")+')"></i><span>10"+</span></div>'; }
+    } else if(fbox.firstChild){ fbox.innerHTML=""; fbox._sig=null; }
+    bar.classList.toggle("hidden",!radarOn&&!rainOn);
   }
   // tap: forecast amount at that spot (queried, since the image carries no values)
   function wxBandText(v){ let i=WX_QPF_BANDS.length-1; while(i>0&&WX_QPF_BANDS[i][0]>v) i--; const lo=WX_QPF_BANDS[i][0], hi=WX_QPF_BANDS[i+1]?WX_QPF_BANDS[i+1][0]:null;
@@ -3492,6 +3552,7 @@
   { const b=$("#mRain"); if(b) b.addEventListener("click",()=>setRain(!rainOn)); }
   { const bar=$("#wxBar"); if(bar){
       bar.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("#wxPlayBtn"); if(!b) return; if(wxPlay) wxStopLoop(); else wxStartLoop(); wxStatus(); });
+      bar.addEventListener("input",e=>{ if(e.target&&e.target.id==="wxSlider"){ wxStopLoop(); wxShow(+e.target.value); } });
       bar.addEventListener("change",e=>{ if(e.target&&e.target.id==="wxPer") setRainPeriod(e.target.value); });
     } }
   window.addEventListener("online",wxStatus); window.addEventListener("offline",wxStatus);
