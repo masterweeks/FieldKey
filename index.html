@@ -1003,7 +1003,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v66";
+  const APP_VER="v67";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -1865,6 +1865,37 @@
   $("#mFlag").addEventListener("click",bulkAccessIssue);
 
   /* ---- texting ---- */
+  /* Imported sites start with no street address (addresses are looked up on demand, not at import),
+     so before a text goes out we look the address up from the site's coordinates. One lookup at a
+     time, spaced by the Settings delay, like Build request. If none is found, the coordinates go in. */
+  const addrJobs={};                 // site id -> "pending" | "failed"
+  let addrQueue=Promise.resolve(), addrLast=0;
+  function hasCoords(c){ return !!c && c.lat!==""&&c.lng!==""&&!isNaN(parseFloat(c.lat))&&!isNaN(parseFloat(c.lng)); }
+  function needsAddr(c){ return !!c && !c.address && hasCoords(c); }
+  function addrPending(c){ return needsAddr(c) && addrJobs[c.id]==="pending"; }
+  function msgAddress(c){ return c.address || (hasCoords(c) ? (+c.lat).toFixed(5)+", "+(+c.lng).toFixed(5) : ""); }
+  function lookupAddress(c){
+    if(!needsAddr(c) || addrJobs[c.id]) return addrQueue;
+    addrJobs[c.id]="pending";
+    addrQueue=addrQueue.then(async()=>{
+      if(!needsAddr(c)){ delete addrJobs[c.id]; addrChanged(c); return; }
+      const wait=Math.max(0,(parseInt(cfg.delay,10)||0)-(Date.now()-addrLast)); if(wait) await sleep(wait);
+      addrLast=Date.now();
+      let a="";
+      const useG=cfg.provider==="google"&&cfg.gkey;
+      try{ a=await (useG?geocodeGoogle:geocodeOSM)(c.lat,c.lng); }
+      catch(e){ if(!useG && e&&e.geoReason==="blocked" && cfg.gkey){ try{ a=await geocodeGoogle(c.lat,c.lng); }catch(_e){} } }
+      if(a){ c.address=cleanText(a); delete addrJobs[c.id]; persist(); renderCustomers(); }
+      else addrJobs[c.id]="failed";
+      addrChanged(c);
+    });
+    return addrQueue;
+  }
+  // a lookup finished: refresh whatever is showing that site
+  function addrChanged(c){
+    if(curId===c.id){ const m=$("#dMeta"); if(m) m.textContent=[(c.sapId&&c.name)?c.name:"",stripUSA(c.address)].filter(Boolean).join("  \u00B7  "); renderDPhones(c); }
+    if($("#guideBar").classList.contains("show") && guideList[guideIdx]===c) showGuide();
+  }
   function openSms(tel,name,address){
     const a=document.createElement("a"); a.href=smsHref(tel,buildMsg(cfg.smsTemplate,name,address));
     document.body.appendChild(a); a.click(); a.remove();
@@ -1878,7 +1909,8 @@
   }
   function textCustomer(id){
     const c=findById(id); if(!c||!(c.phones&&c.phones.length)){ toast("No phone number for this customer."); return; }
-    openSms(c.phones[0].tel,c.name,c.address); markTexted(id);
+    if(needsAddr(c) && addrJobs[c.id]!=="failed"){ lookupAddress(c); toast("Finding the address for this site \u2014 tap Text again in a moment."); return; }
+    openSms(c.phones[0].tel,c.name,msgAddress(c)); markTexted(id);
   }
 
   /* ---- guided bulk send ---- */
@@ -1886,18 +1918,22 @@
   function startGuide(){
     guideList=visibleCustomers().filter(c=>c.phones&&c.phones.length&&!(c.textCount>0));
     if(!guideList.length){ toast("No un-texted customers with a phone here."); return; }
+    guideList.forEach(lookupAddress);   // fill in missing addresses while you work down the list
     guideIdx=0; showGuide();
   }
   function showGuide(){
     if(guideIdx>=guideList.length){ closeGuide(); toast("Guided send complete"); return; }
     const c=guideList[guideIdx];
     $("#guideLabel").textContent=(guideIdx+1)+" of "+guideList.length+"  \u00B7  "+displayName(c);
-    setBtnText($("#guideOpen"),"Open text to "+firstName(c.name));
+    const wait=addrPending(c);
+    setBtnText($("#guideOpen"),wait?"Finding address\u2026":"Open text to "+firstName(c.name));
+    $("#guideOpen").disabled=wait;
     $("#guideBar").classList.add("show");
   }
   function guideOpenCurrent(){
     const c=guideList[guideIdx]; if(!c){ closeGuide(); return; }
-    openSms(c.phones[0].tel,c.name,c.address); markTexted(c.id);
+    if(addrPending(c)) return;
+    openSms(c.phones[0].tel,c.name,msgAddress(c)); markTexted(c.id);
     guideIdx++; showGuide();
   }
   function closeGuide(){ $("#guideBar").classList.remove("show"); }
@@ -1909,7 +1945,7 @@
     $("#dPhones").innerHTML=(c.phones&&c.phones.length)
       ? c.phones.map((p,i)=>'<div class="dphone"><span class="pn">'+escapeHtml(p.display)+'</span>'
           +'<a href="tel:'+escapeHtml(p.tel)+'">'+ICO("phone")+'Call</a>'
-          +'<a href="'+escapeHtml(smsHref(p.tel,buildMsg(cfg.smsTemplate,c.name,c.address)))+'" data-sms="'+escapeHtml(c.id)+'">'+ICO("msg")+'Text</a>'
+          +'<a href="'+escapeHtml(smsHref(p.tel,buildMsg(cfg.smsTemplate,c.name,msgAddress(c))))+'" data-sms="'+escapeHtml(c.id)+'">'+ICO("msg")+'Text</a>'
           +'<button class="phrm" data-phrm="'+i+'" type="button" aria-label="Remove number">'+ICO("x")+'</button></div>').join("")
       : '<p class="note">No phone number on file.</p>';
     $("#dPhones").querySelectorAll("[data-sms]").forEach(a=>a.addEventListener("click",()=>markTexted(a.dataset.sms)));
@@ -2001,6 +2037,7 @@
     $("#dCount").textContent=c.textCount||0;
     $("#dNotes").value=c.notes||"";
     renderIssueSection(c);
+    if(c.phones&&c.phones.length) lookupAddress(c);   // so its text message has the street address
     $("#dScrim").classList.add("show"); $("#dSheet").classList.add("show");
   }
   function closeDetail(){ $("#dScrim").classList.remove("show"); $("#dSheet").classList.remove("show"); curId=null; if(detailDirty){ detailDirty=false; renderCustomers(); } }

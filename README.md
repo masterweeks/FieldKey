@@ -94,6 +94,10 @@ manually** on the main screen creates a fresh record.)
   automatically). The app counts each send and marks the customer *Texted*.
   *Guided text* walks through everyone you haven't texted yet, one tap each
   (iOS doesn't allow an app to send texts silently or in bulk).
+  Imported sites don't have a street address until one is looked up, so before a text
+  goes out FieldKey looks it up from the site's coordinates: Guided text shows
+  "Finding address…" for a moment, and a site's **Text** button asks you to tap again
+  once the address is in. If no address can be found, the coordinates go in instead.
 - **Track** — per-customer status (New / Texted / Replied / Scheduled / Done),
   a text counter, and your own notes. Marking a customer **Scheduled** reveals a
   date/time picker that's saved to the database (and shown on the row), plus
