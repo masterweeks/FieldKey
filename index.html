@@ -1007,7 +1007,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v68";
+  const APP_VER="v69";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -1270,11 +1270,12 @@
   async function geocodeOSM(lat,lng){
     const key=lat+","+lng;
     if(geoCache.has(key)) return geoCache.get(key);
-    // Nominatim's policy asks for an identifying app + contact. A browser can't set
-    // User-Agent, so we pass them as query params, which the public server accepts.
+    // Nominatim identifies the app by the page's referrer (sent below). A contact email is
+    // optional; it's sent only if you've entered one in Settings.
+    const em=String(cfg.email||"").trim();
     let url="https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=0"+
       "&lat="+encodeURIComponent(lat)+"&lon="+encodeURIComponent(lng)+
-      "&email="+encodeURIComponent(cfg.email||"obiiweeks@gmail.com");
+      (em?"&email="+encodeURIComponent(em):"");
     let r;
     try{ r=await fetch(url,{headers:{"Accept":"application/json"},referrerPolicy:"strict-origin-when-cross-origin"}); }
     catch(e){ const err=new Error("network"); err.geoReason="network"; throw err; }
