@@ -211,6 +211,12 @@ manually** on the main screen creates a fresh record.)
   details. Weather comes from two forecasts at once — Open-Meteo and the National Weather
   Service (US) — and wind, gusts, rain chance and visibility use the worse of the two,
   so one service being down doesn't stop it. It needs a connection.
+- **Map controls** — the panel under the map is a grid of icon tiles: **Parcels**,
+  **Airspace**, **Protected**, **Radar**, **Rain**, **Issue**, **Pin** and **KML**, with
+  **Build request** below. A tile turns amber when it's on, and its second line shows
+  status such as "zoom in" or "no signal". The small buttons beside the site count are
+  pin colors (the legend), lasso, select visible and clear. On the map's left edge are
+  Save offline, 3D terrain, Measure and Flyability. Icons are from Lucide (ISC license).
 - **Radar** — the **Radar** toggle shows a timeline under the legend: the last hour
   of live NOAA radar, then **forecast radar** from NOAA's HRRR weather model (via the
   Iowa Environmental Mesonet) out to about 14–16 hours ahead — every 30 minutes for the
