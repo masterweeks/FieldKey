@@ -165,7 +165,7 @@
   .mapx:active{background:var(--raise)}
   /* basemap switcher */
   .bmsw{position:absolute;top:calc(env(safe-area-inset-top) + 12px);left:56px;z-index:6;display:flex;background:#141820;border:1px solid #2A3340;border-radius:9px;overflow:hidden;font:600 12px var(--ui)}
-  .bmsw button{background:transparent;color:var(--muted);border:0;padding:7px 9px;cursor:pointer}
+  .bmsw button{background:transparent;color:var(--muted);border:0;padding:7px 8px;cursor:pointer}
   .bmsw button.on{background:var(--amber);color:#10141a}
   .bmsw button+button{border-left:1px solid #2A3340}
   /* bottom dock */
@@ -746,6 +746,7 @@
     <button type="button" data-bm="Aerial">Aerial</button>
     <button type="button" data-bm="Hybrid">Hybrid</button>
     <button type="button" data-bm="Streets">Streets</button>
+    <button type="button" data-bm="Topo" title="USGS topographic map">Topo</button>
   </div>
   <button class="mapsave" id="mSave" type="button" aria-label="Save this area offline" title="Save offline"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg></button>
   <button class="mapsave mapterr" id="mTerr" type="button" aria-label="Toggle 3D terrain" title="3D terrain"><svg class="ico" aria-hidden="true"><use href="#i-mountain"/></svg></button>
@@ -758,6 +759,7 @@
       <div class="dltitle" id="dlTitle">Save this area offline</div>
       <div class="dlsub" id="dlSub">Preparing…</div>
       <label class="dlopt hidden" id="dlOpt"><input type="checkbox" id="dlAerial" checked /> Include aerial imagery <span class="dlopthint">(larger)</span></label>
+      <label class="dlopt hidden" id="dlOptTopo"><input type="checkbox" id="dlTopo" /> Include USGS Topo map</label>
       <div class="dlbarwrap hidden" id="dlBarWrap"><div class="dlbarfill" id="dlBar"></div></div>
       <div class="dlrow">
         <button class="btn ghost" id="dlCancel" type="button">Cancel</button>
@@ -1001,7 +1003,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v65";
+  const APP_VER="v66";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -2348,7 +2350,7 @@
   }
   function applyBasemap(choice){
     if(!cmap||!cMapReady)return;
-    const hybrid=choice==="Hybrid", air=choice==="Aerial"||hybrid, streets=choice==="Streets";
+    const hybrid=choice==="Hybrid", air=choice==="Aerial"||hybrid, streets=choice==="Streets", topo=choice==="Topo";
     const useUSGS = air && !navigator.onLine;   // offline aerial/hybrid falls back to cacheable USGS imagery
     try{
       cmap.setLayoutProperty("esri","visibility",(air&&!useUSGS)?"visible":"none");
@@ -2356,6 +2358,7 @@
       cmap.setLayoutProperty("esri-ref","visibility",(air&&!useUSGS)?"visible":"none");
       cmap.setLayoutProperty("usgs","visibility",useUSGS?"visible":"none");
       cmap.setLayoutProperty("osm","visibility",streets?"visible":"none");
+      if(cmap.getLayer("topo")) cmap.setLayoutProperty("topo","visibility",topo?"visible":"none");
       // Hybrid: bright vector roads + bold names on top of the aerial. These work
       // online (vector tiles) and from the offline cache once an area is saved.
       const hybRoads = hybrid ? "visible" : "none";
@@ -2386,6 +2389,8 @@
   const ESRI_ROADS="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}";
   const OSM_RASTER="https://tile.openstreetmap.org/{z}/{x}/{y}.png";
   const USGS_IMG="https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}";
+  // USGS Topo: contours, relief, trails, Forest Service roads, water and public land (US, public domain; tiles to z16)
+  const USGS_TOPO="https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}";
   const DEM_TILE="https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
 
   /* ---------------- 3D map pin icons ---------------- */
@@ -2540,6 +2545,8 @@
           }
         }catch(e){}
         cmap.addLayer({id:"osm",type:"raster",source:"osm-src",layout:{visibility:"none"}});
+        cmap.addSource("topo-src",{type:"raster",tiles:[USGS_TOPO],tileSize:256,maxzoom:16,attribution:"Topo: USGS The National Map"});
+        cmap.addLayer({id:"topo",type:"raster",source:"topo-src",layout:{visibility:"none"}});
         cmap.addSource("usgs-src",{type:"raster",tiles:[USGS_IMG],tileSize:256,maxzoom:16,attribution:"Imagery: USGS"});
         cmap.addLayer({id:"usgs",type:"raster",source:"usgs-src",layout:{visibility:"none"}});
         addWeatherLayers(cmap);
@@ -2682,12 +2689,13 @@
     // Zoomed in past a source's max zoom, still save its top level — the map overzooms those tiles.
     const zDem=Math.min(zLo,13), zAer=Math.min(zLo,16);
     // Count first: a zoomed-out view is millions of tiles, and building those URLs freezes the tab.
-    let nv=0, nd=0, na=0;
+    let nv=0, nd=0, na=0, nt=0;
     for(const src of chrome.vectorTiles){ const zHi=Math.min(src.maxzoom||14,16); for(let zz=Math.min(zLo,zHi); zz<=zHi; zz++) nv+=countTiles(b,zz)*src.tiles.length; }
     for(let zz=zDem; zz<=13; zz++) nd+=countTiles(b,zz);
     for(let zz=zAer; zz<=16; zz++) na+=countTiles(b,zz);
+    nt=na;   // USGS Topo uses the same zoom range as the aerial
     const baseBig=nv+nd>MAX_OFFLINE_TILES, aerialBig=nv+nd+na>MAX_OFFLINE_TILES;
-    if(baseBig) return { chromeUrls, tiles:[], dem:[], aerial:[], zLo, counts:{nv,nd,na} };
+    if(baseBig) return { chromeUrls, tiles:[], dem:[], aerial:[], topo:[], zLo, counts:{nv,nd,na,nt} };
     const tiles=[];
     for(const src of chrome.vectorTiles){
       const smax=src.maxzoom||14, zHi=Math.min(smax,16);
@@ -2699,21 +2707,24 @@
     // USGS aerial imagery (cacheable; shown offline in place of Esri). Up to z16.
     const aerial=[];
     if(!aerialBig) for(let zz=zAer; zz<=16; zz++){ for(const [tz,tx,ty] of tilesForBounds(b,zz)){ aerial.push(fillTpl(USGS_IMG,tz,tx,ty)); } }
-    const t=[...new Set(tiles)], d=[...new Set(dem)], a=[...new Set(aerial)];
-    return { chromeUrls, tiles:t, dem:d, aerial:a, zLo, counts:{nv:t.length, nd:d.length, na:aerialBig?na:a.length} };
+    const topoT=[], topoBig=nv+nd+nt>MAX_OFFLINE_TILES;
+    if(!topoBig) for(let zz=zAer; zz<=16; zz++){ for(const [tz,tx,ty] of tilesForBounds(b,zz)){ topoT.push(fillTpl(USGS_TOPO,tz,tx,ty)); } }
+    const t=[...new Set(tiles)], d=[...new Set(dem)], a=[...new Set(aerial)], tp=[...new Set(topoT)];
+    return { chromeUrls, tiles:t, dem:d, aerial:a, topo:tp, zLo, counts:{nv:t.length, nd:d.length, na:aerialBig?na:a.length, nt:topoBig?nt:tp.length} };
   }
   let dlBusy=false, dlCancel=false, dlPlan=null, dlBounds=null;
   function showDl(){ $("#dlOverlay").classList.remove("hidden"); }
   function hideDl(){ $("#dlOverlay").classList.add("hidden"); }
   function setDlBar(done,total){ const f=$("#dlBar"); if(f) f.style.width=(total?Math.round(done/total*100):0)+"%"; }
   function wantAerial(){ const c=$("#dlAerial"); return !!(c&&c.checked); }
+  function wantTopo(){ const c=$("#dlTopo"); return !!(c&&c.checked); }
   function updateDlEstimate(){
     if(!dlPlan) return;
-    const nv=dlPlan.counts.nv, nd=dlPlan.counts.nd, na=wantAerial()?dlPlan.counts.na:0, total=nv+nd+na;
+    const nv=dlPlan.counts.nv, nd=dlPlan.counts.nd, na=wantAerial()?dlPlan.counts.na:0, nt=wantTopo()?(dlPlan.counts.nt||0):0, total=nv+nd+na+nt;
     if(!total){ $("#dlSub").textContent="Nothing to save for this view."; $("#dlGo").classList.add("hidden"); return; }
-    if(total>MAX_OFFLINE_TILES){ $("#dlSub").textContent="Too large ("+total+" tiles) \u2014 zoom in"+(na?" or turn off aerial":"")+"."; $("#dlGo").classList.add("hidden"); return; }
-    const mb=Math.max(1,Math.round(nv*0.045 + nd*0.12 + na*0.03));
-    $("#dlSub").textContent="~"+total+" tiles \u00B7 about "+mb+" MB \u00B7 basemap + terrain"+(na?" + aerial":"");
+    if(total>MAX_OFFLINE_TILES){ $("#dlSub").textContent="Too large ("+total+" tiles) \u2014 zoom in"+(na||nt?" or turn off "+(na&&nt?"aerial or topo":na?"aerial":"topo"):"")+"."; $("#dlGo").classList.add("hidden"); return; }
+    const mb=Math.max(1,Math.round(nv*0.045 + nd*0.12 + na*0.03 + nt*0.02));
+    $("#dlSub").textContent="~"+total+" tiles \u00B7 about "+mb+" MB \u00B7 basemap + terrain"+(na?" + aerial":"")+(nt?" + topo":"");
     $("#dlGo").classList.remove("hidden");
   }
   async function beginSaveOffline(){
@@ -2723,25 +2734,28 @@
     const bb=cmap.getBounds(); dlBounds={w:bb.getWest(),s:bb.getSouth(),e:bb.getEast(),n:bb.getNorth()};
     const zoom=Math.floor(cmap.getZoom());
     $("#dlTitle").textContent="Save this area offline"; $("#dlSub").textContent="Preparing\u2026";
-    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlBarWrap").classList.add("hidden"); setDlBar(0,1);
+    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlOptTopo").classList.add("hidden"); $("#dlBarWrap").classList.add("hidden"); setDlBar(0,1);
     setBtnText($("#dlCancel"),"Cancel"); showDl();
     let style; try{ style=await fetch(MAP_STYLE,{mode:"cors"}).then(r=>r.json()); }catch(e){ hideDl(); toast("Couldn't reach the map server."); return; }
     const chrome=await gatherStyleResources(style);
     dlPlan=planOffline(dlBounds,zoom,chrome);
     if(!dlPlan.counts.nv && !dlPlan.counts.nd){ hideDl(); toast("Nothing to save for this view."); return; }
-    $("#dlOpt").classList.remove("hidden");
+    $("#dlOpt").classList.remove("hidden"); $("#dlOptTopo").classList.remove("hidden");
+    { const c=$("#dlTopo"); if(c) c.checked=store.get("fk_basemap","Dark")==="Topo"; }   // on by default when you're using Topo
     updateDlEstimate();
   }
   async function runSaveOffline(){
     if(dlBusy||!dlPlan) return;
     dlBusy=true; dlCancel=false;
-    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlBarWrap").classList.remove("hidden"); setBtnText($("#dlCancel"),"Stop");
+    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlOptTopo").classList.add("hidden"); $("#dlBarWrap").classList.remove("hidden"); setBtnText($("#dlCancel"),"Stop");
     const items=[];
     dlPlan.chromeUrls.forEach(u=>items.push([u,false]));
     dlPlan.tiles.forEach(u=>items.push([u,false]));
     dlPlan.dem.forEach(u=>items.push([u,false]));
     const withAerial=wantAerial();
     if(withAerial) dlPlan.aerial.forEach(u=>items.push([u,true]));   // raster imagery
+    const withTopo=wantTopo();
+    if(withTopo) (dlPlan.topo||[]).forEach(u=>items.push([u,true]));
     const total=items.length;
     const save=$("#mSave"); if(save) save.classList.add("busy");
     let done=0, ok=0; const CONC=6;
@@ -2765,7 +2779,7 @@
     }
     dlBusy=false; if(save) save.classList.remove("busy"); hideDl();
     if(dlCancel){ toast("Stopped \u2014 partial area saved ("+ok+" tiles)"); }
-    else { toast("Saved "+ok+" tiles for offline"+(withAerial?" (with aerial)":"")); }
+    else { toast("Saved "+ok+" tiles for offline"+(withAerial||withTopo?" (with "+[withAerial?"aerial":"",withTopo?"topo":""].filter(Boolean).join(" and ")+")":"")); }
     try{ const regions=JSON.parse(store.get("fk_offline_regions","[]")||"[]");
       regions.push({date:Date.now(), w:dlBounds.w,s:dlBounds.s,e:dlBounds.e,n:dlBounds.n, tiles:ok}); 
       store.set("fk_offline_regions",JSON.stringify(regions)); }catch(e){}
@@ -2774,6 +2788,7 @@
   $("#mSave") && $("#mSave").addEventListener("click",beginSaveOffline);
   $("#dlGo") && $("#dlGo").addEventListener("click",runSaveOffline);
   $("#dlAerial") && $("#dlAerial").addEventListener("change",updateDlEstimate);
+  $("#dlTopo") && $("#dlTopo").addEventListener("change",updateDlEstimate);
   $("#dlCancel") && $("#dlCancel").addEventListener("click",()=>{ if(dlBusy){ dlCancel=true; } else { hideDl(); } });
   async function refreshOfflineStat(){
     const el=$("#offlineStat"); if(!el) return;
