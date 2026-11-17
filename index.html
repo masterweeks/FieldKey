@@ -895,21 +895,22 @@
   <div class="sgroup"><label class="label">Description of work</label><input type="text" id="sWork" /></div>
 
   <h2 style="margin-top:8px"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg>Address lookup</h2>
-  <p class="hint">OpenStreetMap is free and needs no key. Google is more precise but needs your own API key.</p>
+  <p class="hint">Google is the most precise and needs your own API key. OpenStreetMap is free and needs no key. Whichever you pick, the other fills in when it can't find an address.</p>
   <div class="sgroup">
     <span class="label">Provider</span>
     <div class="seg" id="segProvider">
-      <button data-v="osm" class="sel">OpenStreetMap</button>
-      <button data-v="google">Google</button>
+      <button data-v="google" class="sel">Google</button>
+      <button data-v="osm">OpenStreetMap</button>
     </div>
   </div>
-  <div class="sgroup" id="osmOpts">
+  <div class="sgroup hidden" id="osmOpts">
     <label class="label">Contact email (optional, polite for OSM)</label>
     <input type="text" id="sEmail" placeholder="you@example.com" />
   </div>
-  <div class="sgroup hidden" id="googleOpts">
+  <div class="sgroup" id="googleOpts">
     <label class="label">Google Maps API key</label>
     <input type="text" id="sGkey" placeholder="AIza…" />
+    <p class="note" id="sGkeyNote" style="margin:5px 0 0">Until a key is added, lookups use OpenStreetMap.</p>
   </div>
   <div class="sgroup">
     <label class="label">Delay between lookups (ms)</label>
@@ -993,17 +994,20 @@
   const DEF = {
     name:"Obii weeks", lan:"OXWC", phone:"3052196892",
     issue:"need code/contact info", work:"Drone inspection",
-    provider:"osm", email:"", gkey:"", delay:"1100", geolimit:"9999",
+    provider:"google", email:"", gkey:"", delay:"1100", geolimit:"9999",
     parcelsproxy:"",
     latestKml:"",
     smsTemplate:"Hey [Customer name] this is Cyberhawk with PGE, I need to complete an aerial inspection at [customer address]. Let me know what time during business hours works for you."
   };
   const cfg = {};
   for(const k in DEF) cfg[k]=store.get("fk_"+k, DEF[k]);
+  // v68: Google became the default address lookup. Move devices still on the old default once;
+  // anyone can switch back to OpenStreetMap in Settings and it sticks.
+  if(store.get("fk_provider_v68","")!=="1"){ if(cfg.provider==="osm"){ cfg.provider="google"; store.set("fk_provider","google"); } store.set("fk_provider_v68","1"); }
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v67";
+  const APP_VER="v68";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -1280,6 +1284,15 @@
     const addr=j.display_name||"";
     geoCache.set(key,addr); return addr;
   }
+  /* Address for a site's coordinates: Google first (when a key is saved and it's the chosen provider),
+     OpenStreetMap otherwise; each one fills in when the other finds nothing, refuses, or hits its limit. */
+  async function geocodeAddr(lat,lng){
+    const hasKey=!!(cfg.gkey||"").trim(), wantG=cfg.provider!=="osm"&&hasKey;
+    if(wantG){ try{ const a=await geocodeGoogle(lat,lng); if(a) return a; }catch(e){} }
+    try{ const a=await geocodeOSM(lat,lng); if(a||wantG||!hasKey) return a; }
+    catch(e){ if(wantG||!hasKey) throw e; }
+    return await geocodeGoogle(lat,lng);   // chose OpenStreetMap, but it came back empty or refused
+  }
   /* weekly Google lookup budget (resets Monday) */
   function geoWeekKey(){ const d=new Date(); const day=(d.getDay()+6)%7; const m=new Date(d.getFullYear(),d.getMonth(),d.getDate()-day); return m.getFullYear()+"-"+String(m.getMonth()+1).padStart(2,"0")+"-"+String(m.getDate()).padStart(2,"0"); }
   function geoBudget(){ return Math.max(1,parseInt(cfg.geolimit,10)||9999); }
@@ -1478,9 +1491,11 @@
     document.querySelectorAll("#segProvider button").forEach(b=>b.classList.toggle("sel",b.dataset.v===p));
     $("#osmOpts").classList.toggle("hidden",p!=="osm");
     $("#googleOpts").classList.toggle("hidden",p!=="google");
+    { const n=$("#sGkeyNote"); if(n) n.classList.toggle("hidden",!!(($("#sGkey")&&$("#sGkey").value)||cfg.gkey).trim()); }
     cfg._pendProvider=p;
   }
   document.querySelectorAll("#segProvider button").forEach(b=>b.addEventListener("click",()=>setProviderUI(b.dataset.v)));
+  { const k=$("#sGkey"), n=$("#sGkeyNote"); if(k&&n) k.addEventListener("input",()=>n.classList.toggle("hidden",!!k.value.trim())); }
   function setSeg(id,val){ document.querySelectorAll("#"+id+" button").forEach(b=>b.classList.toggle("sel",b.dataset.v===val)); }
   { const sh=$("#segPinShape"); if(sh) sh.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; store.set("fk_pin_shape",b.dataset.v); setSeg("segPinShape",b.dataset.v); drawPinPreview(); }); }
   { const sz=$("#segPinSize"); if(sz) sz.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; store.set("fk_pin_size",b.dataset.v); setSeg("segPinSize",b.dataset.v); drawPinPreview(); }); }
@@ -1882,9 +1897,7 @@
       const wait=Math.max(0,(parseInt(cfg.delay,10)||0)-(Date.now()-addrLast)); if(wait) await sleep(wait);
       addrLast=Date.now();
       let a="";
-      const useG=cfg.provider==="google"&&cfg.gkey;
-      try{ a=await (useG?geocodeGoogle:geocodeOSM)(c.lat,c.lng); }
-      catch(e){ if(!useG && e&&e.geoReason==="blocked" && cfg.gkey){ try{ a=await geocodeGoogle(c.lat,c.lng); }catch(_e){} } }
+      try{ a=await geocodeAddr(c.lat,c.lng); }catch(e){}
       if(a){ c.address=cleanText(a); delete addrJobs[c.id]; persist(); renderCustomers(); }
       else addrJobs[c.id]="failed";
       addrChanged(c);
@@ -2896,23 +2909,18 @@
     const missing=list.filter(c=>!c.address && c.lat!==""&&c.lng!==""&&!isNaN(parseFloat(c.lat))&&!isNaN(parseFloat(c.lng)));
     if(!missing.length) return {resolved:0,total:0,limited:false};
     const token=++rqToken;
-    let useGoogle = cfg.provider==="google" && cfg.gkey;
-    let provider = useGoogle ? geocodeGoogle : geocodeOSM;
     const delay=Math.max(0,parseInt(cfg.delay,10)||0);
     let ok=0, limited=false, blocked=false;
     for(let i=0;i<missing.length;i++){
       if(rqToken!==token) return null;
       $("#rqInfo").textContent="Resolving addresses "+(i+1)+"/"+missing.length+"\u2026";
       try{
-        const a=await provider(missing[i].lat,missing[i].lng);
+        const a=await geocodeAddr(missing[i].lat,missing[i].lng);
         if(rqToken!==token) return null;
         if(a){ missing[i].address=cleanText(a); ok++; }
       }catch(e){
         if(String(e&&e.message)==="geo-limit"){ limited=true; break; }
-        if(e&&e.geoReason==="blocked" && !useGoogle){
-          if(cfg.gkey){ useGoogle=true; provider=geocodeGoogle; i--; continue; }
-          else { blocked=true; break; }
-        }
+        if(e&&e.geoReason==="blocked"){ blocked=true; break; }
       }
       if(i<missing.length-1&&delay) await sleep(delay);
     }

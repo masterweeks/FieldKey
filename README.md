@@ -347,12 +347,15 @@ independent of any cache, open `…/index.html?x=1` in Safari — the query stri
 sidesteps caching.
 
 ## Notes
-- Default address lookup is **OpenStreetMap** (free, no key). Keep the lookup
-  delay at ~1100 ms to respect its 1-request-per-second policy.
-- For higher volume/precision, switch to **Google** in Settings and paste your
-  own Maps JavaScript API key. Google lookups are capped by a **weekly limit**
-  (default 9,999, adjustable in Settings, resets Monday); Settings shows how much
-  of the week's budget you've used, and when the cap is hit FieldKey says so and
-  stops rather than silently burning quota.
+- Default address lookup is **Google** (the most precise): paste your own Maps
+  JavaScript API key in Settings. Until a key is added, lookups use
+  **OpenStreetMap** (free, no key), which you can also pick as the provider.
+  Whichever is chosen, the other fills in when it finds nothing, refuses, or hits
+  its limit. Keep the lookup delay at ~1100 ms when OpenStreetMap is doing the
+  lookups, to respect its 1-request-per-second policy.
+- Google lookups are capped by a **weekly limit** (default 9,999, adjustable in
+  Settings, resets Monday); Settings shows how much of the week's budget you've
+  used. Once the cap is hit, lookups carry on through OpenStreetMap instead of
+  using more Google quota.
 - Requestor name / LanID / phone / descriptions live in **Settings** and are
   saved on the device.
