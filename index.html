@@ -55,6 +55,23 @@
     width:40px;height:40px;border-radius:11px;font-size:18px;display:grid;place-items:center;
   }
   .iconbtn:active{background:var(--raise)}
+  .iconbtn .ico{width:20px;height:20px}
+  /* home: icon tiles (shares .tile with the map panel) */
+  .htiles{display:grid;gap:8px;margin-bottom:8px}
+  .htiles.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .htiles.c4{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:12px}
+  .htiles .tile{min-height:64px;text-decoration:none}
+  .tile.pri{border-color:var(--amber);color:var(--amber)}
+  .homenote{font-size:12px;color:var(--faint);margin:0 2px 12px;line-height:1.4}
+  .searchbox{position:relative}
+  .searchbox .ico{position:absolute;left:12px;top:50%;width:17px;height:17px;transform:translateY(calc(-50% - 5px));color:var(--muted);pointer-events:none}
+  .searchbox input[type=text]{padding-left:38px}
+  .sbtn{appearance:none;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line2);background:var(--bg3);color:var(--ink);border-radius:9px;padding:6px 9px;font:600 12px var(--ui);cursor:pointer}
+  .sbtn .ico{width:16px;height:16px}
+  #selBar{gap:6px 8px;flex-wrap:nowrap}
+  #selClear{padding:6px 7px}
+  .sbtn.issue{color:#FF9A9A;border-color:#5a2330}
+  .textbtn .ico{width:15px;height:15px;margin-right:5px;vertical-align:-3px}
   .readout{
     display:flex;gap:0;border-top:1px solid var(--line);
     font-family:var(--mono);font-size:11px;letter-spacing:.04em;
@@ -474,14 +491,14 @@
 </head>
 <body>
 <!-- Icons from Lucide v0.460.0 (https://lucide.dev), ISC License. Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022. Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies. THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES. The drone icon is FieldKey's own. -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></symbol><symbol id="i-mountain" viewBox="0 0 24 24"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></symbol><symbol id="i-ruler" viewBox="0 0 24 24"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></symbol><symbol id="i-plane" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></symbol><symbol id="i-trees" viewBox="0 0 24 24"><path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5"/></symbol><symbol id="i-radar" viewBox="0 0 24 24"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/></symbol><symbol id="i-rain" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M19.914 11.105A7.298 7.298 0 0 0 20 10a8 8 0 0 0-16 0c0 4.993 5.539 10.193 7.399 11.799a1 1 0 0 0 1.202 0 32 32 0 0 0 .824-.738"/><circle cx="12" cy="10" r="3"/><path d="M16 18h6"/><path d="M19 15v6"/></symbol><symbol id="i-filedown" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></symbol><symbol id="i-lasso" viewBox="0 0 24 24"><path d="M7 22a5 5 0 0 1-2-4"/><path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8-4.5 8-10 8a12 12 0 0 1-5-1"/><path d="M5 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="i-selvis" viewBox="0 0 24 24"><path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h2"/><path d="M14 3h1"/><path d="M3 9v1"/><path d="M21 9v2"/><path d="M3 14v1"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol><symbol id="i-plot" viewBox="0 0 24 24"><path d="m12 8 6-3-6-3v10"/><path d="m8 11.99-5.5 3.14a1 1 0 0 0 0 1.74l8.5 4.86a2 2 0 0 0 2 0l8.5-4.86a1 1 0 0 0 0-1.74L16 12"/><path d="m6.49 12.85 11.02 6.3"/><path d="M17.51 12.85 6.5 19.15"/></symbol><symbol id="i-drone" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="18" r="2.4"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.2"/><path d="M7.6 7.6 9.6 9.6M16.4 7.6 14.4 9.6M7.6 16.4 9.6 14.4M16.4 16.4 14.4 14.4"/></symbol></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></symbol><symbol id="i-mountain" viewBox="0 0 24 24"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></symbol><symbol id="i-ruler" viewBox="0 0 24 24"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></symbol><symbol id="i-plane" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></symbol><symbol id="i-trees" viewBox="0 0 24 24"><path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5"/></symbol><symbol id="i-radar" viewBox="0 0 24 24"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/></symbol><symbol id="i-rain" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M19.914 11.105A7.298 7.298 0 0 0 20 10a8 8 0 0 0-16 0c0 4.993 5.539 10.193 7.399 11.799a1 1 0 0 0 1.202 0 32 32 0 0 0 .824-.738"/><circle cx="12" cy="10" r="3"/><path d="M16 18h6"/><path d="M19 15v6"/></symbol><symbol id="i-filedown" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></symbol><symbol id="i-lasso" viewBox="0 0 24 24"><path d="M7 22a5 5 0 0 1-2-4"/><path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8-4.5 8-10 8a12 12 0 0 1-5-1"/><path d="M5 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="i-selvis" viewBox="0 0 24 24"><path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h2"/><path d="M14 3h1"/><path d="M3 9v1"/><path d="M21 9v2"/><path d="M3 14v1"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol><symbol id="i-plot" viewBox="0 0 24 24"><path d="m12 8 6-3-6-3v10"/><path d="m8 11.99-5.5 3.14a1 1 0 0 0 0 1.74l8.5 4.86a2 2 0 0 0 2 0l8.5-4.86a1 1 0 0 0 0-1.74L16 12"/><path d="m6.49 12.85 11.02 6.3"/><path d="M17.51 12.85 6.5 19.15"/></symbol><symbol id="i-drone" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="18" r="2.4"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.2"/><path d="M7.6 7.6 9.6 9.6M16.4 7.6 14.4 9.6M7.6 16.4 9.6 14.4M16.4 16.4 14.4 14.4"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-fileup" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/></symbol><symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol><symbol id="i-userplus" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol><symbol id="i-map" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></symbol><symbol id="i-guide" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></symbol><symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol></svg>
 <header>
   <div class="bar">
     <svg class="glyph" viewBox="0 0 48 60" aria-hidden="true"><path d="M24 4a17 17 0 0 1 17 17c0 11-17 33-17 33S7 32 7 21A17 17 0 0 1 24 4z" fill="#FFB000"/><circle cx="24" cy="20" r="9" fill="#0E1116"/><rect x="22" y="20" width="4" height="9" rx="2" fill="#0E1116"/></svg>
     <span class="title">Field<b>Key</b></span>
     <span class="spacer"></span>
-    <button class="iconbtn" id="flyBtn" aria-label="Flyability drone weather" title="Flyability"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="18" r="2.4"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.2"/><path d="M7.6 7.6 9.6 9.6M16.4 7.6 14.4 9.6M7.6 16.4 9.6 14.4M16.4 16.4 14.4 14.4"/></svg></button>
-    <button class="iconbtn" id="settingsBtn" aria-label="Settings">⚙</button>
+    <button class="iconbtn" id="flyBtn" aria-label="Flyability drone weather" title="Flyability"><svg class="ico" aria-hidden="true"><use href="#i-drone"/></svg></button>
+    <button class="iconbtn" id="settingsBtn" aria-label="Settings" title="Settings"><svg class="ico" aria-hidden="true"><use href="#i-settings"/></svg></button>
   </div>
   <div class="readout" style="display:none">
     <span class="cell">Rows<span class="v" id="rRows">—</span></span>
@@ -563,17 +580,15 @@
 <div id="viewCustomers" class="view">
   <main>
     <div class="cust-actions">
-      <label class="drop" id="impDrop" for="impFile">
-        <svg class="pin" viewBox="0 0 48 60" aria-hidden="true"><path d="M24 4a17 17 0 0 1 17 17c0 11-17 33-17 33S7 32 7 21A17 17 0 0 1 24 4z" fill="#FFB000"/><circle cx="24" cy="20" r="9" fill="#0E1116"/><rect x="22" y="20" width="4" height="9" rx="2" fill="#0E1116"/></svg>
-        <div class="big">Choose a CSV or KML file</div>
-        <div class="sub">Needs latitude, longitude, and a 9-digit SAP ID column</div>
-      </label>
+      <div class="htiles c3">
+        <label class="tile pri" id="impDrop" for="impFile" title="Import a CSV or KML file of sites"><svg class="ico" aria-hidden="true"><use href="#i-fileup"/></svg><span class="tl">Import file</span><span class="ts">CSV or KML</span></label>
+        <button class="tile" id="pasteEmailBtn" type="button" title="Import an email return"><svg class="ico" aria-hidden="true"><use href="#i-mail"/></svg><span class="tl">Email return</span><span class="ts">paste reply</span></button>
+        <button class="tile" id="addContactBtn" type="button" title="Add a contact manually"><svg class="ico" aria-hidden="true"><use href="#i-userplus"/></svg><span class="tl">Add contact</span><span class="ts">by hand</span></button>
+      </div>
       <input type="file" id="impFile" accept=".csv,.kml,text/csv,text/plain,application/vnd.google-earth.kml+xml" style="display:none" />
-      <p class="note">Your file never leaves your phone — parsing happens on-device. Only the coordinates are sent to the map service to look up addresses.</p>
-      <button class="btn ghost" id="pasteEmailBtn" style="margin-top:16px">Import email return</button>
-      <button class="btn ghost" id="addContactBtn" style="margin-top:10px">Add contact manually</button>
+      <p class="homenote">Files need latitude, longitude and a 9-digit SAP ID column. They stay on your phone; only coordinates go out for address lookup.</p>
     </div>
-    <div class="searchrow"><input type="text" id="custSearch" placeholder="Search name, address, SAP, or phone…" /></div>
+    <div class="searchrow searchbox"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg><input type="text" id="custSearch" placeholder="Search name, address, SAP, or phone…" aria-label="Search customers" /></div>
     <div class="filters" id="custFilters">
       <button class="chip sel" data-f="all">All</button>
       <button class="chip" data-f="selected">Selected</button>
@@ -585,14 +600,14 @@
       <button class="chip" data-f="replied">Replied</button>
       <button class="chip" data-f="scheduled">Scheduled</button>
     </div>
-    <div class="bulkrow">
-      <button class="btn ghost" id="buildReqBtn">Build request</button>
-      <button class="btn ghost" id="mapBtn">Map</button>
-      <button class="btn ghost" id="exportCustBtn">Export</button>
-      <button class="btn ghost" id="textAllBtn">Guided text</button>
+    <div class="htiles c4">
+      <button class="tile" id="buildReqBtn" type="button" title="Build request"><svg class="ico" aria-hidden="true"><use href="#i-send"/></svg><span class="tl">Request</span></button>
+      <button class="tile" id="mapBtn" type="button" title="Open the map"><svg class="ico" aria-hidden="true"><use href="#i-map"/></svg><span class="tl">Map</span></button>
+      <button class="tile" id="exportCustBtn" type="button" title="Export"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg><span class="tl">Export</span></button>
+      <button class="tile" id="textAllBtn" type="button" title="Guided texting"><svg class="ico" aria-hidden="true"><use href="#i-guide"/></svg><span class="tl">Text guide</span></button>
     </div>
     <div class="dbbar"><span id="dbCount" class="mono">0 in database</span></div>
-    <div class="selbar hidden" id="selBar"><span id="selCount" class="mono">0 selected</span><button id="selBuild" class="linkbtn">Build request</button><button id="selFlag" class="linkbtn issue">Mark access issue</button><button id="selClear" class="linkbtn alt">Clear selection</button></div>
+    <div class="selbar hidden" id="selBar"><span id="selCount" class="mono">0 selected</span><button id="selBuild" class="sbtn" type="button" title="Build request"><svg class="ico" aria-hidden="true"><use href="#i-send"/></svg>Request</button><button id="selFlag" class="sbtn issue" type="button" title="Mark access issue"><svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg><span class="sl">Issue</span></button><button id="selClear" class="sbtn" type="button" title="Clear selection" aria-label="Clear selection"><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <div id="custList" class="custlist"></div>
     <div id="custEmpty" class="empty">Nothing here yet.<br>Import a CSV or KML above, or paste an email return.</div>
   </main>
@@ -959,7 +974,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v63";
+  const APP_VER="v64";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -1714,6 +1729,7 @@
     else bar.classList.add("hidden");
     updateBulkButtons();
   }
+  const ICO_MSG='<svg class="ico" aria-hidden="true"><use href="#i-msg"/></svg>';
   function customerRow(c){
     const st=escapeHtml(c.status||"new"), cid=escapeHtml(c.id);   // ids come from file SAP cells — escape for attributes
     const stShow=(st==="enriched"||st==="new")?"":'<span class="cstat '+st+'">'+st+'</span>';
@@ -1733,7 +1749,7 @@
         ((c.status==="scheduled"&&c.scheduledAt)?'<div class="csched">'+escapeHtml(fmtSched(c.scheduledAt))+'</div>':'')+
       '</div>'+
       '<div class="cright">'+
-        '<button class="textbtn '+(hasP?"":"nophone")+'" data-text="'+cid+'"'+(hasP?"":" disabled")+'>Text</button>'+
+        '<button class="textbtn '+(hasP?"":"nophone")+'" data-text="'+cid+'"'+(hasP?"":" disabled")+'>'+ICO_MSG+'Text</button>'+
         ((c.textCount||0)>0?'<span class="ccount">\u00D7'+c.textCount+'</span>':'')+
       '</div>'+
     '</div>';
@@ -1805,7 +1821,8 @@
   }
   function updateBulkButtons(){
     const clear=allFlagged(selectedIds()); const t=clear?"Clear access issue":"Mark access issue";
-    const sf=$("#selFlag"), mf=$("#mFlag"); if(sf) sf.textContent=t;
+    const sf=$("#selFlag"), mf=$("#mFlag");
+    if(sf){ const l=sf.querySelector(".sl"); if(l) l.textContent=clear?"Clear issue":"Issue"; sf.title=t; sf.setAttribute("aria-label",t); }
     if(mf){ const l=mf.querySelector(".tl"); if(l) l.textContent=clear?"Clear issue":"Issue"; mf.title=t; mf.setAttribute("aria-label",t); }
   }
   $("#riScrim").addEventListener("click",closeReasonPicker);

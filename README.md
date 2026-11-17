@@ -211,6 +211,10 @@ manually** on the main screen creates a fresh record.)
   details. Weather comes from two forecasts at once — Open-Meteo and the National Weather
   Service (US) — and wind, gusts, rain chance and visibility use the worse of the two,
   so one service being down doesn't stop it. It needs a connection.
+- **Home screen** — three tiles at the top import a CSV or KML file, an email
+  return, or a contact added by hand. Under the search box and filters, four tiles
+  open **Request**, **Map**, **Export** and **Text guide** (guided texting). When sites
+  are selected, a bar offers Request, Issue (mark or clear an access issue) and clear.
 - **Map controls** — the panel under the map is a grid of icon tiles: **Parcels**,
   **Airspace**, **Protected**, **Radar**, **Rain**, **Issue**, **Pin** and **KML**, with
   **Build request** below. A tile turns amber when it's on, and its second line shows
