@@ -238,7 +238,7 @@
   </details>
 
   <div class="foot">
-    Weather: Open-Meteo (blends GFS · ECMWF · ICON · GEM) · Space weather: NOAA SWPC Kp<br>
+    Weather: Open-Meteo (GFS · ECMWF · ICON · GEM) · National Weather Service (US) — worst case of those that answer · Space weather: NOAA SWPC Kp<br>
     Satellite counts &amp; winds aloft are modeled — verify on your aircraft before launch. Not an official aviation source.
   </div>
 </div>
@@ -270,7 +270,7 @@ const S = {
   selDay:0, selHour:null, nowIdx:0, chartDays:1,
   limits:{ maxWind:24, maxGust:25, minVis:3, cautionWindFrac:0.7, cautionGustFrac:0.75,
            precipCaution:25, precipNoGo:55, kpCaution:5, kpNoGo:7, tempColdF:32, tempHotF:104, lapseF:3.5 },
-  sources:{ openmeteo:false, swpc:false, models:false }
+  sources:{ openmeteo:false, nws:false, swpc:false, models:false }, placeHint:""
 };
 
 /* ---------- helpers ---------- */
@@ -352,6 +352,162 @@ async function fetchKp(){
   return {current,forecast};
 }
 
+/* ---------- multiple forecast sources ----------
+   Open-Meteo and the National Weather Service (US) are fetched together.
+   Every source is mapped onto one hourly timeline in the location's local time; then
+   wind, gusts, rain chance, visibility and weather take the WORST value of the sources
+   that answered, so a disagreement makes the verdict more cautious, never less.
+   Temperature, dew point, cloud and direction come from the first source available
+   (NWS, then Open-Meteo). Winds at 260–590 ft only come from Open-Meteo. */
+const HR=3600000, KMH_MPH=0.621371, MS_MPH=2.236936, MM_IN=1/25.4, cToF=c=>c*9/5+32;
+const wxCache={};
+async function cached(key,ttlMin,fn){
+  const c=wxCache[key]; if(c&&Date.now()-c.t<ttlMin*60000) return c.v;
+  const v=await fn(); wxCache[key]={t:Date.now(),v}; return v;
+}
+async function jsonOrThrow(url,tries){
+  for(let k=0;;k++){
+    try{ const r=await fetchT(url); if(!r.ok) throw new Error(url.split("/")[2]+" "+r.status); return await r.json(); }
+    catch(e){ if(k+1>=(tries||1)) throw e; await new Promise(res=>setTimeout(res,800)); }
+  }
+}
+// "2026-11-16T15:00:00+00:00/PT6H" → [startMs, hours]
+function nwsSpan(vt){
+  const [a,d]=String(vt).split("/"), t=Date.parse(a); if(!fin(t)) return null;
+  const m=String(d||"").match(/P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?/); if(!m) return [t,1];
+  return [t,Math.max(1,(+m[1]||0)*24+(+m[2]||0)+((+m[3]||0)>0?1:0))];
+}
+function nwsSeries(prop,conv){
+  const out=new Map(); if(!prop||!Array.isArray(prop.values)) return out;
+  prop.values.forEach(v=>{ const sp=nwsSpan(v.validTime); if(!sp||v.value==null) return; const x=conv(v.value,prop.uom||"",sp[1]);
+    for(let h=0;h<sp[1];h++) out.set(Math.floor((sp[0]+h*HR)/HR)*HR,x); });
+  return out;
+}
+const nwsTemp=(v,u)=>/degC/.test(u)?cToF(v):v, nwsWind=(v,u)=>/km_h/.test(u)?v*KMH_MPH:/m_s/.test(u)?v*MS_MPH:v;
+function nwsCode(list,sky){
+  let code=null;
+  (list||[]).forEach(w=>{ const t=String(w&&w.weather||""), i=String(w&&w.intensity||""), cov=String(w&&w.coverage||"");
+    if(!t||/slight_chance/.test(cov)) return;
+    let c=null;
+    if(/thunder/.test(t)) c=95; else if(/freezing/.test(t)) c=66; else if(/snow|sleet/.test(t)) c=i==="heavy"?75:i==="light"||i==="very_light"?71:73;
+    else if(/rain/.test(t)) c=/showers/.test(t)?(i==="heavy"?82:80):(i==="heavy"?65:i==="light"||i==="very_light"?61:63);
+    else if(/drizzle/.test(t)) c=53; else if(/fog/.test(t)) c=45; else if(/haze|smoke/.test(t)) c=45;
+    if(c!=null&&(code==null||c>code)) code=c; });
+  if(code!=null) return code;
+  return fin(sky)?(sky<15?0:sky<40?1:sky<75?2:3):null;
+}
+async function fetchNWS(lat,lon){
+  const la=lat.toFixed(4), lo=lon.toFixed(4);
+  const pt=await cached("nwsp"+la+lo,720,()=>jsonOrThrow(`https://api.weather.gov/points/${la},${lo}`,2));
+  const pp=pt.properties||{}; if(!pp.forecastGridData) throw new Error("NWS: outside coverage");
+  const g=(await cached("nwsg"+pp.forecastGridData,15,()=>jsonOrThrow(pp.forecastGridData,2))).properties||{};
+  const pop=nwsSeries(g.probabilityOfPrecipitation,v=>v), sky=nwsSeries(g.skyCover,v=>v);
+  const qpf=nwsSeries(g.quantitativePrecipitation,(v,u,h)=>(/mm/.test(u)?v*MM_IN:v)/h);
+  const wx=new Map(); (g.weather&&g.weather.values||[]).forEach(v=>{ const sp=nwsSpan(v.validTime); if(!sp) return; for(let h=0;h<sp[1];h++) wx.set(Math.floor((sp[0]+h*HR)/HR)*HR,v.value); });
+  const rl=pp.relativeLocation&&pp.relativeLocation.properties;
+  return { tz:pp.timeZone||null, elevM:g.elevation&&fin(g.elevation.value)?g.elevation.value:null,
+    place:rl&&rl.city?rl.city+(rl.state?", "+rl.state:""):"",
+    temp:nwsSeries(g.temperature,nwsTemp), dew:nwsSeries(g.dewpoint,nwsTemp), feels:nwsSeries(g.apparentTemperature,nwsTemp),
+    wind:nwsSeries(g.windSpeed,nwsWind), gust:nwsSeries(g.windGust,nwsWind), dir:nwsSeries(g.windDirection,v=>v),
+    pop, cloud:sky, vis:nwsSeries(g.visibility,(v,u)=>/km/.test(u)&&!/km_h/.test(u)?v*1000:v), qpf,
+    code:{get:t=>nwsCode(wx.get(t),sky.get(t)),has:t=>wx.has(t)||sky.has(t)} };
+}
+// local-time helpers for a named time zone
+function tzParts(ms,tz){
+  const f=new Intl.DateTimeFormat("en-CA",{timeZone:tz,hourCycle:"h23",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+  const p={}; f.formatToParts(new Date(ms)).forEach(x=>p[x.type]=x.value);
+  return p;
+}
+function tzLocalStr(ms,tz){ const p=tzParts(ms,tz); return `${p.year}-${p.month}-${p.day}T${p.hour==="24"?"00":p.hour}:${p.minute}`; }
+function tzOffsetMs(ms,tz){ const p=tzParts(ms,tz); return Date.UTC(+p.year,+p.month-1,+p.day,+(p.hour==="24"?0:p.hour),+p.minute)-Math.floor(ms/60000)*60000; }
+// NOAA sunrise/sunset (minutes after UTC midnight) for days with no Open-Meteo data
+function sunTimesUTC(dateStr,lat,lon){
+  const d=new Date(dateStr+"T12:00:00Z"), rad=Math.PI/180, n=Math.floor((d-Date.UTC(d.getUTCFullYear(),0,0))/864e5);
+  const g=2*Math.PI/365*(n-1);
+  const eq=229.18*(0.000075+0.001868*Math.cos(g)-0.032077*Math.sin(g)-0.014615*Math.cos(2*g)-0.040849*Math.sin(2*g));
+  const decl=0.006918-0.399912*Math.cos(g)+0.070257*Math.sin(g)-0.006758*Math.cos(2*g)+0.000907*Math.sin(2*g)-0.002697*Math.cos(3*g)+0.00148*Math.sin(3*g);
+  const cosH=(Math.cos(90.833*rad)/(Math.cos(lat*rad)*Math.cos(decl)))-Math.tan(lat*rad)*Math.tan(decl);
+  if(cosH>1||cosH<-1) return null;
+  const ha=Math.acos(cosH)/rad, base=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());
+  return {rise:base+(720-4*(lon+ha)-eq)*60000, set:base+(720-4*(lon-ha)-eq)*60000};
+}
+async function fetchAllWeather(lat,lon){
+  // once NWS has answered, give Open-Meteo at most 6 more seconds rather than its full time limit
+  const omP=fetchWeather(lat,lon).then(v=>v,()=>null), N=await fetchNWS(lat,lon).then(v=>v,()=>null);
+  const O=N?await Promise.race([omP,new Promise(r=>setTimeout(()=>r(null),6000))]):await omP;
+  S.sources.openmeteo=!!O; S.sources.nws=!!N; S.placeHint=N&&N.place||"";
+  if(!O&&!N) throw new Error("no weather source answered");
+  // timeline: Open-Meteo's own (location-local) hours, else 7 days from local midnight
+  const tz=(O&&O.timezone)||(N&&N.tz)||Intl.DateTimeFormat().resolvedOptions().timeZone;
+  let times, utc;
+  if(O){ times=O.hourly.time.slice(); const off=(O.utc_offset_seconds||0)*1000; utc=times.map(t=>Date.parse(t+":00Z")-off); }
+  else{
+    const now=Date.now(), p=tzParts(now,tz), mid=Date.UTC(+p.year,+p.month-1,+p.day)-tzOffsetMs(now,tz);
+    utc=[]; times=[]; for(let k=0;k<168;k++){ const ms=mid+k*HR; utc.push(ms); times.push(tzLocalStr(ms,tz)); }
+  }
+  const n=times.length, oh=O?O.hourly:{}, arr=k=>Array.isArray(oh[k])?oh[k]:[];
+  const pick=(k,i,...vals)=>{ for(const v of vals) if(fin(v)) return v; return null; };
+  const worst=(vals,lowWorse)=>{ const v=vals.filter(fin); return v.length?(lowWorse?Math.min(...v):Math.max(...v)):null; };
+  const H={time:times};
+  ["temperature_2m","apparent_temperature","dew_point_2m","precipitation_probability","precipitation","weather_code","cloud_cover","cloud_cover_low","visibility",
+   "wind_speed_10m","wind_gusts_10m","wind_direction_10m","wind_speed_80m","wind_speed_120m","wind_speed_180m","surface_pressure","pressure_msl","is_day"].forEach(k=>H[k]=new Array(n).fill(null));
+  const g=(src,key,t)=>src&&src[key]&&src[key].get?src[key].get(t):null;
+  for(let i=0;i<n;i++){
+    const t=utc[i];
+    H.temperature_2m[i]=pick(0,i,g(N,"temp",t),arr("temperature_2m")[i]);
+    H.dew_point_2m[i]=pick(0,i,g(N,"dew",t),arr("dew_point_2m")[i]);
+    H.apparent_temperature[i]=pick(0,i,g(N,"feels",t),arr("apparent_temperature")[i],H.temperature_2m[i]);
+    H.wind_speed_10m[i]=worst([arr("wind_speed_10m")[i],g(N,"wind",t)]);
+    H.wind_gusts_10m[i]=worst([arr("wind_gusts_10m")[i],g(N,"gust",t)]);
+    if(fin(H.wind_speed_10m[i])&&fin(H.wind_gusts_10m[i])&&H.wind_gusts_10m[i]<H.wind_speed_10m[i]) H.wind_gusts_10m[i]=H.wind_speed_10m[i];
+    H.wind_direction_10m[i]=pick(0,i,g(N,"dir",t),arr("wind_direction_10m")[i]);
+    H.precipitation_probability[i]=worst([arr("precipitation_probability")[i],g(N,"pop",t)]);
+    H.precipitation[i]=worst([arr("precipitation")[i],g(N,"qpf",t)]);
+    H.visibility[i]=worst([arr("visibility")[i],g(N,"vis",t)],true);
+    H.cloud_cover[i]=pick(0,i,g(N,"cloud",t),arr("cloud_cover")[i]);
+    H.cloud_cover_low[i]=pick(0,i,arr("cloud_cover_low")[i]);
+    ["cloud_cover","cloud_cover_low"].forEach(k=>{ if(fin(H[k][i])) H[k][i]=Math.round(H[k][i]); });
+    H.weather_code[i]=worst([arr("weather_code")[i],N?N.code.get(t):null]);
+    ["wind_speed_80m","wind_speed_120m","wind_speed_180m","surface_pressure"].forEach(k=>H[k][i]=fin(arr(k)[i])?arr(k)[i]:null);
+    H.pressure_msl[i]=pick(0,i,arr("pressure_msl")[i]);
+  }
+  // the first hours can be missing from a source that starts "now": carry the nearest value back
+  Object.keys(H).forEach(k=>{ if(k==="time") return; const a=H[k]; let first=a.findIndex(fin); if(first>0&&first<4) for(let i=0;i<first;i++) a[i]=a[first]; });
+  const elevM=O&&fin(O.elevation)?O.elevation:(N&&fin(N.elevM)?N.elevM:null);
+  for(let i=0;i<n;i++){
+    if(!fin(H.surface_pressure[i])&&fin(H.pressure_msl[i])&&fin(elevM)) H.surface_pressure[i]=H.pressure_msl[i]*Math.pow(1-2.25577e-5*elevM,5.25588);
+    if(!fin(H.weather_code[i])) H.weather_code[i]=fin(H.cloud_cover[i])?(H.cloud_cover[i]<15?0:H.cloud_cover[i]<40?1:H.cloud_cover[i]<75?2:3):3;
+    H.precipitation_probability[i]=fin(H.precipitation_probability[i])?Math.round(H.precipitation_probability[i]):0;
+  }
+  // days: Open-Meteo's when present (sunrise/sunset), maxima always recomputed from the merged hours
+  const days=[...new Set(times.map(t=>t.slice(0,10)))].slice(0,7), od=O&&O.daily;
+  const D={time:days,weather_code:[],temperature_2m_max:[],temperature_2m_min:[],sunrise:[],sunset:[],precipitation_probability_max:[],wind_speed_10m_max:[],wind_gusts_10m_max:[],wind_direction_10m_dominant:[]};
+  days.forEach((day,di)=>{
+    const idx=[]; times.forEach((t,i)=>{ if(t.startsWith(day)) idx.push(i); });
+    const col=k=>idx.map(i=>H[k][i]).filter(fin), mx=k=>{const c=col(k);return c.length?Math.max(...c):null;}, mn=k=>{const c=col(k);return c.length?Math.min(...c):null;};
+    const oi=od?od.time.indexOf(day):-1, sun=sunTimesUTC(day,lat,lon);
+    D.sunrise.push(oi>=0?od.sunrise[oi]:(sun?tzLocalStr(sun.rise,tz):day+"T06:00"));
+    D.sunset.push(oi>=0?od.sunset[oi]:(sun?tzLocalStr(sun.set,tz):day+"T18:00"));
+    D.temperature_2m_max.push(oi>=0&&fin(od.temperature_2m_max[oi])?od.temperature_2m_max[oi]:mx("temperature_2m"));
+    D.temperature_2m_min.push(oi>=0&&fin(od.temperature_2m_min[oi])?od.temperature_2m_min[oi]:mn("temperature_2m"));
+    // daytime (7am–7pm) decides the day's icon and limits, like a flying day
+    const dayIdx=idx.filter(i=>{const h=+times[i].slice(11,13);return h>=7&&h<=19;}), use=dayIdx.length?dayIdx:idx;
+    const dmx=k=>{const c=use.map(i=>H[k][i]).filter(fin);return c.length?Math.max(...c):null;};
+    D.weather_code.push(dmx("weather_code"));
+    D.precipitation_probability_max.push(mx("precipitation_probability"));
+    D.wind_speed_10m_max.push(mx("wind_speed_10m")); D.wind_gusts_10m_max.push(mx("wind_gusts_10m"));
+    let best=-1,dir=null; idx.forEach(i=>{ if(fin(H.wind_speed_10m[i])&&H.wind_speed_10m[i]>best&&fin(H.wind_direction_10m[i])){best=H.wind_speed_10m[i];dir=H.wind_direction_10m[i];} });
+    D.wind_direction_10m_dominant.push(oi>=0&&fin(od.wind_direction_10m_dominant[oi])?od.wind_direction_10m_dominant[oi]:(dir??0));
+  });
+  // daylight per hour from the day's sunrise/sunset when Open-Meteo didn't send it
+  for(let i=0;i<n;i++){
+    if(fin(arr("is_day")[i])){ H.is_day[i]=arr("is_day")[i]; continue; }
+    const di=days.indexOf(times[i].slice(0,10)); if(di<0){ H.is_day[i]=1; continue; }
+    H.is_day[i]=(times[i]>=D.sunrise[di].slice(0,16)&&times[i]<D.sunset[di].slice(0,16))?1:0;
+  }
+  return {hourly:H,daily:D,elevation:elevM,timezone:tz};
+}
+
 /* ---------- models ---------- */
 function gnss(kp){
   const base=24;
@@ -364,7 +520,8 @@ function windAtHeight(hFt,pts){
   const m=hFt*0.3048;
   const P=pts.filter(p=>fin(p[1])&&p[1]>=0);
   if(P.length===0) return null;
-  if(P.length===1||m<=P[0][0]) return P[0][1];
+  if(P.length===1) return P[0][0]>0&&m>P[0][0]?P[0][1]*Math.pow(m/P[0][0],1/7):P[0][1];   // surface only: standard 1/7 power law
+  if(m<=P[0][0]) return P[0][1];
   for(let i=0;i<P.length-1;i++){
     if(m<=P[i+1][0]){
       const [h1,w1]=P[i],[h2,w2]=P[i+1];
@@ -525,9 +682,12 @@ function renderScrub(){
 }
 function renderSources(){
   const s=$("#sources");s.innerHTML="";
-  [["Open-Meteo",S.sources.openmeteo],["Model spread",S.sources.models],["NOAA SWPC Kp",S.sources.swpc]].forEach(([n,on])=>{
+  [["Open-Meteo",S.sources.openmeteo],["NWS",S.sources.nws],["Model spread",S.sources.models],["NOAA SWPC Kp",S.sources.swpc]].forEach(([n,on])=>{
     const p=el("div","source-pill "+(on?"on":"off"));p.innerHTML=`<span class="led"></span>${n} ${on?"live":"offline"}`;s.appendChild(p);
   });
+  if(S.data){ const n=el("div","wp-note"); n.style.flexBasis="100%";
+    n.textContent="Wind, gusts, rain chance and visibility use the worst value of the live forecasts."+(S.sources.nws?"":" (NWS covers the US only.)");
+    s.appendChild(n); }
 }
 
 /* ---------- render: wind profile ---------- */
@@ -536,6 +696,10 @@ function renderProfile(){
   if(!S.data){return;} const c=condAt(activeIdx()),L=S.limits;
   $("#wp-time").textContent=(c.idx===S.nowIdx?"now":new Date(c.time).toLocaleString([], {weekday:'short',hour:'2-digit',minute:'2-digit'}));
   const pts=[[10,c.wind],[80,c.wind80],[120,c.wind120],[180,c.wind180]];
+  const aloft=fin(c.wind80)||fin(c.wind120)||fin(c.wind180);
+  let warn=$("#wp-aloft"); if(!warn){ warn=el("div","wp-note"); warn.id="wp-aloft"; warn.style.color="var(--caution)"; $("#wp-table-wrap").before(warn); }
+  warn.textContent=aloft?"":"Winds above the surface normally come from Open-Meteo, which isn't answering — these heights are estimated from the surface wind with a standard rule of thumb, so treat them as rough.";
+  warn.style.display=aloft?"none":"block";
   const gustDelta=Math.max(0,(fin(c.gust)&&fin(c.wind))?c.gust-c.wind:0);
   const rows=[]; let highestOK=null, groundBad=false;
   AGL.forEach(ft=>{
@@ -575,7 +739,13 @@ function renderProfile(){
 /* ---------- render: charts ---------- */
 function ensureChartData(cb){
   if(S.chartData){cb();return;}
-  fetchChartData(S.lat,S.lon).then(d=>{S.chartData=d;cb();}).catch(()=>{S.chartData=S.data;cb();});
+  // 14-day Open-Meteo hours, with the merged (worst-case) values laid over the days they share
+  fetchChartData(S.lat,S.lon).then(d=>{
+    const at=new Map(); S.data.hourly.time.forEach((t,i)=>at.set(t,i));
+    Object.keys(d.hourly).forEach(k=>{ if(k==="time"||!Array.isArray(S.data.hourly[k])) return;
+      d.hourly[k]=d.hourly[k].map((v,i)=>{ const j=at.get(d.hourly.time[i]); return j!=null&&fin(S.data.hourly[k][j])?S.data.hourly[k][j]:v; }); });
+    S.chartData=d; cb();
+  }).catch(()=>{S.chartData=S.data;cb();});
 }
 function chartGeom(){
   const times=S.chartData.hourly.time, now=Date.now();
@@ -715,16 +885,24 @@ function switchPage(p){
 /* ---------- load ---------- */
 async function loadAll(){
   $("#verdict-title").textContent="Checking…"; $("#brand-loc").textContent=S.name||`${S.lat.toFixed(2)}, ${S.lon.toFixed(2)}`;
-  S.chartData=null;
-  try{ S.data=await fetchWeather(S.lat,S.lon); S.elevM=S.data.elevation; S.sources.openmeteo=true; }
-  catch(e){ S.sources.openmeteo=false; $("#verdict-title").textContent="Weather unavailable"; $("#verdict-meta").textContent="Could not reach Open-Meteo — check connection."; renderSources(); return; }
-  S.nowIdx=nearestNowIdx(S.data.hourly.time); S.selDay=0; S.selHour=S.nowIdx;
-  await Promise.allSettled([
-    fetchKp().then(k=>{S.kp=k.current;S.kpForecast=k.forecast;S.sources.swpc=fin(k.current);}).catch(()=>{S.sources.swpc=false;}),
-    fetchModelSpread(S.lat,S.lon).then(sp=>{S.spread=sp;S.sources.models=!!sp;}).catch(()=>{S.sources.models=false;})
+  S.chartData=null; S.spread=null; const gen=S.loadGen=(S.loadGen||0)+1, lat=S.lat, lon=S.lon;
+  // Kp and the model spread don't depend on the forecast: start them now, draw when they land
+  const extras=Promise.allSettled([
+    fetchKp().then(k=>{ if(gen!==S.loadGen) return; S.kp=k.current;S.kpForecast=k.forecast;S.sources.swpc=fin(k.current);}).catch(()=>{ if(gen===S.loadGen) S.sources.swpc=false;}),
+    fetchModelSpread(lat,lon).then(sp=>{ if(gen!==S.loadGen) return; S.spread=sp;S.sources.models=!!sp;}).catch(()=>{ if(gen===S.loadGen){ S.spread=null; S.sources.models=false; } })
   ]);
+  let data;
+  try{ data=await fetchAllWeather(lat,lon); }
+  catch(e){ data=null; }
+  if(gen!==S.loadGen) return;   // a newer location was picked meanwhile
+  try{ if(!data) throw new Error("none"); S.data=data; S.elevM=S.data.elevation;
+    if(S.placeHint&&/^-?\d/.test(S.name)){ S.name="Near "+S.placeHint; $("#brand-loc").textContent=S.name; } }
+  catch(e){ S.data=null; ["#grid","#days","#scrub","#reasons"].forEach(q=>$(q).innerHTML=""); $("#verdict").className="verdict caution"; $("#verdict-title").textContent="Weather unavailable"; $("#verdict-meta").textContent="No weather source answered (Open-Meteo, NWS) — check connection."; renderSources(); return; }
+  S.nowIdx=nearestNowIdx(S.data.hourly.time); S.selDay=0; S.selHour=S.nowIdx;
   render();
   if(S.page==="charts") renderCharts();
+  await extras;
+  if(gen===S.loadGen&&S.data) render();
 }
 
 /* ---------- geo + search ---------- */

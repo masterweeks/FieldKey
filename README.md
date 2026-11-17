@@ -208,7 +208,9 @@ manually** on the main screen creates a fresh record.)
   index, plus a 7-day outlook, wind by altitude and charts). Open it from the drone
   button at the top of the home screen (your location), the **Flyability** button on
   the map (the spot at the map's center), or **Flyability here** in a site's map
-  details. Weather comes from Open-Meteo and NOAA, so it needs a connection.
+  details. Weather comes from two forecasts at once — Open-Meteo and the National Weather
+  Service (US) — and wind, gusts, rain chance and visibility use the worse of the two,
+  so one service being down doesn't stop it. It needs a connection.
 - **Radar** — the **Radar** toggle shows live NOAA weather radar (rain and snow falling
   now, updated every few minutes). The bar under the legend shows when the image is from;
   tap **Loop last hour** to animate the last hour and see which way storms are moving.
