@@ -31,6 +31,46 @@ then set a new one with the steps above when ready.
 Check the hashing tool itself: `python scripts/make_db_password.py --self-test` (it compares against
 the RFC 7677 test vector).
 
+## Rotate the export worker's secrets
+
+Same hashed method for the database password: `python scripts/make_db_password.py --role export_worker`,
+run the printed line in the SQL Editor, then update the `fk-db-url` secret in Google Secret Manager
+and redeploy (or update `worker/.env` on whatever host runs it). To lock the worker out at once:
+`alter role export_worker with password null;`.
+
+For the Storage key: Supabase → Project Settings → API Keys → create a new secret key, put it in
+`fk-sb-secret`, redeploy, then delete the old key. For `WORKER_TOKEN`: make a new one, update both
+`fk-worker-token` and the Vault secret `export_worker_token`, redeploy.
+
+## Re-run an export
+
+From FieldKey, just request the package again. To re-run the same job (same missions and options),
+in the SQL Editor:
+
+```sql
+-- recent jobs and why they stopped
+select id, status, error, message, created_at, attempts from public.export_jobs
+order by created_at desc limit 20;
+
+-- put a failed, cancelled or expired job back in the queue
+select public.fk_export_requeue('<job id>');
+```
+
+If the worker is woken by the database (Cloud Run), a requeued job is picked up on the next wake-up
+— request any package, or open `https://<worker url>/healthz` and then call `/run` with the token:
+`curl -X POST -H "Authorization: Bearer <token>" https://<worker url>/run`. In `loop` mode it's picked
+up within the interval.
+
+Common failures and what to do:
+
+| Message | Fix |
+|---|---|
+| "about N MB, over the 45 MB cap" | lower the map detail or the distance around each site, or leave out a basemap |
+| "isn't responding properly" | the tile server was down or blocking; try later |
+| "None of the chosen missions were found" | the mission was deleted, or the phone hadn't synced; sync and request again |
+| "The worker stopped during this export 3 times" | the host ran out of memory/time; make the package smaller or give the worker more memory |
+| stays "Waiting for the export worker" | the worker isn't running or the wake-up call isn't set up: check Cloud Run logs, pg_net, and the two Vault secrets (docs/export.md step 4) |
+
 ## Restore a paused project
 
 Free Supabase projects pause after a week without activity. Restore from the dashboard
@@ -99,4 +139,3 @@ wins). To delete it again, use the QGIS "Soft delete" action or delete it in Fie
 - To re-check the server rules, paste `supabase/tests/sync_rules_test.sql` into the SQL Editor and run
   it. It rolls everything back; the "error" it prints is the test report.
 
-*Re-running a failed export is added with Phase 4.*

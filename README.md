@@ -329,6 +329,13 @@ also sync to your Supabase account — and from there into QGIS (`docs/qgis-setu
   is kept on the server for review — nothing is thrown away.
 - Signing out keeps the data on the phone. Not signing in at all works exactly as before.
 
+### Export → Mission package
+When signed in, **Export → Mission package (.gpkg)** builds one GeoPackage of the missions you
+pick — sites, pins and the QGIS styles — on the server, and gives you a Download button when it's
+ready (kept 14 days). Names and phone numbers are left out unless you tick them, so the file can go
+straight to a client. FieldKey shows the size first; packages are capped at 45 MB. Setup and the
+basemap licensing list: `docs/export.md`.
+
 ### Settings → Data
 - **Back up data** downloads a single `.json` file with every customer and your
   Settings — keep it somewhere safe (Files, email, cloud).
@@ -351,6 +358,7 @@ Edit the text-message template anytime in **Settings → Text message**.
 - `supabase/migrations/` — the PostGIS schema, row-level security and sync functions
 - `qgis/` — script that builds the QGIS project; `docs/` — QGIS setup and runbook
 - `scripts/` — backup import and database-password tools
+- `export-plan.js`, `worker/` — mission package size estimate and the GeoPackage export worker (Docker)
 
 ## Install on iPhone (no Mac, no App Store)
 1. Put these files on any HTTPS host. Easiest free option: a GitHub repo with
