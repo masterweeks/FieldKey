@@ -316,6 +316,19 @@ manually** on the main screen creates a fresh record.)
   toggle it). So a saved area gives you the dark map with terrain, your pins, GPS, and
   aerial — all with no signal.
 
+### Settings → Account & sync
+Sign in with the FieldKey account your admin created (see `docs/runbook.md`).
+Everything still saves on the phone first; when signed in, missions, sites and pins
+also sync to your Supabase account — and from there into QGIS (`docs/qgis-setup.md`).
+- The cloud button in the header shows the state: a green cloud when up to date,
+  "N waiting" with no signal, a spinner while syncing, red when something needs a look.
+  Tap it to sync now.
+- Changes made offline queue up and upload when signal returns (it also syncs every
+  minute and when you reopen the app). Edits made in QGIS come back down the same way.
+- If two people edit the same site at once, the later edit wins and the other version
+  is kept on the server for review — nothing is thrown away.
+- Signing out keeps the data on the phone. Not signing in at all works exactly as before.
+
 ### Settings → Data
 - **Back up data** downloads a single `.json` file with every customer and your
   Settings — keep it somewhere safe (Files, email, cloud).
@@ -334,6 +347,10 @@ Edit the text-message template anytime in **Settings → Text message**.
 - `index.html` — the whole app
 - `manifest.webmanifest`, `sw.js` — make it installable + work offline
 - `icon-*.png`, `apple-touch-icon.png` — home-screen icons
+- `sync-engine.js` — offline outbox + push/pull sync (tests: `node --test tests/`)
+- `supabase/migrations/` — the PostGIS schema, row-level security and sync functions
+- `qgis/` — script that builds the QGIS project; `docs/` — QGIS setup and runbook
+- `scripts/` — backup import and database-password tools
 
 ## Install on iPhone (no Mac, no App Store)
 1. Put these files on any HTTPS host. Easiest free option: a GitHub repo with

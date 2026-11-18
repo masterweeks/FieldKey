@@ -14,6 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="FieldKey" />
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" crossorigin="" />
 <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js" crossorigin=""></script>
+<script src="sync-engine.js"></script>
 <style>
   :root{
     --bg:#0E1116; --bg2:#14181F; --bg3:#1B212B; --raise:#212935;
@@ -56,6 +57,15 @@
   }
   .iconbtn:active{background:var(--raise)}
   .iconbtn .ico{width:20px;height:20px}
+  .syncbtn{appearance:none;height:40px;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--bg3);color:var(--ink);border-radius:11px;padding:0 11px;font:600 12px var(--ui);cursor:pointer;max-width:9.5em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .syncbtn .ico{width:18px;height:18px;color:var(--green)}
+  .syncbtn.warn .ico{color:var(--amber)}
+  .syncbtn.bad{border-color:#5a2330;color:#FF9A9A} .syncbtn.bad .ico{color:var(--red)}
+  .syncbtn.busy .ico{color:var(--muted);animation:fkspin 1s linear infinite}
+  @keyframes fkspin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){ .syncbtn.busy .ico{animation:none} }
+  .acctrow{display:flex;gap:8px;flex-wrap:wrap}
+  .acctrow .btn{flex:1;min-width:8em}
   /* home: icon tiles (shares .tile with the map panel) */
   .htiles{display:grid;gap:8px;margin-bottom:8px}
   .htiles.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -517,12 +527,13 @@
 </head>
 <body>
 <!-- Icons from Lucide v0.460.0 (https://lucide.dev), ISC License. Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022. Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies. THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES. The drone icon is FieldKey's own. -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></symbol><symbol id="i-mountain" viewBox="0 0 24 24"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></symbol><symbol id="i-ruler" viewBox="0 0 24 24"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></symbol><symbol id="i-plane" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></symbol><symbol id="i-trees" viewBox="0 0 24 24"><path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5"/></symbol><symbol id="i-radar" viewBox="0 0 24 24"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/></symbol><symbol id="i-rain" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M19.914 11.105A7.298 7.298 0 0 0 20 10a8 8 0 0 0-16 0c0 4.993 5.539 10.193 7.399 11.799a1 1 0 0 0 1.202 0 32 32 0 0 0 .824-.738"/><circle cx="12" cy="10" r="3"/><path d="M16 18h6"/><path d="M19 15v6"/></symbol><symbol id="i-filedown" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></symbol><symbol id="i-lasso" viewBox="0 0 24 24"><path d="M7 22a5 5 0 0 1-2-4"/><path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8-4.5 8-10 8a12 12 0 0 1-5-1"/><path d="M5 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="i-selvis" viewBox="0 0 24 24"><path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h2"/><path d="M14 3h1"/><path d="M3 9v1"/><path d="M21 9v2"/><path d="M3 14v1"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol><symbol id="i-plot" viewBox="0 0 24 24"><path d="m12 8 6-3-6-3v10"/><path d="m8 11.99-5.5 3.14a1 1 0 0 0 0 1.74l8.5 4.86a2 2 0 0 0 2 0l8.5-4.86a1 1 0 0 0 0-1.74L16 12"/><path d="m6.49 12.85 11.02 6.3"/><path d="M17.51 12.85 6.5 19.15"/></symbol><symbol id="i-drone" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="18" r="2.4"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.2"/><path d="M7.6 7.6 9.6 9.6M16.4 7.6 14.4 9.6M7.6 16.4 9.6 14.4M16.4 16.4 14.4 14.4"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-fileup" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/></symbol><symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol><symbol id="i-userplus" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol><symbol id="i-map" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></symbol><symbol id="i-guide" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></symbol><symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol><symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol><symbol id="i-nav" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol><symbol id="i-key" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></symbol><symbol id="i-filetext" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol><symbol id="i-cal" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></symbol><symbol id="i-calclock" viewBox="0 0 24 24"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></symbol><symbol id="i-calplus" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><path d="M3 10h18"/><path d="M16 19h6"/><path d="M19 16v6"/></symbol><symbol id="i-notes" viewBox="0 0 24 24"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol><symbol id="i-reply" viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol><symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol><symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></symbol><symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol><symbol id="i-restore" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol><symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></symbol><symbol id="i-merge" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></symbol><symbol id="i-paste" viewBox="0 0 24 24"><path d="M15 2H9a1 1 0 0 0-1 1v2c0 .6.4 1 1 1h6c.6 0 1-.4 1-1V3c0-.6-.4-1-1-1Z"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2M16 4h2a2 2 0 0 1 2 2v2M11 14h10"/><path d="m17 10 4 4-4 4"/></symbol><symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol><symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol><symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></symbol><symbol id="i-sheet" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/></symbol><symbol id="i-json" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/><path d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/></symbol><symbol id="i-contact" viewBox="0 0 24 24"><path d="M16 2v2"/><path d="M7 22v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><path d="M8 2v2"/><circle cx="12" cy="11" r="3"/><rect x="3" y="4" width="18" height="18" rx="2"/></symbol><symbol id="i-mappin" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></symbol><symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></symbol><symbol id="i-bldg" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></symbol><symbol id="i-3d" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></symbol></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></symbol><symbol id="i-mountain" viewBox="0 0 24 24"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></symbol><symbol id="i-ruler" viewBox="0 0 24 24"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></symbol><symbol id="i-plane" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></symbol><symbol id="i-trees" viewBox="0 0 24 24"><path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5"/></symbol><symbol id="i-radar" viewBox="0 0 24 24"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/></symbol><symbol id="i-rain" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M19.914 11.105A7.298 7.298 0 0 0 20 10a8 8 0 0 0-16 0c0 4.993 5.539 10.193 7.399 11.799a1 1 0 0 0 1.202 0 32 32 0 0 0 .824-.738"/><circle cx="12" cy="10" r="3"/><path d="M16 18h6"/><path d="M19 15v6"/></symbol><symbol id="i-filedown" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></symbol><symbol id="i-lasso" viewBox="0 0 24 24"><path d="M7 22a5 5 0 0 1-2-4"/><path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8-4.5 8-10 8a12 12 0 0 1-5-1"/><path d="M5 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="i-selvis" viewBox="0 0 24 24"><path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h2"/><path d="M14 3h1"/><path d="M3 9v1"/><path d="M21 9v2"/><path d="M3 14v1"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol><symbol id="i-plot" viewBox="0 0 24 24"><path d="m12 8 6-3-6-3v10"/><path d="m8 11.99-5.5 3.14a1 1 0 0 0 0 1.74l8.5 4.86a2 2 0 0 0 2 0l8.5-4.86a1 1 0 0 0 0-1.74L16 12"/><path d="m6.49 12.85 11.02 6.3"/><path d="M17.51 12.85 6.5 19.15"/></symbol><symbol id="i-drone" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="18" r="2.4"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.2"/><path d="M7.6 7.6 9.6 9.6M16.4 7.6 14.4 9.6M7.6 16.4 9.6 14.4M16.4 16.4 14.4 14.4"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-fileup" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/></symbol><symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol><symbol id="i-userplus" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol><symbol id="i-map" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></symbol><symbol id="i-guide" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></symbol><symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol><symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol><symbol id="i-nav" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol><symbol id="i-key" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></symbol><symbol id="i-filetext" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol><symbol id="i-cal" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></symbol><symbol id="i-calclock" viewBox="0 0 24 24"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></symbol><symbol id="i-calplus" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><path d="M3 10h18"/><path d="M16 19h6"/><path d="M19 16v6"/></symbol><symbol id="i-notes" viewBox="0 0 24 24"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol><symbol id="i-reply" viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol><symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol><symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></symbol><symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol><symbol id="i-restore" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol><symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></symbol><symbol id="i-merge" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></symbol><symbol id="i-paste" viewBox="0 0 24 24"><path d="M15 2H9a1 1 0 0 0-1 1v2c0 .6.4 1 1 1h6c.6 0 1-.4 1-1V3c0-.6-.4-1-1-1Z"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2M16 4h2a2 2 0 0 1 2 2v2M11 14h10"/><path d="m17 10 4 4-4 4"/></symbol><symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol><symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol><symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></symbol><symbol id="i-sheet" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/></symbol><symbol id="i-json" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/><path d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/></symbol><symbol id="i-contact" viewBox="0 0 24 24"><path d="M16 2v2"/><path d="M7 22v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><path d="M8 2v2"/><circle cx="12" cy="11" r="3"/><rect x="3" y="4" width="18" height="18" rx="2"/></symbol><symbol id="i-mappin" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></symbol><symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></symbol><symbol id="i-bldg" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></symbol><symbol id="i-3d" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></symbol><symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></symbol><symbol id="i-cloudoff" viewBox="0 0 24 24"><path d="m2 2 20 20"/><path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193"/><path d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07"/></symbol><symbol id="i-cloudalert" viewBox="0 0 24 24"><path d="M12 12v4"/><path d="M12 20h.01"/><path d="M17 18h.5a1 1 0 0 0 0-9h-1.79A7 7 0 1 0 7 17.708"/></symbol><symbol id="i-login" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></symbol><symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></symbol></svg>
 <header>
   <div class="bar">
     <svg class="glyph" viewBox="0 0 48 60" aria-hidden="true"><path d="M24 4a17 17 0 0 1 17 17c0 11-17 33-17 33S7 32 7 21A17 17 0 0 1 24 4z" fill="#FFB000"/><circle cx="24" cy="20" r="9" fill="#0E1116"/><rect x="22" y="20" width="4" height="9" rx="2" fill="#0E1116"/></svg>
     <span class="title">Field<b>Key</b></span>
     <span class="spacer"></span>
+    <button class="syncbtn hidden" id="syncBtn" type="button" aria-label="Sync status. Tap to sync now"></button>
     <button class="iconbtn" id="flyBtn" aria-label="Flyability drone weather" title="Flyability"><svg class="ico" aria-hidden="true"><use href="#i-drone"/></svg></button>
     <button class="iconbtn" id="settingsBtn" aria-label="Settings" title="Settings"><svg class="ico" aria-hidden="true"><use href="#i-settings"/></svg></button>
   </div>
@@ -894,7 +905,26 @@
 <div class="scrim" id="scrim"></div>
 <div class="sheet" id="sheet" role="dialog" aria-label="Settings">
   <div class="grab"></div>
-  <h2><svg class="ico" aria-hidden="true"><use href="#i-filetext"/></svg>Request details</h2>
+  <h2><svg class="ico" aria-hidden="true"><use href="#i-cloud"/></svg>Account &amp; sync</h2>
+  <div id="sAcctBox">
+    <div id="sAcctOut">
+      <p class="hint">Sign in to keep your sites and pins in your FieldKey account: they're saved on this phone first and sync when you have signal, and they show up in QGIS. Your admin creates the account in Supabase.</p>
+      <div class="sgroup"><label class="label" for="sAcctEmail">Email</label><input type="text" id="sAcctEmail" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="username" /></div>
+      <div class="sgroup"><label class="label" for="sAcctPw">Password</label><input type="password" id="sAcctPw" autocomplete="current-password" /></div>
+      <div class="sgroup"><button class="btn primary" id="sSignIn" type="button"><svg class="ico" aria-hidden="true"><use href="#i-login"/></svg><span class="bl">Sign in</span></button></div>
+    </div>
+    <div id="sAcctIn" class="hidden">
+      <p class="hint">Signed in as <b id="sAcctWho"></b></p>
+      <p class="note" id="sAcctStat" style="margin:-8px 0 12px"></p>
+      <div class="sgroup acctrow">
+        <button class="btn ghost" id="sSyncNow" type="button"><svg class="ico" aria-hidden="true"><use href="#i-refresh"/></svg><span class="bl">Sync now</span></button>
+        <button class="btn ghost hidden" id="sRetryFailed" type="button"><svg class="ico" aria-hidden="true"><use href="#i-restore"/></svg><span class="bl">Retry failed</span></button>
+        <button class="btn ghost" id="sSignOut" type="button"><svg class="ico" aria-hidden="true"><use href="#i-logout"/></svg><span class="bl">Sign out</span></button>
+      </div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:22px"><svg class="ico" aria-hidden="true"><use href="#i-filetext"/></svg>Request details</h2>
   <p class="hint">These fill every request. Saved on this device.</p>
   <div class="sgroup"><label class="label">Requestor name</label><input type="text" id="sName" /></div>
   <div class="sgroup"><label class="label">Requestor LanID</label><input type="text" id="sLan" /></div>
@@ -1022,7 +1052,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v71";
+  const APP_VER="v72";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -1638,16 +1668,19 @@
   let _db=null, dbOk=true;
   function dbOpen(){ return new Promise((res,rej)=>{ if(_db)return res(_db);
     if(!("indexedDB" in window)){ dbOk=false; return rej(new Error("no idb")); }
-    const rq=indexedDB.open(DB_NAME,2);
+    const rq=indexedDB.open(DB_NAME,3);
     rq.onupgradeneeded=e=>{ const db=e.target.result;
       if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:"id"});
-      if(!db.objectStoreNames.contains(SNAP)) db.createObjectStore(SNAP,{keyPath:"date"}); };
+      if(!db.objectStoreNames.contains(SNAP)) db.createObjectStore(SNAP,{keyPath:"date"});
+      if(!db.objectStoreNames.contains("outbox")) db.createObjectStore("outbox",{keyPath:"key"});      // sync: queued changes
+      if(!db.objectStoreNames.contains("syncmeta")) db.createObjectStore("syncmeta",{keyPath:"k"});    // sync: cursors etc.
+      if(!db.objectStoreNames.contains("shadow")) db.createObjectStore("shadow",{keyPath:"k"}); };     // sync: last-synced fingerprints
     rq.onsuccess=e=>{_db=e.target.result;res(_db);}; rq.onerror=e=>{dbOk=false;rej(e.target.error);}; }); }
   function _store(mode){ return _db.transaction(STORE,mode).objectStore(STORE); }
   function dbAll(){ return new Promise((res,rej)=>{ try{const r=_store("readonly").getAll(); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
-  function dbBulk(recs){ return new Promise((res,rej)=>{ try{const s=_store("readwrite"); recs.forEach(r=>s.put(r)); s.transaction.oncomplete=()=>res(); s.transaction.onerror=()=>rej(s.transaction.error);}catch(e){rej(e);} }); }
-  function dbDel(id){ return new Promise((res,rej)=>{ try{const r=_store("readwrite").delete(id); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
-  function dbClear(){ return new Promise((res,rej)=>{ try{const r=_store("readwrite").clear(); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
+  function dbBulk(recs){ return new Promise((res,rej)=>{ try{const s=_store("readwrite"); recs.forEach(r=>s.put(r)); s.transaction.oncomplete=()=>{ res(); fkSyncChanged(); }; s.transaction.onerror=()=>rej(s.transaction.error);}catch(e){rej(e);} }); }
+  function dbDel(id){ return new Promise((res,rej)=>{ try{const r=_store("readwrite").delete(id); r.onsuccess=()=>{ res(); fkSyncChanged(); }; r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
+  function dbClear(){ return new Promise((res,rej)=>{ try{const r=_store("readwrite").clear(); r.onsuccess=()=>{ res(); fkSyncChanged(); }; r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
   function _snap(mode){ return _db.transaction(SNAP,mode).objectStore(SNAP); }
   function snapPut(rec){ return new Promise((res,rej)=>{ try{const r=_snap("readwrite").put(rec); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
   function snapAll(){ return new Promise((res,rej)=>{ try{const r=_snap("readonly").getAll(); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
@@ -2168,7 +2201,7 @@
   function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
   async function clearDatabase(){
     if(!customers.length){ toast("The database is already empty."); return; }
-    if(confirm("Delete all "+customers.length+" customers from the database? This cannot be undone.")){
+    if(confirm("Delete all "+customers.length+" customers from the database?"+(sbSession?" They'll also be removed from your FieldKey account on the next sync (QGIS keeps a copy marked deleted).":" This cannot be undone."))){
       customers=[]; cfg.latestKml=""; store.set("fk_latestKml",""); cSel.clear(); if(dbOk) await dbClear();
       renderCustomers(); updateBadge(); closeSheet(); toast("Database cleared");
     }
@@ -3116,7 +3149,7 @@
     {k:"note",n:"Note",L:"N",c:"#3FB6A8"}];
   let userPins=[]; try{ userPins=JSON.parse(store.get("fk_userpins","[]"))||[]; }catch(e){ userPins=[]; }
   let pinPlacing=false, editPinId=null, pinDraft=null;
-  function savePinsStore(){ store.set("fk_userpins",JSON.stringify(userPins)); }
+  function savePinsStore(){ store.set("fk_userpins",JSON.stringify(userPins)); fkSyncChanged(); }
   function pinType(k){ return PIN_TYPES.find(t=>t.k===k)||PIN_TYPES[3]; }
   function pinsGeo(){ return {type:"FeatureCollection",features:userPins.map(p=>({type:"Feature",properties:{id:p.id,L:pinType(p.type).L,c:pinType(p.type).c},geometry:{type:"Point",coordinates:[p.lng,p.lat]}}))}; }
   function refreshUserPins(){ if(cmap&&cMapReady&&cmap.getSource("userpins")) cmap.getSource("userpins").setData(pinsGeo()); }
@@ -3823,6 +3856,235 @@
       dt.addEventListener("click",()=>setC(!dk.classList.contains("collapsed")));
     } }
 
+  /* ---------------- cloud sync (Supabase) ----------------
+     Sign-in with Supabase Auth (email + password); then every change to sites and pins is
+     written locally first, queued in the IndexedDB outbox, and synced by sync-engine.js
+     (push the outbox, pull changes since the last sync). Ids: each record gets a uuid derived
+     from its FieldKey id and the user (uuid5, same as scripts/import_backup.py), so the first
+     sync uploads what's already on the phone without duplicates. */
+  const SB_URL="https://fdclbfqgsookhxfboxpn.supabase.co";
+  const SB_KEY="sb_publishable_yvQxdaJPScjQ0_iOtnxhWA_vy40hCAe";   // publishable key: safe in the app, RLS protects the data
+  const FK_NS="8f4e6c1a-3b2d-4e5f-9a7b-1c2d3e4f5a6b";
+  const SYNC_STATUSES=["new","enriched","texted","replied","scheduled","done"], SYNC_KINDS=["entrance","parking","hazard","note"];
+  let sbSession=null, syncEngine=null, syncStatus=null, shadow=new Map(), missionIdByName=new Map(), missionNameById=new Map();
+  try{ sbSession=JSON.parse(store.get("fk_sb_session","null")); }catch(e){ sbSession=null; }
+
+  // ---- IndexedDB: outbox, sync metadata, last-synced fingerprints ----
+  function idbReq(storeName,mode,fn){ return new Promise((res,rej)=>{ try{ const tx=_db.transaction(storeName,mode), s=tx.objectStore(storeName); const r=fn(s); tx.oncomplete=()=>res(r&&"result" in r?r.result:undefined); tx.onerror=()=>rej(tx.error); }catch(e){ rej(e); } }); }
+  const syncStore={
+    outboxAll:()=>idbReq("outbox","readonly",s=>s.getAll()).then(v=>v||[]),
+    outboxPut:e=>idbReq("outbox","readwrite",s=>s.put(e)),
+    outboxDelete:k=>idbReq("outbox","readwrite",s=>s.delete(k)),
+    metaGet:k=>idbReq("syncmeta","readonly",s=>s.get(k)).then(r=>r?r.v:null),
+    metaSet:(k,v)=>idbReq("syncmeta","readwrite",s=>s.put({k,v})),
+  };
+  function shadowPut(table,id,h,su){ const k=table+":"+id, v={k,h,su:su||null}; shadow.set(k,v); return idbReq("shadow","readwrite",s=>s.put(v)).catch(()=>{}); }
+  function shadowDel(table,id){ const k=table+":"+id; shadow.delete(k); return idbReq("shadow","readwrite",s=>s.delete(k)).catch(()=>{}); }
+  function rawPutCustomer(c){ return idbReq(STORE,"readwrite",s=>s.put(c)).catch(()=>{}); }
+  function rawDelCustomer(id){ return idbReq(STORE,"readwrite",s=>s.delete(id)).catch(()=>{}); }
+  function fingerprint(o){ const s=JSON.stringify(o); let h1=0xdeadbeef, h2=0x41c6ce57;
+    for(let i=0;i<s.length;i++){ const ch=s.charCodeAt(i); h1=Math.imul(h1^ch,2654435761); h2=Math.imul(h2^ch,1597334677); }
+    h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909); h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+    return (4294967296*(2097151&h2)+(h1>>>0)).toString(36)+":"+s.length; }
+  const sha1=b=>crypto.subtle.digest("SHA-1",b);
+  const uuidFor=(kind,legacy)=>FKSync.uuid5(sha1,FK_NS,sbSession.user.id+":"+kind+":"+legacy);
+
+  // ---- FieldKey record <-> database row ----
+  function isoOrNull(v){ if(!v) return null; const d=new Date(v); return isNaN(d)?null:d.toISOString(); }
+  function isoToLocalInput(v){ if(!v) return ""; const d=new Date(v); if(isNaN(d)) return ""; const p=n=>String(n).padStart(2,"0");
+    return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes()); }
+  function pointOf(lat,lng){ const a=parseFloat(lat), o=parseFloat(lng); return (isFinite(a)&&isFinite(o)&&Math.abs(a)<=90&&Math.abs(o)<=180&&!(a===0&&o===0))?{type:"Point",coordinates:[o,a]}:null; }
+  function assetRow(c){ return { id:c.uuid, legacy_id:c.id, mission_id:(c.assignment&&missionIdByName.get(c.assignment))||null,
+    sap_id:c.sapId||null, name:c.name||null, address:c.address||null,
+    phones:(c.phones||[]).map(p=>({display:p.display||"",tel:p.tel||""})), access:c.access||null, access_notes:c.accessNotes||null,
+    status:SYNC_STATUSES.indexOf(c.status)>=0?c.status:"new", text_count:c.textCount||0, last_texted_at:isoOrNull(c.lastTexted),
+    scheduled_at:isoOrNull(c.scheduledAt), notes:c.notes||null, access_issue:!!c.accessIssue, access_issue_reason:c.accessIssueReason||null,
+    extra:c.extra||{}, geom:pointOf(c.lat,c.lng), deleted_at:null }; }
+  function applyAssetRow(c,row){
+    c.sapId=row.sap_id||""; c.name=row.name||""; c.address=row.address||""; c.phones=Array.isArray(row.phones)?row.phones:[];
+    c.access=row.access||""; c.accessNotes=row.access_notes||""; c.status=row.status||"new"; c.textCount=row.text_count||0;
+    c.lastTexted=row.last_texted_at||""; c.scheduledAt=isoToLocalInput(row.scheduled_at); c.notes=row.notes||"";
+    c.accessIssue=!!row.access_issue; c.accessIssueReason=row.access_issue_reason||""; c.extra=row.extra||{};
+    const g=row.geom&&row.geom.coordinates; c.lat=g?String(g[1]):""; c.lng=g?String(g[0]):"";
+    c.assignment=(row.mission_id&&missionNameById.get(row.mission_id))||(row.mission_id?c.assignment:"")||"";
+  }
+  function pinRow(p){ return { id:p.uuid, legacy_id:p.id, kind:SYNC_KINDS.indexOf(p.type)>=0?p.type:"note", label:p.label||null, notes:p.notes||null,
+    geom:pointOf(p.lat,p.lng), mission_id:null, deleted_at:null }; }
+  function missionRow(name,id){ return { id, name, source_file:name, legacy_id:"batch:"+name, status:"active", deleted_at:null }; }
+
+  // ---- change tracking: compare each record with what was last synced, queue the differences ----
+  let trackTimer=null, tracking=null;
+  function fkSyncChanged(){ if(!sbSession||!syncEngine) return; clearTimeout(trackTimer); trackTimer=setTimeout(fkTrack,700); }
+  function fkTrack(){
+    if(tracking) return tracking.then(fkTrack);
+    tracking=(async()=>{
+      if(!sbSession||!syncEngine) return;
+      const now=new Date().toISOString(); let queued=0; const touched=[];
+      for(const c of customers){ if(!c.uuid){ c.uuid=await uuidFor("asset",c.id); touched.push(c); } }
+      for(const p of userPins){ if(!p.uuid){ p.uuid=await uuidFor("pin",p.id); } }
+      const names=[...new Set(customers.map(c=>(c.assignment||"").trim()).filter(Boolean))];
+      for(const n of names){ if(!missionIdByName.has(n)){ const id=await uuidFor("mission",n); missionIdByName.set(n,id); missionNameById.set(id,n); } }
+      for(const n of names){ const id=missionIdByName.get(n), row=missionRow(n,id), h=fingerprint(row), sh=shadow.get("missions:"+id);
+        if(!sh||sh.h!==h){ await syncEngine.enqueue("missions",Object.assign({},row,{client_updated_at:now,_base_updated_at:sh?sh.su:null})); await shadowPut("missions",id,h,sh&&sh.su); queued++; } }
+      const live=new Set();
+      for(const c of customers){ live.add("assets:"+c.uuid); const row=assetRow(c), h=fingerprint(row), sh=shadow.get("assets:"+c.uuid);
+        if(!sh||sh.h!==h){ c._cu=now; touched.push(c); await syncEngine.enqueue("assets",Object.assign({},row,{client_updated_at:now,_base_updated_at:c._su||(sh&&sh.su)||null})); await shadowPut("assets",c.uuid,h,c._su||(sh&&sh.su)); queued++; } }
+      for(const p of userPins){ live.add("pins:"+p.uuid); const row=pinRow(p), h=fingerprint(row), sh=shadow.get("pins:"+p.uuid);
+        if(!row.geom) continue;
+        if(!sh||sh.h!==h){ p._cu=now; await syncEngine.enqueue("pins",Object.assign({},row,{client_updated_at:now,_base_updated_at:p._su||(sh&&sh.su)||null})); await shadowPut("pins",p.uuid,h,p._su||(sh&&sh.su)); queued++; } }
+      // anything synced before that's gone now was deleted on this phone: send a soft delete
+      for(const [k,sh] of [...shadow.entries()]){
+        const [t,id]=k.split(":"); if((t!=="assets"&&t!=="pins")||live.has(k)) continue;
+        await syncEngine.enqueue(t,{id,deleted_at:now,client_updated_at:now,_base_updated_at:sh.su||null}); await shadowDel(t,id); queued++;
+      }
+      for(const c of touched) await rawPutCustomer(c);
+      store.set("fk_userpins",JSON.stringify(userPins));
+      if(queued) setTimeout(()=>{ if(syncEngine&&navigator.onLine) syncEngine.syncNow(); },1200);
+    })().finally(()=>{ tracking=null; });
+    return tracking;
+  }
+
+  // ---- rows coming back from the server (pull, or the server's answer to a push) ----
+  let remoteChanged=false;
+  async function fkApplyRemote(table,row){
+    if(table==="missions"){
+      missionNameById.set(row.id,row.name); missionIdByName.set(row.name,row.id);
+      await shadowPut("missions",row.id,fingerprint(missionRow(row.name,row.id)),row.updated_at); return;
+    }
+    if(table==="assets"){
+      let c=customers.find(x=>x.uuid===row.id);
+      if(row.deleted_at){ if(c){ customers=customers.filter(x=>x!==c); cSel.delete(c.id); await rawDelCustomer(c.id); remoteChanged=true; } await shadowDel("assets",row.id); return; }
+      if(!c){ c={id:row.legacy_id||("srv_"+row.id), uuid:row.id, phones:[], extra:{}}; if(findById(c.id)) c.id="srv_"+row.id; customers.push(c); }
+      applyAssetRow(c,row); c._cu=row.client_updated_at; c._su=row.updated_at; sanitizeRecord(c);
+      await shadowPut("assets",row.id,fingerprint(assetRow(c)),row.updated_at); await rawPutCustomer(c); remoteChanged=true; return;
+    }
+    if(table==="pins"){
+      let p=userPins.find(x=>x.uuid===row.id);
+      if(row.deleted_at){ if(p){ userPins=userPins.filter(x=>x!==p); remoteChanged=true; } await shadowDel("pins",row.id); store.set("fk_userpins",JSON.stringify(userPins)); return; }
+      const g=row.geom&&row.geom.coordinates; if(!g) return;
+      if(!p){ p={id:row.legacy_id||("pin_"+row.id), uuid:row.id, created:row.created_at}; userPins.push(p); }
+      p.type=row.kind; p.label=row.label||""; p.notes=row.notes||""; p.lat=g[1]; p.lng=g[0]; p._cu=row.client_updated_at; p._su=row.updated_at;
+      await shadowPut("pins",row.id,fingerprint(pinRow(p)),row.updated_at); store.set("fk_userpins",JSON.stringify(userPins)); remoteChanged=true;
+    }
+  }
+
+  // ---- Supabase Auth + RPC over fetch (no extra library) ----
+  async function sbFetch(path,body,token){
+    const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),30000);
+    try{
+      const r=await fetch(SB_URL+path,{method:"POST",signal:ctl.signal,headers:Object.assign({"apikey":SB_KEY,"Content-Type":"application/json"},token?{"Authorization":"Bearer "+token}:{}),body:JSON.stringify(body||{})});
+      const txt=await r.text(); let j=null; try{ j=txt?JSON.parse(txt):null; }catch(e){}
+      if(!r.ok){ const e=new Error((j&&(j.msg||j.message||j.error_description||j.error))||("HTTP "+r.status)); e.status=r.status; throw e; }
+      return j;
+    }catch(e){ if(e.name==="AbortError"){ const x=new Error("Timed out"); x.status=0; throw x; } throw e; }
+    finally{ clearTimeout(t); }
+  }
+  function saveSession(j){
+    sbSession={access_token:j.access_token, refresh_token:j.refresh_token, expires_at:Math.floor(Date.now()/1000)+(j.expires_in||3600), user:{id:j.user.id,email:j.user.email}};
+    store.set("fk_sb_session",JSON.stringify(sbSession));
+  }
+  async function sbToken(){
+    if(!sbSession) { const e=new Error("Signed out"); e.permanent=true; throw e; }
+    if(sbSession.expires_at-90>Date.now()/1000) return sbSession.access_token;
+    try{ saveSession(await sbFetch("/auth/v1/token?grant_type=refresh_token",{refresh_token:sbSession.refresh_token})); }
+    catch(e){ if(e.status===400||e.status===401){ signOutLocal(); toast("Your sign-in expired. Sign in again in Settings to keep syncing; your changes are safe on this phone."); const x=new Error("Your sign-in expired. Sign in again in Settings."); x.permanent=true; throw x; } throw e; }
+    return sbSession.access_token;
+  }
+  async function sbRpc(fn,args){
+    try{ return await sbFetch("/rest/v1/rpc/"+fn,args,await sbToken()); }
+    catch(e){ if(e.status===401&&sbSession){ sbSession.expires_at=0; return await sbFetch("/rest/v1/rpc/"+fn,args,await sbToken()); } throw e; }
+  }
+  const syncTransport={
+    push:(table,rows)=>sbRpc("fk_sync_push",{p_table:table,p_rows:rows}),
+    pull:(table,ts,id,limit)=>sbRpc("fk_sync_pull",{p_table:table,p_since:ts,p_since_id:id,p_limit:limit}),
+  };
+
+  function startSyncEngine(){
+    if(!sbSession||!_db||!_db.objectStoreNames.contains("outbox")) return;
+    if(syncEngine) syncEngine.stop();
+    syncEngine=FKSync.createSyncEngine({ store:syncStore, transport:syncTransport, applyRemote:fkApplyRemote,
+      tables:["missions","assets","pins"], isOnline:()=>navigator.onLine,
+      onStatus:s=>{ syncStatus=s; if(s.state!=="syncing"&&remoteChanged){ remoteChanged=false; renderCustomers(); updateBadge(); refreshUserPins(); if(cmap) refreshMarks(); } renderSyncUI(); } });
+    fkTrack().then(()=>syncEngine&&syncEngine.start(60000));
+  }
+  async function loadSyncState(){
+    try{ (await idbReq("shadow","readonly",s=>s.getAll())||[]).forEach(v=>shadow.set(v.k,v));
+         (await syncStore.metaGet("missions")||[]).forEach(([id,name])=>{ missionNameById.set(id,name); missionIdByName.set(name,id); }); }catch(e){}
+  }
+  async function signIn(email,password){
+    const prev=store.get("fk_sync_owner","");
+    const j=await sbFetch("/auth/v1/token?grant_type=password",{email,password});
+    if(prev&&prev!==j.user.id&&customers.length){
+      throw new Error("This phone holds another account's data. Back it up and clear the database before signing in as someone else.");
+    }
+    saveSession(j); store.set("fk_sync_owner",j.user.id);
+    startSyncEngine();
+  }
+  function signOutLocal(){
+    if(syncEngine) syncEngine.stop(); syncEngine=null;
+    const tok=sbSession&&sbSession.access_token; sbSession=null; store.set("fk_sb_session","null");
+    if(tok) sbFetch("/auth/v1/logout",{},tok).catch(()=>{});
+    renderSyncUI();
+  }
+  // remember mission names between launches
+  setInterval(()=>{ if(sbSession&&missionNameById.size) syncStore.metaSet("missions",[...missionNameById.entries()]).catch(()=>{}); },15000);
+
+  // ---- status indicator + Settings section ----
+  function agoText(iso){ if(!iso) return "never"; const m=Math.round((Date.now()-Date.parse(iso))/60000); return m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" hr ago":Math.round(m/1440)+" d ago"; }
+  function renderSyncUI(){
+    const b=$("#syncBtn"), s=syncStatus||{state:"idle",pending:0,failed:0};
+    if(b){
+      b.classList.toggle("hidden",!sbSession);
+      let icon="cloud", text="Synced", cls="";
+      if(!navigator.onLine||s.state==="offline"){ icon="cloudoff"; text=s.pending?s.pending+" waiting":"Offline"; cls="warn"; }
+      else if(s.state==="syncing"){ icon="refresh"; text="Syncing"; cls="busy"; }
+      else if(s.state==="error"&&!s.failed&&/fetch|network|timed out|load failed/i.test(s.lastError||"")){ icon="cloudoff"; text=s.pending?s.pending+" waiting":"No connection"; cls="warn"; }   // weak signal: changes are safe, it retries
+      else if(s.state==="error"||s.failed){ icon="cloudalert"; text=s.failed?s.failed+" not synced":"Sync error"; cls="bad"; }
+      else if(s.pending){ icon="cloud"; text=s.pending+" to sync"; cls="warn"; }
+      b.className="syncbtn"+(sbSession?"":" hidden")+(cls?" "+cls:"");
+      b.innerHTML=ICO(icon)+'<span class="bl"></span>'; b.querySelector(".bl").textContent=text;
+      b.title=(s.lastError?s.lastError+" · ":"")+"Last sync "+agoText(s.lastSyncAt)+". Tap to sync now.";
+    }
+    const box=$("#sAcctBox"); if(!box) return;
+    $("#sAcctOut").classList.toggle("hidden",!!sbSession); $("#sAcctIn").classList.toggle("hidden",!sbSession);
+    if(sbSession){
+      $("#sAcctWho").textContent=sbSession.user.email||sbSession.user.id;
+      const parts=["Last sync "+agoText(s.lastSyncAt)];
+      if(s.pending) parts.push(s.pending+" change"+(s.pending===1?"":"s")+" waiting");
+      if(s.failed) parts.push(s.failed+" couldn't sync");
+      if(s.lastError) parts.push(s.lastError);
+      if(s.nextRetryAt&&s.state==="error") parts.push("retrying "+new Date(s.nextRetryAt).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}));
+      $("#sAcctStat").textContent=parts.join(" · ");
+      $("#sRetryFailed").classList.toggle("hidden",!s.failed);
+    }
+  }
+  { const b=$("#syncBtn"); if(b) b.addEventListener("click",async()=>{
+      if(!syncEngine) return;
+      if(!navigator.onLine){ toast("Offline — changes are saved and will sync when you're back online."); return; }
+      const r=await syncEngine.syncNow();
+      toast(r.state==="error"?"Sync failed: "+(r.lastError||"try again"):r.pending?r.pending+" still waiting":"All synced");
+    }); }
+  { const b=$("#sSignIn"); if(b) b.addEventListener("click",async()=>{
+      const em=($("#sAcctEmail").value||"").trim(), pw=$("#sAcctPw").value||"";
+      if(!em||!pw){ toast("Enter your email and password."); return; }
+      if(!navigator.onLine){ toast("Signing in needs a connection."); return; }
+      b.disabled=true; setBtnText(b,"Signing in…");
+      try{ await signIn(em,pw); $("#sAcctPw").value=""; toast("Signed in — syncing"); }
+      catch(e){ toast(/invalid/i.test(e.message)?"Wrong email or password.":e.message); }
+      finally{ b.disabled=false; setBtnText(b,"Sign in"); renderSyncUI(); }
+    }); }
+  { const b=$("#sSignOut"); if(b) b.addEventListener("click",()=>{
+      const pend=(syncStatus&&syncStatus.pending)||0;
+      if(pend&&!confirm(pend+" change"+(pend===1?" hasn't":"s haven't")+" synced yet. They stay on this phone and sync after you sign in again. Sign out?")) return;
+      signOutLocal(); toast("Signed out. Your data stays on this phone.");
+    }); }
+  { const b=$("#sSyncNow"); if(b) b.addEventListener("click",()=>{ if(syncEngine) syncEngine.syncNow(); }); }
+  { const b=$("#sRetryFailed"); if(b) b.addEventListener("click",async()=>{ if(syncEngine){ await syncEngine.retryFailed(); syncEngine.syncNow(); } }); }
+  window.addEventListener("online",()=>{ renderSyncUI(); if(syncEngine) syncEngine.syncNow(); });
+  window.addEventListener("offline",renderSyncUI);
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&syncEngine&&navigator.onLine) syncEngine.syncNow(); });
+  setInterval(renderSyncUI,60000);
+
   /* init DB */
   (async function(){
     try{ await dbOpen(); customers=await dbAll(); }catch(e){ customers=[]; }
@@ -3832,6 +4094,7 @@
     if(dirty) persist();
     renderCustomers(); updateBadge();
     dailySnapshot();
+    await loadSyncState(); startSyncEngine(); renderSyncUI();
   })();
 
   /* ---------------- service worker (offline) ---------------- */

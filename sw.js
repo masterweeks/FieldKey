@@ -1,8 +1,8 @@
 /* FieldKey offline shell. Bump CACHE when app files change. */
-const CACHE = "fieldkey-v71";          /* app shell + map engine (rebuilt on bump) */
+const CACHE = "fieldkey-v72";          /* app shell + map engine (rebuilt on bump) */
 const MAPCACHE = "fieldkey-maps";       /* basemap style/fonts/sprite/tiles (persists across bumps) */
 const SHELL = [
-  "./", "./index.html", "./flyability.html", "./view3d.html", "./manifest.webmanifest",
+  "./", "./index.html", "./flyability.html", "./view3d.html", "./sync-engine.js", "./manifest.webmanifest",
   "./icon-192.png", "./icon-512.png", "./icon-rounded-512.png", "./apple-touch-icon.png"
 ];
 /* MapLibre engine — best-effort precache so the map code loads with no signal */
