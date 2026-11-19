@@ -33,7 +33,7 @@ flowchart LR
 |---|---|---|
 | Schema | `supabase/migrations/` | PostGIS tables, audit triggers, RLS, roles, sync and export functions. Additive only. |
 | FieldKey | `index.html`, `sync-engine.js`, `export-plan.js` | Offline-first app. Saves locally, queues changes in an outbox, syncs when online. |
-| QGIS project | `qgis/fieldkey_qgis_setup.py`, `docs/qgis-setup.md` | Builds the "FieldKey" project stored in the database, with forms and styles. |
+| QGIS project | `qgis/fieldkey_qgis_setup.py`, `docs/qgis-setup.md` | Builds the "FieldKey" project stored in the database, with forms and styles, plus FieldKey's basemaps, terrain, airspace and protected areas from their online sources. |
 | Export worker | `worker/`, `docs/export.md` | Builds mission GeoPackages from queued jobs. |
 | Runbook | `docs/runbook.md` | Passwords, accounts, conflicts, exports, paused project. |
 

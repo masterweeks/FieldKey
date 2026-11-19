@@ -67,13 +67,88 @@ AUTHCFG = "fk3dqgs"                            # your ID from step 3
 Then in QGIS: **Plugins → Python Console → Show Editor → Open Script…** → pick the file →
 **Run Script**. It:
 
-- adds a **FieldKey** group: Assets, Pins, Photos, Inspections, Circuits, Missions, plus OpenStreetMap
+- adds a **FieldKey** group: Assets, Pins, Photos, Inspections, Circuits, Missions
+- adds FieldKey's basemaps, 3D terrain, airspace and protected areas
+  (see [The map around your data](#the-map-around-your-data))
 - styles and labels every layer and sets up the forms (next section)
 - saves each style into the database as that layer's default (`public.layer_styles`), so anyone
   adding a layer from the Browser gets the same look, and GeoPackage exports carry it
 - saves the project into Postgres as **FieldKey** in schema `qgis`
 
-Run it again any time to rebuild the group and re-save.
+Run it again any time to rebuild the groups and re-save. The basemap you had switched on stays on.
+If the message bar says it couldn't reach a source, the rest is still added: run the script again
+later to add what's missing.
+
+---
+
+## The map around your data
+
+The script adds the same map layers FieldKey shows, read live from the same online sources. They
+need a connection; nothing here is stored offline.
+
+**Basemaps.** The **Basemaps** group works like FieldKey's switcher: tick one and the others
+untick.
+
+| Basemap | What you get | Source |
+|---|---|---|
+| **Dark** | FieldKey's dark map, with shaded terrain | OpenFreeMap (OpenStreetMap data), Terrain Tiles on AWS |
+| **Aerial** | USGS imagery; closer than 1:7,000, sharper NAIP close-up photos | USGS, USDA NAIP |
+| **Hybrid** | Aerial with bright roads and road and town names on top | the same, plus OpenFreeMap |
+| **Streets** | OpenStreetMap | OpenStreetMap |
+| **Topo** | USGS topographic map | USGS |
+
+Aerial and Hybrid use USGS photos, not the Esri photos FieldKey shows online: Esri's terms
+restrict use outside its own apps. They are the same photos FieldKey shows offline.
+
+**Airspace** (group) and **Protected areas** are the same live FAA and USGS PAD-US layers, with
+FieldKey's filters and colours:
+
+| Layer | Shows | Appears closer than |
+|---|---|---|
+| National security restrictions, and the part-time ones | red: no drones | 1:2,500,000 |
+| Controlled airspace | Class B and C solid, Class D and surface Class E dashed | 1:2,500,000 |
+| Special use airspace | prohibited, restricted, military operations, warning and alert areas | 1:5,000,000 |
+| LAANC grid | the altitude that can be approved automatically, red (0 ft) to green (400 ft) | 1:150,000 |
+| Protected areas | national parks, wildlife refuges, wilderness, state parks and wildlife areas, marine protected areas | 1:1,000,000 |
+
+- Untick a layer or the whole group to hide it. The legend under each layer explains the colours.
+- **Hover tips:** turn on **View → Show Map Tips** and rest the pointer on an area to see its name
+  and the drone rule. The **Identify** tool shows every field.
+- These layers load a few seconds after you stop panning, because each one asks its service for
+  the area in view.
+- As in FieldKey, TFRs and NOTAMs aren't shown. Check B4UFLY or tfr.faa.gov before flying.
+
+**3D.** The script makes the **Terrain (elevation)** layer the project's terrain. It stays
+unticked: it isn't drawn on the flat map.
+
+1. **View → 3D Map Views → New 3D Map View.**
+2. Hold **Shift** and drag (or drag with the middle mouse button) to tilt and turn. The view shows
+   whichever basemap and overlays are ticked.
+3. FieldKey draws hills 1.5× taller. For the same look, open the wrench menu in the 3D view →
+   **Configure…** → **Terrain** → set **Vertical scale** to `1.5`.
+
+**View → Elevation Profile** also uses this terrain. FieldKey's photorealistic **3D view** button
+(Google's 3D tiles) isn't part of the QGIS project.
+
+**Zoom Full** goes to the area your FieldKey sites cover, and new 3D views cover that area. The
+area is measured when the script runs, so run it again after importing sites somewhere new.
+
+The project is drawn in Web Mercator (EPSG:3857), as web maps are. The status bar still shows
+latitude and longitude.
+
+**Sources** (each approved before it was added; add a row here before adding another):
+
+| Source | Used for | Licence |
+|---|---|---|
+| USGS The National Map (Topo, Imagery Only) | Topo, Aerial, Hybrid | US Government work, public domain |
+| USDA NAIP via USGS | Aerial and Hybrid close-ups | US Government work, public domain |
+| OpenFreeMap / OpenStreetMap | Dark, Hybrid roads and names, Streets | ODbL, credit "© OpenStreetMap contributors" |
+| Terrain Tiles on AWS | 3D terrain, Dark's shaded relief | open data, credits listed by the provider |
+| FAA Aeronautical Information Services | Airspace | US Government work, public domain |
+| USGS PAD-US | Protected areas | US Government work, public domain |
+
+To leave all of this out, set `ADD_REFERENCE_LAYERS = False` at the top of the script: you then
+get the FieldKey group and one OpenStreetMap layer.
 
 ---
 
@@ -191,3 +266,8 @@ select
 - **`… belongs to a different user`:** the Mission, Asset or Pin you picked belongs to another
   user. Pick one of this feature owner's.
 - **`permission denied for table …` when deleting:** use the Soft delete action.
+- **A basemap or the airspace is blank:** check the internet connection, then zoom in: the
+  overlays hide when zoomed far out. If **Dark** or Hybrid's roads stay blank weeks after setup,
+  run the script again: OpenFreeMap changes its tile address with each data update.
+- **The Dark basemap looks empty in a hand-made project:** QGIS mis-converts part of the Dark
+  style and hides roads, water and names. The script corrects this, so add Dark with the script.

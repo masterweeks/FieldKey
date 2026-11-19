@@ -113,7 +113,7 @@ built in about 11 seconds.
 |---|---|---|
 | **USGS Topo** (The National Map) | US Government work; USGS states no use restrictions on TNM map services, credit requested | ✅ **Approved.** US only, tiles to z16 |
 | **USGS Imagery Only** (NAIP, 1 m) | Same as above | ✅ **Approved.** US only, tiles to z16 |
-| **USDA NAIP via USGS** (USGSNAIPImagery image service, ~0.6 m) | US Government work (USDA/USGS), public domain, credit requested | ✅ **Approved 2026-11-18 for FieldKey's offline close-ups** (zoom 17–18 around sites). Not in mission packages yet |
+| **USDA NAIP via USGS** (USGSNAIPImagery image service, ~0.6 m) | US Government work (USDA/USGS), public domain, credit requested | ✅ **Approved 2026-11-18 for FieldKey's offline close-ups** (zoom 17–18 around sites), and 2026-11-19 for live viewing in the QGIS project (`docs/qgis-setup.md`). Not in mission packages yet |
 | USGS Imagery Topo (imagery + labels) | Same as above (not in FieldKey yet) | ✅ Optional |
 | ⚠️ **Esri World Imagery**, Esri reference / transportation overlays | Esri's terms don't allow exporting the standard layer for offline use; only small exports via the "for Export" layer inside ArcGIS apps with an ArcGIS account | ❌ Don't use |
 | ⚠️ **Google** (Maps, Photorealistic 3D Tiles) | Google Maps Platform terms forbid pre-fetching, caching, storing or offline use | ❌ Don't use |
