@@ -151,7 +151,19 @@ should stay inside its free monthly allowance — check the Cloud Run pricing pa
    `python scripts/make_db_password.py --role export_worker` → run the printed `alter role` line
    in the Supabase SQL Editor. Keep the password for step 3.
 2. **Secrets in Google Secret Manager** (Console → Security → Secret Manager): create
-   `fk-db-url` (the full `DATABASE_URL`), `fk-sb-secret`, `fk-worker-token`.
+   `fk-db-url` (the full `DATABASE_URL`), `fk-sb-secret`, `fk-worker-token`. Then let Cloud Run
+   read them (it runs as the project's default compute account):
+   ```
+   PN=$(gcloud projects describe $(gcloud config get-value project) --format='value(projectNumber)')
+   for s in fk-db-url fk-sb-secret fk-worker-token; do
+     gcloud secrets add-iam-policy-binding $s \
+       --member serviceAccount:$PN-compute@developer.gserviceaccount.com \
+       --role roles/secretmanager.secretAccessor
+   done
+   ```
+   No gcloud on your PC? Use **Cloud Shell** (the `>_` button at the top of the Google Cloud
+   console): it has gcloud and git, and `git clone https://github.com/masterweeks/FieldKey.git`
+   gives it the repo folder for step 3.
 3. **Deploy** from the repo folder:
    ```
    gcloud run deploy fieldkey-export --source worker --region us-west1 \
