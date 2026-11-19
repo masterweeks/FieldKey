@@ -31,7 +31,8 @@ below). It **merges** into what's already there: a point that
 matches an existing customer (by SAP ID, then name, then address) updates that
 record and keeps the phone / access / status / text history you've collected;
 brand-new points are added; anything already in the database that isn't in this file
-is left untouched. The file is tagged and the view auto-filters to **Latest KML** so
+is left untouched. The file is tagged and the view auto-filters to that file (the
+**KML file** filter picks any file you've imported, newest first) so
 you immediately see just what you loaded — which is also the set you'll usually build
 requests for. (If you pick the wrong file, close the sheet before tapping Import,
 and the daily snapshot is your undo otherwise.)
@@ -103,7 +104,8 @@ manually** on the main screen creates a fresh record.)
   date/time picker that's saved to the database (and shown on the row), plus
   **Apple Calendar** and **Google Calendar** buttons that create a real 30-minute
   inspection event — pre-filled with the site name, address, phone, access notes,
-  and a directions link. Filter chips (including **Latest KML** and **Selected**,
+  and a directions link. Filter chips (including **KML file**, a dropdown of every imported file with its
+  site count, and **Selected**,
   which shows whatever you've picked in the list or on the map) and a search box
   that matches name, address, SAP ID, or **phone number** — phone matching ignores
   formatting, so `5303398783`, `530-339-8783`, or even just the last few digits

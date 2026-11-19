@@ -514,6 +514,8 @@
   .popissue{color:#FF6B6B;font-weight:700}
   .linkbtn.issue{color:var(--red)}
   .chip.issue{border-color:#5a2330;color:#FF8A8A}
+select.chip{background-color:var(--bg3);background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;max-width:62vw;text-overflow:ellipsis;cursor:pointer}
+select.chip.sel{background-color:var(--amber)}
   .chip.issue.sel{background:#3a1414;border-color:#7a2a3a;color:#FFB0B0}
   .btn.issue{border-color:#5a2330;color:#FF9A9A}
   .btn.issue:active{background:#2a1414}
@@ -633,7 +635,7 @@
       <button class="chip sel" data-f="all">All</button>
       <button class="chip" data-f="selected">Selected</button>
       <button class="chip issue" data-f="accessissue">Access issue</button>
-      <button class="chip" data-f="latest">Latest KML</button>
+      <select class="chip" id="custKml" aria-label="Show one imported file"><option value="">KML file</option></select>
       <button class="chip" data-f="has">Has contact</button>
       <button class="chip" data-f="nottexted">Not texted</button>
       <button class="chip" data-f="texted">Texted</button>
@@ -1090,7 +1092,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v76";
+  const APP_VER="v77";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -1819,7 +1821,7 @@
   }
 
   /* ---- render list ---- */
-  let custFilter="all", custQuery="";
+  let custFilter="all", custQuery="", custKml="";
   function displayName(c){ return c.name || (c.sapId?("SAP "+c.sapId):"(no name)"); }
   function assetTitle(c){ return c.sapId ? ("SAP "+c.sapId) : (c.name || "(no name)"); }
   function visibleCustomers(){
@@ -1828,7 +1830,7 @@
       const hasP=c.phones&&c.phones.length;
       if(custFilter==="selected"&&!cSel.has(c.id)) return false;
       if(custFilter==="accessissue"&&!c.accessIssue) return false;
-      if(custFilter==="latest"&&(!cfg.latestKml||c.assignment!==cfg.latestKml)) return false;
+      if(custFilter==="kml"&&(c.assignment||"").trim()!==custKml) return false;
       if(custFilter==="has"&&!hasP) return false;
       if(custFilter==="nottexted"&&!(hasP&&!(c.textCount>0))) return false;
       if(custFilter==="texted"&&!((c.textCount>0)||c.status==="texted")) return false;
@@ -1850,7 +1852,7 @@
   function exportList(){ return cSel.size ? customers.filter(c=>cSel.has(c.id)) : visibleCustomers(); }
   function exportScopeLabel(){
     if(cSel.size) return cSel.size+(cSel.size===1?" selected customer":" selected customers");
-    const names={latest:"Latest KML",has:"with a contact",nottexted:"not texted",texted:"texted",replied:"replied",scheduled:"scheduled"};
+    const names={kml:'from "'+custKml+'"',has:"with a contact",nottexted:"not texted",texted:"texted",replied:"replied",scheduled:"scheduled"};
     const parts=[]; if(custFilter!=="all"&&names[custFilter]) parts.push(names[custFilter]);
     const q=custQuery.trim(); if(q) parts.push('matching "'+q+'"');
     const n=visibleCustomers().length;
@@ -1889,7 +1891,37 @@
       '</div>'+
     '</div>';
   }
+  /* "KML file" filter: every imported file (each site's assignment), newest import first. */
+  let kmlSig="";
+  function kmlFiles(){
+    const counts=new Map();
+    customers.forEach(c=>{ const a=(c.assignment||"").trim(); if(a) counts.set(a,(counts.get(a)||0)+1); });
+    let when={}; try{ when=JSON.parse(store.get("fk_kml_dates","{}")||"{}"); }catch(e){}
+    return [...counts.entries()].map(([name,n])=>({name,n,t:name===cfg.latestKml?Infinity:(when[name]||0)}))
+      .sort((a,b)=>(b.t-a.t)||a.name.localeCompare(b.name));
+  }
+  function noteKmlImport(name){
+    let when={}; try{ when=JSON.parse(store.get("fk_kml_dates","{}")||"{}"); }catch(e){}
+    // files imported before dates were kept: the previous "latest" still sorts just below the new one
+    if(cfg.latestKml&&cfg.latestKml!==name&&!when[cfg.latestKml]) when[cfg.latestKml]=Date.now()-1;
+    when[name]=Date.now(); store.set("fk_kml_dates",JSON.stringify(when));
+  }
+  function renderKmlPicker(){
+    const sel=$("#custKml"); if(!sel) return;
+    const files=kmlFiles(), sig=files.map(f=>f.name+"\u0001"+f.n).join("\u0002")+"|"+custKml;
+    if(custFilter==="kml"&&!files.some(f=>f.name===custKml)){ custFilter="all"; custKml=""; setFilterChips(); }
+    if(sig===kmlSig) return; kmlSig=sig;
+    sel.innerHTML='<option value="">'+(files.length?"KML file":"No files yet")+'</option>'+files.map(f=>
+      '<option value="'+escapeHtml(f.name)+'">'+escapeHtml(f.name)+' ('+f.n+')'+(f.name===cfg.latestKml?" \u00B7 latest":"")+'</option>').join("");
+    sel.value=custFilter==="kml"?custKml:"";
+  }
+  function setFilterChips(){
+    $("#custFilters").querySelectorAll(".chip").forEach(x=>x.classList.toggle("sel",x.id==="custKml"?custFilter==="kml":x.dataset.f===custFilter));
+    const sel=$("#custKml"); if(sel&&custFilter!=="kml") sel.value="";
+  }
+  function showKmlFile(name){ custFilter="kml"; custKml=name; kmlSig=""; setFilterChips(); renderCustomers(); }
   function renderCustomers(){
+    renderKmlPicker();
     const list=$("#custList"), empty=$("#custEmpty"), dbc=$("#dbCount");
     if(dbc) dbc.textContent=customers.length+(customers.length===1?" in database":" in database");
     if(!customers.length){ list.innerHTML=""; empty.classList.remove("hidden");
@@ -2306,9 +2338,13 @@
   $("#guideOpen").addEventListener("click",guideOpenCurrent);
   $("#guideClose").addEventListener("click",closeGuide);
   $("#custSearch").addEventListener("input",e=>{ custQuery=e.target.value; renderCustomers(); });
-  $("#custFilters").querySelectorAll(".chip").forEach(ch=>ch.addEventListener("click",()=>{
-    custFilter=ch.dataset.f; $("#custFilters").querySelectorAll(".chip").forEach(x=>x.classList.toggle("sel",x===ch)); renderCustomers();
+  $("#custFilters").querySelectorAll("button.chip").forEach(ch=>ch.addEventListener("click",()=>{
+    custFilter=ch.dataset.f; custKml=""; setFilterChips(); renderCustomers();
   }));
+  $("#custKml").addEventListener("change",e=>{
+    if(e.target.value) showKmlFile(e.target.value);
+    else { custFilter="all"; custKml=""; setFilterChips(); renderCustomers(); }
+  });
 
   /* detail controls */
   $("#dScrim").addEventListener("click",closeDetail);
@@ -2447,11 +2483,11 @@
     const recs=recordsFromRequests(map);
     const batch=batchLabel();
     const res=mergeIntoDB(recs,batch);
-    cfg.latestKml=batch; store.set("fk_latestKml",batch);
+    noteKmlImport(batch); cfg.latestKml=batch; store.set("fk_latestKml",batch);
     await persist(); updateBadge();
     toast(res.matched+" matched \u00B7 "+res.added+" new \u2014 saved");
     closeKml();
-    custFilter="latest"; $("#custFilters").querySelectorAll(".chip").forEach(x=>x.classList.toggle("sel",x.dataset.f==="latest")); renderCustomers();
+    showKmlFile(batch);
     switchTab("customers");
   });
 
@@ -3284,10 +3320,10 @@
       return rec;
     });
     const batch=batchLabel(), res=mergeIntoDB(recs,batch);
-    cfg.latestKml=batch; store.set("fk_latestKml",batch);
+    noteKmlImport(batch); cfg.latestKml=batch; store.set("fk_latestKml",batch);
     await persist(); updateBadge();
     hideImport();
-    custFilter="latest"; $("#custFilters").querySelectorAll(".chip").forEach(x=>x.classList.toggle("sel",x.dataset.f==="latest")); renderCustomers();
+    showKmlFile(batch);
     toast(res.matched+" matched \u00B7 "+res.added+" new \u2014 imported");
   }
   $("#impFile").addEventListener("change",e=>{ if(e.target.files[0]) openImport(e.target.files[0]); e.target.value=""; });
