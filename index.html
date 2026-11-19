@@ -786,6 +786,7 @@
       </div>
       <div class="dlsub" id="dlSub">Preparing…</div>
       <label class="dlopt hidden" id="dlOpt"><input type="checkbox" id="dlAerial" checked /> Include aerial imagery <span class="dlopthint">(larger)</span></label>
+      <label class="dlopt hidden" id="dlOptNaip"><input type="checkbox" id="dlNaip" checked /><span>Sharp close-ups <span class="dlopthint">(zoom 17&ndash;18, USDA NAIP)</span></span></label>
       <label class="dlopt hidden" id="dlOptTopo"><input type="checkbox" id="dlTopo" /> Include USGS Topo map</label>
       <div class="dlbarwrap hidden" id="dlBarWrap"><div class="dlbarfill" id="dlBar"></div></div>
       <div class="dlrow">
@@ -1089,7 +1090,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v75";
+  const APP_VER="v76";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -2495,6 +2496,7 @@
       cmap.setLayoutProperty("esri-rd","visibility",(hybrid&&!useUSGS)?"visible":"none");
       cmap.setLayoutProperty("esri-ref","visibility",(air&&!useUSGS)?"visible":"none");
       cmap.setLayoutProperty("usgs","visibility",useUSGS?"visible":"none");
+      if(cmap.getLayer("naip")) cmap.setLayoutProperty("naip","visibility",useUSGS?"visible":"none");
       cmap.setLayoutProperty("osm","visibility",streets?"visible":"none");
       if(cmap.getLayer("topo")) cmap.setLayoutProperty("topo","visibility",topo?"visible":"none");
       bldgStyle(choice);
@@ -2530,6 +2532,23 @@
   const USGS_IMG="https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}";
   // USGS Topo: contours, relief, trails, Forest Service roads, water and public land (US, public domain; tiles to z16)
   const USGS_TOPO="https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}";
+  /* USDA NAIP aerial photos (about 0.6 m) from USGS's image service. The USGS tiles above stop at zoom 16,
+     so offline close-ups (zoom 17-18) come from here. The service draws any box on request; each map tile
+     asks for exactly its own box, and the same function builds the URLs FieldKey saves, so they match. */
+  const NAIP_SVC="https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage";
+  const NAIP_Z0=17, NAIP_Z1=18, NAIP_CLOSE_M=150;
+  function naipUrl(z,x,y){
+    const W=20037508.342789244, t=2*W/Math.pow(2,z), f=v=>v.toFixed(2);
+    return NAIP_SVC+"?bbox="+f(-W+x*t)+","+f(W-(y+1)*t)+","+f(-W+(x+1)*t)+","+f(W-y*t)+"&bboxSR=3857&imageSR=3857&size=256,256&format=jpg&f=image";
+  }
+  if(typeof maplibregl!=="undefined"&&maplibregl.addProtocol){
+    try{ maplibregl.addProtocol("naip", async (params, ac)=>{
+      const m=/^naip:\/\/(\d+)\/(\d+)\/(\d+)/.exec(params.url);
+      const r=await fetch(naipUrl(+m[1],+m[2],+m[3]),{mode:"cors",signal:ac&&ac.signal});
+      if(!r.ok) throw new Error("NAIP tile "+r.status);
+      return {data:await r.arrayBuffer()};
+    }); }catch(e){}
+  }
   const DEM_TILE="https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
 
   /* ---------------- 3D map pin icons ---------------- */
@@ -2688,6 +2707,9 @@
         cmap.addLayer({id:"topo",type:"raster",source:"topo-src",layout:{visibility:"none"}});
         cmap.addSource("usgs-src",{type:"raster",tiles:[USGS_IMG],tileSize:256,maxzoom:16,attribution:"Imagery: USGS"});
         cmap.addLayer({id:"usgs",type:"raster",source:"usgs-src",layout:{visibility:"none"}});
+        // offline close-ups on top of the USGS imagery; where none were saved the USGS layer shows through
+        cmap.addSource("naip-src",{type:"raster",tiles:["naip://{z}/{x}/{y}"],tileSize:256,minzoom:NAIP_Z0,maxzoom:NAIP_Z1,attribution:"Close-ups: USDA NAIP via USGS"});
+        cmap.addLayer({id:"naip",type:"raster",source:"naip-src",layout:{visibility:"none"}});
         addBuildingLayer(cmap);
         addWeatherLayers(cmap);
         addOverlayLayers(cmap);
@@ -2835,7 +2857,8 @@
     for(let zz=zAer; zz<=16; zz++) na+=countTiles(b,zz);
     nt=na;   // USGS Topo uses the same zoom range as the aerial
     const baseBig=nv+nd>MAX_OFFLINE_TILES, aerialBig=nv+nd+na>MAX_OFFLINE_TILES;
-    if(baseBig) return { chromeUrls, tiles:[], dem:[], aerial:[], topo:[], zLo, counts:{nv,nd,na,nt} };
+    const nn=zoom>=15?countTiles(b,NAIP_Z0)+countTiles(b,NAIP_Z1):0;   // close-ups only when zoomed in
+    if(baseBig) return { chromeUrls, tiles:[], dem:[], aerial:[], topo:[], naip:[], zLo, counts:{nv,nd,na,nt,nn} };
     const tiles=[];
     for(const src of chrome.vectorTiles){
       const smax=src.maxzoom||14, zHi=Math.min(smax,16);
@@ -2850,7 +2873,9 @@
     const topoT=[], topoBig=nv+nd+nt>MAX_OFFLINE_TILES;
     if(!topoBig) for(let zz=zAer; zz<=16; zz++){ for(const [tz,tx,ty] of tilesForBounds(b,zz)){ topoT.push(fillTpl(USGS_TOPO,tz,tx,ty)); } }
     const t=[...new Set(tiles)], d=[...new Set(dem)], a=[...new Set(aerial)], tp=[...new Set(topoT)];
-    return { chromeUrls, tiles:t, dem:d, aerial:a, topo:tp, zLo, counts:{nv:t.length, nd:d.length, na:aerialBig?na:a.length, nt:topoBig?nt:tp.length} };
+    const naip=[];
+    if(nn&&nv+nd+na+nn<=MAX_OFFLINE_TILES) for(let zz=NAIP_Z0; zz<=NAIP_Z1; zz++){ for(const [tz,tx,ty] of tilesForBounds(b,zz)) naip.push(naipUrl(tz,tx,ty)); }
+    return { chromeUrls, tiles:t, dem:d, aerial:a, topo:tp, naip, zLo, counts:{nv:t.length, nd:d.length, na:aerialBig?na:a.length, nt:topoBig?nt:tp.length, nn} };
   }
   let dlBusy=false, dlCancel=false, dlPlan=null, dlBounds=null;
   function showDl(){ $("#dlOverlay").classList.remove("hidden"); }
@@ -2858,6 +2883,7 @@
   function setDlBar(done,total){ const f=$("#dlBar"); if(f) f.style.width=(total?Math.round(done/total*100):0)+"%"; }
   function wantAerial(){ const c=$("#dlAerial"); return !!(c&&c.checked); }
   function wantTopo(){ const c=$("#dlTopo"); return !!(c&&c.checked); }
+  function wantNaip(){ const c=$("#dlNaip"); return wantAerial()&&!!(c&&c.checked); }
   /* Save mission offline: the map around every site in a mission, planned with the same rule as
      mission packages (export-plan.js). Tiles go into the same offline cache as "This view". */
   const MAX_MISSION_TILES=8000;
@@ -2865,7 +2891,7 @@
   // many tiles at that zoom. Planner v1 (v74) used 64, which left the map between sites blank.
   const MISSION_FULL_AREA=400, MISSION_PLANNER=2;
   let dlMode="view", dlChrome=null, dlViewPlan=null;
-  function tileMB(nv,nd,na,nt){ return Math.max(1,Math.round(nv*0.045 + nd*0.12 + na*0.03 + nt*0.02)); }
+  function tileMB(nv,nd,na,nt,nn){ return Math.max(1,Math.round(nv*0.045 + nd*0.12 + na*0.03 + nt*0.02 + (nn||0)*0.013)); }
   function offlineMissions(){
     const m=new Map();
     customers.forEach(c=>{ const a=(c.assignment||"").trim(), g=pointOf(c.lat,c.lng); if(!a||!g) return;
@@ -2885,15 +2911,22 @@
     return FKExport.planTileList(pts.map(([lo,la])=>FKExport.bufferBbox([lo,la,lo,la],bufferM)),10,16,MAX_MISSION_TILES*2,
       (planner||MISSION_PLANNER)>=2?MISSION_FULL_AREA:64);
   }
+  /* Close-ups: zoom 17-18 within 150 m of each site (or the chosen distance, if smaller). */
+  function missionNaipUrls(pts,bufferM){
+    const m=Math.min(bufferM||NAIP_CLOSE_M,NAIP_CLOSE_M);
+    const p=FKExport.planTileList(pts.map(([lo,la])=>FKExport.bufferBbox([lo,la,lo,la],m)),NAIP_Z0,NAIP_Z1,MAX_MISSION_TILES*2);
+    const out=[]; for(let z=NAIP_Z0; z<=NAIP_Z1; z++) for(const [x,y] of (p.byZoom[z]||[])) out.push(naipUrl(z,x,y));
+    return out;
+  }
   function planMission(name,bufferM,chrome){
     const pts=offlineMissions().get(name)||[], chromeUrls=[MAP_STYLE].concat(chrome.glyphs,chrome.sprite,chrome.tilejson);
-    const empty={kind:"mission",name,pts,bufferM,zLo:10,chromeUrls,tiles:[],dem:[],aerial:[],topo:[],counts:{nv:0,nd:0,na:0,nt:0}};
+    const empty={kind:"mission",name,pts,bufferM,zLo:10,chromeUrls,tiles:[],dem:[],aerial:[],topo:[],naip:[],counts:{nv:0,nd:0,na:0,nt:0,nn:0}};
     if(!pts.length) return empty;
     const p=missionTilePlan(pts,bufferM);
     if(p.truncated) return Object.assign(empty,{tooBig:true});
     const layers=offlineLayers(chrome.vectorTiles,10,true,true), of=g=>FKExport.layerUrls(layers.filter(L=>L.g===g),p.byZoom);
-    const tiles=of("v"), dem=of("d"), aerial=of("a"), topo=of("t");
-    return Object.assign(empty,{tiles,dem,aerial,topo,counts:{nv:tiles.length,nd:dem.length,na:aerial.length,nt:topo.length}});
+    const tiles=of("v"), dem=of("d"), aerial=of("a"), topo=of("t"), naip=missionNaipUrls(pts,bufferM);
+    return Object.assign(empty,{tiles,dem,aerial,topo,naip,counts:{nv:tiles.length,nd:dem.length,na:aerial.length,nt:topo.length,nn:naip.length}});
   }
   function updateDlEstimate(){
     if(!dlPlan) return;
@@ -2901,11 +2934,12 @@
     const no=t=>{ sub.textContent=t; go.classList.add("hidden"); };
     if(mission&&!dlPlan.pts.length) return no("No sites in this mission have a map position.");
     if(mission&&dlPlan.tooBig) return no("Too large — pick a smaller area around each site.");
-    const nv=dlPlan.counts.nv, nd=dlPlan.counts.nd, na=wantAerial()?dlPlan.counts.na:0, nt=wantTopo()?(dlPlan.counts.nt||0):0, total=nv+nd+na+nt;
+    $("#dlOptNaip").classList.toggle("hidden",!(wantAerial()&&dlPlan.counts.nn));
+    const nv=dlPlan.counts.nv, nd=dlPlan.counts.nd, na=wantAerial()?dlPlan.counts.na:0, nt=wantTopo()?(dlPlan.counts.nt||0):0, nn=wantNaip()?(dlPlan.counts.nn||0):0, total=nv+nd+na+nt+nn;
     if(!total) return no("Nothing to save for this view.");
-    if(total>limit) return no("Too large ("+total.toLocaleString()+" tiles) — "+(mission?"pick a smaller area around each site":"zoom in")+(na||nt?" or turn off "+(na&&nt?"aerial or topo":na?"aerial":"topo"):"")+".");
-    const mb=tileMB(nv,nd,na,nt); dlPlan.mb=mb;
-    sub.textContent=(mission?dlPlan.pts.length+" site"+(dlPlan.pts.length===1?"":"s")+" · ":"")+"~"+total.toLocaleString()+" tiles · about "+mb+" MB · basemap + terrain"+(na?" + aerial":"")+(nt?" + topo":"");
+    if(total>limit) return no("Too large ("+total.toLocaleString()+" tiles) — "+(mission?"pick a smaller area around each site":"zoom in")+(na||nt||nn?" or turn off "+(nn?"close-ups, ":"")+(na&&nt?"aerial or topo":na?"aerial":"topo"):"")+".");
+    const mb=tileMB(nv,nd,na,nt,nn); dlPlan.mb=mb;
+    sub.textContent=(mission?dlPlan.pts.length+" site"+(dlPlan.pts.length===1?"":"s")+" · ":"")+"~"+total.toLocaleString()+" tiles · about "+mb+" MB · basemap + terrain"+(na?" + aerial":"")+(nn?" + close-ups":"")+(nt?" + topo":"");
     go.classList.remove("hidden");
   }
   function replanMission(){
@@ -2927,7 +2961,7 @@
     const bb=cmap.getBounds(); dlBounds={w:bb.getWest(),s:bb.getSouth(),e:bb.getEast(),n:bb.getNorth()};
     const zoom=Math.floor(cmap.getZoom());
     $("#dlTitle").textContent=dlMode==="mission"?"Save a mission offline":"Save this area offline"; $("#dlSub").textContent="Preparing…";
-    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlOptTopo").classList.add("hidden"); $("#dlBarWrap").classList.add("hidden"); setDlBar(0,1);
+    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlOptTopo").classList.add("hidden"); $("#dlOptNaip").classList.add("hidden"); $("#dlBarWrap").classList.add("hidden"); setDlBar(0,1);
     $("#dlMode").classList.add("hidden"); $("#dlMission").classList.add("hidden");
     setBtnText($("#dlCancel"),"Cancel"); showDl();
     let style; try{ style=await fetch(MAP_STYLE,{mode:"cors"}).then(r=>r.json()); }catch(e){ hideDl(); toast("Couldn't reach the map server."); return; }
@@ -2960,7 +2994,7 @@
     const plan=dlPlan, room=await offlineRoom(plan.mb||1);
     if(room){ dlBusy=false; $("#dlSub").textContent=room; $("#dlGo").classList.add("hidden"); return; }
     dlCancel=false;
-    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlOptTopo").classList.add("hidden"); $("#dlMode").classList.add("hidden"); $("#dlMission").classList.add("hidden");
+    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlOptTopo").classList.add("hidden"); $("#dlOptNaip").classList.add("hidden"); $("#dlMode").classList.add("hidden"); $("#dlMission").classList.add("hidden");
     $("#dlBarWrap").classList.remove("hidden"); setBtnText($("#dlCancel"),"Stop");
     const items=[];
     plan.chromeUrls.forEach(u=>items.push([u,false]));
@@ -2971,6 +3005,8 @@
     if(withAerial) plan.aerial.forEach(u=>items.push([u,true]));   // raster imagery
     const withTopo=wantTopo();
     if(withTopo) (plan.topo||[]).forEach(u=>items.push([u,true]));
+    const withNaip=wantNaip()&&!!(plan.naip&&plan.naip.length);
+    if(withNaip) plan.naip.forEach(u=>items.push([u,true]));
     const total=items.length, savedTiles=[];
     const save=$("#mSave"); if(save) save.classList.add("busy");
     let done=0, ok=0; const CONC=6;
@@ -3007,11 +3043,11 @@
     const mission=plan.kind==="mission", label=mission?plan.name:"this area";
     if(dlCancel){ toast("Stopped — part of "+label+" saved ("+ok+" tiles)"); }
     else if(missing){ toast("Saved "+(mission?label+" ":"")+"for offline, but "+missing.toLocaleString()+" of "+total.toLocaleString()+" tiles didn't download. Save it again on a better connection to fill the gaps.",6000); }
-    else { toast("Saved "+(mission?label+" ":"")+"for offline · "+ok.toLocaleString()+" tiles"+(withAerial||withTopo?" (with "+[withAerial?"aerial":"",withTopo?"topo":""].filter(Boolean).join(" and ")+")":"")); }
+    else { toast("Saved "+(mission?label+" ":"")+"for offline · "+ok.toLocaleString()+" tiles"+(withAerial||withTopo?" (with "+[withAerial?"aerial":"",withNaip?"close-ups":"",withTopo?"topo":""].filter(Boolean).join(" and ")+")":"")); }
     try{
       const regions=loadRegions();
       const rec={v:2, id:Date.now().toString(36), kind:mission?"mission":"view", date:Date.now(), tiles:ok, mb:plan.mb||0,
-        aerial:withAerial, topo:withTopo, vt:(dlChrome&&dlChrome.vectorTiles)||[], zLo:plan.zLo, partial:!!dlCancel, missing,
+        aerial:withAerial, topo:withTopo, naip:withNaip, vt:(dlChrome&&dlChrome.vectorTiles)||[], zLo:plan.zLo, partial:!!dlCancel, missing,
         probe:[savedTiles[0],savedTiles[savedTiles.length>>1],savedTiles[savedTiles.length-1]].filter(Boolean)};
       if(mission){
         const b=FKExport.unionBbox(plan.pts.map(([lo,la])=>FKExport.bufferBbox([lo,la,lo,la],plan.bufferM)));
@@ -3028,6 +3064,7 @@
   $("#dlGo") && $("#dlGo").addEventListener("click",runSaveOffline);
   $("#dlAerial") && $("#dlAerial").addEventListener("change",updateDlEstimate);
   $("#dlTopo") && $("#dlTopo").addEventListener("change",updateDlEstimate);
+  $("#dlNaip") && $("#dlNaip").addEventListener("change",updateDlEstimate);
   $("#dlCancel") && $("#dlCancel").addEventListener("click",()=>{ if(dlBusy){ dlCancel=true; } else { hideDl(); } });
   $("#dlMode") && $("#dlMode").addEventListener("click",ev=>{ const b=ev.target.closest("button"); if(b&&b.dataset.m&&!dlBusy) setDlMode(b.dataset.m); });
   $("#dlMis") && $("#dlMis").addEventListener("change",replanMission);
@@ -3043,10 +3080,13 @@
   function regionName(r){ return r.kind==="mission"?r.name:"Map area"; }
   function regionTileUrls(r){
     const L=offlineLayers(r.vt,r.zLo,r.aerial,r.topo);
-    if(r.kind==="mission") return FKExport.layerUrls(L, missionTilePlan(r.pts||[],r.bufferM||300,r.planner||1).byZoom);
+    if(r.kind==="mission") return FKExport.layerUrls(L, missionTilePlan(r.pts||[],r.bufferM||300,r.planner||1).byZoom)
+      .concat(r.naip?missionNaipUrls(r.pts||[],r.bufferM||300):[]);
     const byZoom={};
     for(let z=Math.min(...L.map(l=>l.z0)); z<=16; z++) byZoom[z]=tilesForBounds({w:r.w,s:r.s,e:r.e,n:r.n},z).map(t=>[t[1],t[2]]);
-    return FKExport.layerUrls(L,byZoom);
+    const out=FKExport.layerUrls(L,byZoom);
+    if(r.naip) for(let z=NAIP_Z0; z<=NAIP_Z1; z++) for(const t of tilesForBounds({w:r.w,s:r.s,e:r.e,n:r.n},z)) out.push(naipUrl(t[0],t[1],t[2]));
+    return out;
   }
   async function deleteRegion(id,quiet){
     const regions=loadRegions(), r=regions.find(x=>x.id===id); if(!r) return;
@@ -3071,7 +3111,7 @@
       if(cache&&r.probe&&r.probe.length){ gone=true; for(const u of r.probe){ try{ if(await cache.match(u)){ gone=false; break; } }catch(e){ gone=false; } } }
       const d=new Date(r.date||Date.now()).toLocaleDateString([], {month:"short",day:"numeric"});
       const what=r.kind==="mission"?(r.pts||[]).length+" sites, "+((r.bufferM||300)>=1000?(r.bufferM/1000)+" km":(r.bufferM||300)+" m")+" around each":"";
-      const layers=[r.aerial?"aerial":"",r.topo?"topo":""].filter(Boolean).join(" + ");
+      const layers=[r.aerial?"aerial":"",r.naip?"close-ups":"",r.topo?"topo":""].filter(Boolean).join(" + ");
       const meta=[what,(r.tiles||0).toLocaleString()+" tiles"+(r.mb?" (~"+r.mb+" MB)":""),layers,d,r.partial?"stopped early":"",r.missing?r.missing.toLocaleString()+" tiles missing":""].filter(Boolean).join(" · ");
       rows.push('<div class="verrow"><div style="min-width:0"><b style="word-break:break-word">'+escapeHtml(regionName(r))+'</b><div class="vmeta">'+escapeHtml(meta)+'</div>'
         +(gone?'<div class="vmeta" style="color:var(--red)">No longer on this phone (cleared to free space). Save it again before you go.</div>':'')

@@ -1,5 +1,5 @@
 /* FieldKey offline shell. Bump CACHE when app files change. */
-const CACHE = "fieldkey-v75";          /* app shell + map engine (rebuilt on bump) */
+const CACHE = "fieldkey-v76";          /* app shell + map engine (rebuilt on bump) */
 const MAPCACHE = "fieldkey-maps";       /* basemap style/fonts/sprite/tiles (persists across bumps) */
 const SHELL = [
   "./", "./index.html", "./flyability.html", "./view3d.html", "./sync-engine.js", "./export-plan.js", "./manifest.webmanifest",
@@ -19,6 +19,7 @@ function isMapResource(url) {
       || h === "tile.openstreetmap.org" || h.endsWith(".tile.openstreetmap.org")
       || h === "s3.amazonaws.com"          /* terrain DEM tiles (added in 3b) */
       || h === "basemap.nationalmap.gov"   /* USGS aerial (added in 3b) */
+      || h === "imagery.nationalmap.gov"   /* USDA NAIP close-ups (v76) */
       || h === "tiles.arcgis.com"          /* Regrid free parcel-boundary tiles */
       || (h === "unpkg.com" && url.pathname.includes("maplibre-gl"));
 }

@@ -312,7 +312,11 @@ manually** on the main screen creates a fresh record.)
   topo tile that wasn't saved is filled in from the closest saved zoom, so the map
   between sites looks softer instead of going blank. Tiles that fail to download get a
   second try, and the save tells you if any are still missing. Saving a mission again
-  replaces its old copy. Saved tiles persist across app updates and stay
+  replaces its old copy. **Sharp close-ups:** USGS's regular imagery tiles stop at zoom 16, so with
+  aerial on, saves also include **USDA NAIP** photos (about 0.6 m) at zoom 17–18 within
+  150 m of each site (or of the screen, for **This view** when zoomed in), switchable
+  with **Sharp close-ups**. Offline, the map shows them on top of the USGS imagery when
+  you zoom in on a site; online it keeps using the Esri imagery. Saved tiles persist across app updates and stay
   until you remove them: **Settings → Offline maps** lists each saved area or mission
   with its size and a **Delete** button (tiles another saved area still uses are kept),
   plus the storage FieldKey uses and **Clear offline maps** to free it all. Before a
