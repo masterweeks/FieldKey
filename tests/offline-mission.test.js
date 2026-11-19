@@ -53,3 +53,16 @@ test("a limit stops planning early", () => {
   assert.equal(p.truncated, true);
   assert.ok(p.total > 500);
 });
+
+test("a larger whole-area threshold fills the map between sites", () => {
+  const pts = [[-121.70, 40.51], [-121.96, 40.82], [-121.92, 40.63]];
+  const boxes = pts.map(([lo, la]) => X.bufferBbox([lo, la, lo, la], 300));
+  const area = X.unionBbox(boxes);
+  const pkg = X.planTileList(boxes, 10, 16), phone = X.planTileList(boxes, 10, 16, 0, 400);
+  for (let z = 10; z <= 16; z++) {
+    const [x0, y0, x1, y1] = X.tileRange(area, z), all = (x1 - x0 + 1) * (y1 - y0 + 1);
+    if (all <= 400) assert.equal(phone.byZoom[z].length, all, "zoom " + z + " saved whole");
+    else assert.equal(phone.byZoom[z].length, pkg.byZoom[z].length, "zoom " + z + " near sites only");
+  }
+  assert.ok(phone.total > pkg.total);
+});

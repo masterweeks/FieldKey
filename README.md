@@ -306,9 +306,13 @@ manually** on the main screen creates a fresh record.)
   on your Home Screen; **Save offline** is only for the *map tiles* of a specific
   area. **This view / A mission:** the save dialog can also save **a whole mission**
   in one go: pick the mission and how much map to keep around each site (150 m – 2 km),
-  and it saves zoom 10–16 around every site that has a map position, without the empty
-  land in between (the same rule as mission packages, up to 8,000 tiles). Saving a
-  mission again replaces its old copy. Saved tiles persist across app updates and stay
+  and it saves zoom 10–16 for the mission: the whole mission area at every zoom where
+  that takes 400 tiles or fewer (usually through zoom 14), and only the chosen distance
+  around each site at the closer zooms (up to 8,000 tiles). Offline, any USGS imagery or
+  topo tile that wasn't saved is filled in from the closest saved zoom, so the map
+  between sites looks softer instead of going blank. Tiles that fail to download get a
+  second try, and the save tells you if any are still missing. Saving a mission again
+  replaces its old copy. Saved tiles persist across app updates and stay
   until you remove them: **Settings → Offline maps** lists each saved area or mission
   with its size and a **Delete** button (tiles another saved area still uses are kept),
   plus the storage FieldKey uses and **Clear offline maps** to free it all. Before a

@@ -51,14 +51,16 @@
     return {perZoom,total,truncated:false};
   }
   /* Same rule as planTiles, but returns the tiles themselves: {byZoom:{z:[[x,y]]}, total, truncated}.
-     Used by "Save mission offline", which caches these tiles on the phone. */
-  function planTileList(boxes,minZoom,maxZoom,limit){
-    limit=limit||PLAN_TILE_LIMIT; boxes=boxes.filter(Boolean);
+     Used by "Save mission offline", which caches these tiles on the phone. fullArea (default 64, the
+     package rule) is how many tiles a zoom level may have and still be taken whole; the phone passes
+     a larger number so the map between sites isn't blank. */
+  function planTileList(boxes,minZoom,maxZoom,limit,fullArea){
+    limit=limit||PLAN_TILE_LIMIT; fullArea=fullArea||FULL_AREA_TILES; boxes=boxes.filter(Boolean);
     const area=unionBbox(boxes), byZoom={}; let total=0;
     if(!area) return {byZoom,total:0,truncated:false};
     for(let z=minZoom; z<=maxZoom; z++){
       const [x0,y0,x1,y1]=tileRange(area,z), s=new Map();
-      if((x1-x0+1)*(y1-y0+1)<=FULL_AREA_TILES){
+      if((x1-x0+1)*(y1-y0+1)<=fullArea){
         for(let x=x0;x<=x1;x++) for(let y=y0;y<=y1;y++) s.set(x*16777216+y,[x,y]);
       }else{
         for(const b of boxes){

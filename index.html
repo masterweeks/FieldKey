@@ -1089,7 +1089,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v74";
+  const APP_VER="v75";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -1109,8 +1109,8 @@
 
   /* ---------------- toast ---------------- */
   let toastT;
-  function toast(msg){ els.toast.textContent=msg; els.toast.classList.add("show");
-    clearTimeout(toastT); toastT=setTimeout(()=>els.toast.classList.remove("show"),1800); }
+  function toast(msg,ms){ els.toast.textContent=msg; els.toast.classList.add("show");
+    clearTimeout(toastT); toastT=setTimeout(()=>els.toast.classList.remove("show"),ms||1800); }
 
   /* ---------------- CSV parser (quotes, commas, CR/LF, BOM) ---------------- */
   function parseCSV(text){
@@ -2861,6 +2861,9 @@
   /* Save mission offline: the map around every site in a mission, planned with the same rule as
      mission packages (export-plan.js). Tiles go into the same offline cache as "This view". */
   const MAX_MISSION_TILES=8000;
+  // A zoom level is saved whole (not just near sites) while the mission's area needs at most this
+  // many tiles at that zoom. Planner v1 (v74) used 64, which left the map between sites blank.
+  const MISSION_FULL_AREA=400, MISSION_PLANNER=2;
   let dlMode="view", dlChrome=null, dlViewPlan=null;
   function tileMB(nv,nd,na,nt){ return Math.max(1,Math.round(nv*0.045 + nd*0.12 + na*0.03 + nt*0.02)); }
   function offlineMissions(){
@@ -2878,8 +2881,9 @@
     if(topo) L.push({g:"t",tpl:USGS_TOPO,z0:Math.min(zLo,16),z1:16});
     return L;
   }
-  function missionTilePlan(pts,bufferM){
-    return FKExport.planTileList(pts.map(([lo,la])=>FKExport.bufferBbox([lo,la,lo,la],bufferM)),10,16,MAX_MISSION_TILES*2);
+  function missionTilePlan(pts,bufferM,planner){
+    return FKExport.planTileList(pts.map(([lo,la])=>FKExport.bufferBbox([lo,la,lo,la],bufferM)),10,16,MAX_MISSION_TILES*2,
+      (planner||MISSION_PLANNER)>=2?MISSION_FULL_AREA:64);
   }
   function planMission(name,bufferM,chrome){
     const pts=offlineMissions().get(name)||[], chromeUrls=[MAP_STYLE].concat(chrome.glyphs,chrome.sprite,chrome.tilejson);
@@ -2972,34 +2976,46 @@
     let done=0, ok=0; const CONC=6;
     let cache; try{ cache=await caches.open(MAPCACHE); }
     catch(e){ dlBusy=false; if(save) save.classList.remove("busy"); hideDl(); toast("Couldn't open offline storage on this device."); return; }
+    const getOne=async (pair,isTile)=>{
+      const u=pair[0], raster=pair[1];
+      try{
+        // CORS first (normal-sized cache entry); for raster imagery fall back to opaque if CORS is unavailable
+        let r=await fetch(u,{mode:"cors"});
+        if(!(r&&r.ok)&&raster){ try{ r=await fetch(u,{mode:"no-cors"}); }catch(e2){ r=null; } }
+        if(r&&(r.ok||r.type==="opaque")){ await cache.put(u,r.clone()); ok++; if(isTile) savedTiles.push(u); return true; }
+      }catch(e){
+        if(raster){ try{ const r2=await fetch(u,{mode:"no-cors"}); if(r2&&(r2.type==="opaque"||r2.ok)){ await cache.put(u,r2.clone()); ok++; if(isTile) savedTiles.push(u); return true; } }catch(e3){} }
+      }
+      return false;
+    };
+    const failed=[];
     for(let i=0;i<items.length && !dlCancel;i+=CONC){
       const batch=items.slice(i,i+CONC);
-      await Promise.all(batch.map(async (pair,k)=>{
-        const u=pair[0], raster=pair[1], isTile=i+k>=nChrome;
-        try{
-          // CORS first (normal-sized cache entry); for raster imagery fall back to opaque if CORS is unavailable
-          let r=await fetch(u,{mode:"cors"});
-          if(!(r&&r.ok)&&raster){ try{ r=await fetch(u,{mode:"no-cors"}); }catch(e2){ r=null; } }
-          if(r&&(r.ok||r.type==="opaque")){ await cache.put(u,r.clone()); ok++; if(isTile) savedTiles.push(u); }
-        }catch(e){
-          if(raster){ try{ const r2=await fetch(u,{mode:"no-cors"}); if(r2&&(r2.type==="opaque"||r2.ok)){ await cache.put(u,r2.clone()); ok++; if(isTile) savedTiles.push(u); } }catch(e3){} }
-        }
-        done++;
-      }));
+      await Promise.all(batch.map(async (pair,k)=>{ if(!(await getOne(pair,i+k>=nChrome))) failed.push([pair,i+k>=nChrome]); done++; }));
       setDlBar(done,total); $("#dlSub").textContent=done.toLocaleString()+" / "+total.toLocaleString()+" tiles";
     }
+    // One slower second try for anything that failed (busy servers, a signal drop).
+    let missing=0;
+    if(failed.length&&!dlCancel){
+      $("#dlSub").textContent="Retrying "+failed.length.toLocaleString()+" tiles…";
+      for(let i=0;i<failed.length && !dlCancel;i+=2){
+        const res=await Promise.all(failed.slice(i,i+2).map(([pair,isTile])=>getOne(pair,isTile)));
+        missing+=res.filter(x=>!x).length;
+      }
+    }else missing=failed.length;
     dlBusy=false; if(save) save.classList.remove("busy"); hideDl();
     const mission=plan.kind==="mission", label=mission?plan.name:"this area";
     if(dlCancel){ toast("Stopped — part of "+label+" saved ("+ok+" tiles)"); }
+    else if(missing){ toast("Saved "+(mission?label+" ":"")+"for offline, but "+missing.toLocaleString()+" of "+total.toLocaleString()+" tiles didn't download. Save it again on a better connection to fill the gaps.",6000); }
     else { toast("Saved "+(mission?label+" ":"")+"for offline · "+ok.toLocaleString()+" tiles"+(withAerial||withTopo?" (with "+[withAerial?"aerial":"",withTopo?"topo":""].filter(Boolean).join(" and ")+")":"")); }
     try{
       const regions=loadRegions();
       const rec={v:2, id:Date.now().toString(36), kind:mission?"mission":"view", date:Date.now(), tiles:ok, mb:plan.mb||0,
-        aerial:withAerial, topo:withTopo, vt:(dlChrome&&dlChrome.vectorTiles)||[], zLo:plan.zLo, partial:!!dlCancel,
+        aerial:withAerial, topo:withTopo, vt:(dlChrome&&dlChrome.vectorTiles)||[], zLo:plan.zLo, partial:!!dlCancel, missing,
         probe:[savedTiles[0],savedTiles[savedTiles.length>>1],savedTiles[savedTiles.length-1]].filter(Boolean)};
       if(mission){
         const b=FKExport.unionBbox(plan.pts.map(([lo,la])=>FKExport.bufferBbox([lo,la,lo,la],plan.bufferM)));
-        Object.assign(rec,{name:plan.name, pts:plan.pts, bufferM:plan.bufferM, w:b[0], s:b[1], e:b[2], n:b[3]});
+        Object.assign(rec,{name:plan.name, pts:plan.pts, bufferM:plan.bufferM, planner:MISSION_PLANNER, w:b[0], s:b[1], e:b[2], n:b[3]});
       }else Object.assign(rec,{w:dlBounds.w, s:dlBounds.s, e:dlBounds.e, n:dlBounds.n});
       const older=mission?regions.filter(r=>r.kind==="mission"&&r.name===plan.name):[];
       regions.push(rec); saveRegions(regions);
@@ -3027,7 +3043,7 @@
   function regionName(r){ return r.kind==="mission"?r.name:"Map area"; }
   function regionTileUrls(r){
     const L=offlineLayers(r.vt,r.zLo,r.aerial,r.topo);
-    if(r.kind==="mission") return FKExport.layerUrls(L, missionTilePlan(r.pts||[],r.bufferM||300).byZoom);
+    if(r.kind==="mission") return FKExport.layerUrls(L, missionTilePlan(r.pts||[],r.bufferM||300,r.planner||1).byZoom);
     const byZoom={};
     for(let z=Math.min(...L.map(l=>l.z0)); z<=16; z++) byZoom[z]=tilesForBounds({w:r.w,s:r.s,e:r.e,n:r.n},z).map(t=>[t[1],t[2]]);
     return FKExport.layerUrls(L,byZoom);
@@ -3056,7 +3072,7 @@
       const d=new Date(r.date||Date.now()).toLocaleDateString([], {month:"short",day:"numeric"});
       const what=r.kind==="mission"?(r.pts||[]).length+" sites, "+((r.bufferM||300)>=1000?(r.bufferM/1000)+" km":(r.bufferM||300)+" m")+" around each":"";
       const layers=[r.aerial?"aerial":"",r.topo?"topo":""].filter(Boolean).join(" + ");
-      const meta=[what,(r.tiles||0).toLocaleString()+" tiles"+(r.mb?" (~"+r.mb+" MB)":""),layers,d,r.partial?"stopped early":""].filter(Boolean).join(" · ");
+      const meta=[what,(r.tiles||0).toLocaleString()+" tiles"+(r.mb?" (~"+r.mb+" MB)":""),layers,d,r.partial?"stopped early":"",r.missing?r.missing.toLocaleString()+" tiles missing":""].filter(Boolean).join(" · ");
       rows.push('<div class="verrow"><div style="min-width:0"><b style="word-break:break-word">'+escapeHtml(regionName(r))+'</b><div class="vmeta">'+escapeHtml(meta)+'</div>'
         +(gone?'<div class="vmeta" style="color:var(--red)">No longer on this phone (cleared to free space). Save it again before you go.</div>':'')
         +'</div><button class="btn ghost sm offdel" data-id="'+escapeHtml(r.id)+'" type="button">Delete</button></div>');

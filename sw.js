@@ -1,5 +1,5 @@
 /* FieldKey offline shell. Bump CACHE when app files change. */
-const CACHE = "fieldkey-v74";          /* app shell + map engine (rebuilt on bump) */
+const CACHE = "fieldkey-v75";          /* app shell + map engine (rebuilt on bump) */
 const MAPCACHE = "fieldkey-maps";       /* basemap style/fonts/sprite/tiles (persists across bumps) */
 const SHELL = [
   "./", "./index.html", "./flyability.html", "./view3d.html", "./sync-engine.js", "./export-plan.js", "./manifest.webmanifest",
@@ -21,6 +21,31 @@ function isMapResource(url) {
       || h === "basemap.nationalmap.gov"   /* USGS aerial (added in 3b) */
       || h === "tiles.arcgis.com"          /* Regrid free parcel-boundary tiles */
       || (h === "unpkg.com" && url.pathname.includes("maplibre-gl"));
+}
+
+/* Offline, a USGS imagery/topo tile that wasn't saved is drawn from the nearest saved lower-zoom
+   tile (cropped and enlarged), so the map looks soft instead of blank. Only these photo/map tiles:
+   terrain tiles encode heights in their colours and can't be resampled. */
+const USGS_RASTER = /^(https:\/\/basemap\.nationalmap\.gov\/arcgis\/rest\/services\/(?:USGSImageryOnly|USGSTopo)\/MapServer\/tile\/)(\d+)\/(\d+)\/(\d+)$/;
+async function parentTile(url) {
+  const m = USGS_RASTER.exec(url);
+  if (!m || typeof OffscreenCanvas === "undefined" || typeof createImageBitmap === "undefined") return null;
+  const base = m[1], z = +m[2], y = +m[3], x = +m[4];
+  for (let d = 1; d <= 8 && z - d >= 0; d++) {
+    const hit = await caches.match(base + (z - d) + "/" + (y >> d) + "/" + (x >> d));
+    if (!hit || hit.type === "opaque") continue;       // an opaque tile can't be read back
+    try {
+      const img = await createImageBitmap(await hit.blob());
+      const part = img.width / (1 << d);               // size of our piece inside the parent
+      const sx = (x - ((x >> d) << d)) * part, sy = (y - ((y >> d) << d)) * part;
+      const c = new OffscreenCanvas(256, 256), g = c.getContext("2d");
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+      g.drawImage(img, sx, sy, part, part, 0, 0, 256, 256);
+      const blob = await c.convertToBlob({ type: "image/jpeg", quality: 0.85 });
+      return new Response(blob, { headers: { "Content-Type": "image/jpeg", "X-FieldKey-From-Zoom": String(z - d) } });
+    } catch (err) { return null; }
+  }
+  return null;
 }
 
 self.addEventListener("install", e => {
@@ -63,7 +88,7 @@ self.addEventListener("fetch", e => {
             caches.open(MAPCACHE).then(c => c.put(e.request, copy)).catch(() => {});
           }
           return res;
-        }).catch(() => hit)
+        }).catch(() => parentTile(e.request.url).then(r => r || Response.error()))
       )
     );
     return;
