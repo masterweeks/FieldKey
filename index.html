@@ -355,6 +355,7 @@
   .seg{display:flex;border:1px solid var(--line2);border-radius:11px;overflow:hidden}
   .seg button{flex:1;appearance:none;border:0;background:var(--bg3);color:var(--muted);padding:12px;font-size:14px;font-weight:600;font-family:var(--ui)}
   .seg button.sel{background:var(--amber);color:#1a1300}
+  .seg.seg3{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line2)}
   .pinprev{display:flex;justify-content:center;background:var(--bg3);border:1px solid var(--line2);border-radius:11px;padding:10px}
   #pinPreview{width:252px;height:120px;max-width:100%}
   .rtsum{background:var(--bg3);border:1px solid var(--line2);border-radius:11px;padding:12px 14px;font-size:15px;font-weight:600;color:var(--ink);line-height:1.5}
@@ -1029,11 +1030,13 @@ select.chip.sel{background-color:var(--amber)}
   <div class="sgroup"><button class="btn ghost danger" id="sClearMaps">Clear offline maps</button></div>
 
   <h2 style="margin-top:22px"><svg class="ico" aria-hidden="true"><use href="#i-mappin"/></svg>Map pins</h2>
-  <p class="hint">How site pins look on the map. Pins are colored by status; this sets their shape and size. Changes show next time you open the map.</p>
+  <p class="hint">How site pins look on the map. Pins are colored by status; this sets their shape and size.</p>
   <div class="sgroup">
     <span class="label">Shape</span>
-    <div class="seg" id="segPinShape">
+    <div class="seg seg3" id="segPinShape">
       <button data-v="pin" class="sel">Pin</button>
+      <button data-v="polepin">Pole pin</button>
+      <button data-v="pole">Pole</button>
       <button data-v="dot">Dot</button>
       <button data-v="square">Square</button>
       <button data-v="diamond">Diamond</button>
@@ -1092,7 +1095,7 @@ select.chip.sel{background-color:var(--amber)}
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v77";
+  const APP_VER="v78";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -1584,8 +1587,8 @@ select.chip.sel{background-color:var(--amber)}
   document.querySelectorAll("#segProvider button").forEach(b=>b.addEventListener("click",()=>setProviderUI(b.dataset.v)));
   { const k=$("#sGkey"), n=$("#sGkeyNote"); if(k&&n) k.addEventListener("input",()=>n.classList.toggle("hidden",!!k.value.trim())); }
   function setSeg(id,val){ document.querySelectorAll("#"+id+" button").forEach(b=>b.classList.toggle("sel",b.dataset.v===val)); }
-  { const sh=$("#segPinShape"); if(sh) sh.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; store.set("fk_pin_shape",b.dataset.v); setSeg("segPinShape",b.dataset.v); drawPinPreview(); }); }
-  { const sz=$("#segPinSize"); if(sz) sz.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; store.set("fk_pin_size",b.dataset.v); setSeg("segPinSize",b.dataset.v); drawPinPreview(); }); }
+  { const sh=$("#segPinShape"); if(sh) sh.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; store.set("fk_pin_shape",b.dataset.v); setSeg("segPinShape",b.dataset.v); drawPinPreview(); applyPinStyle(); }); }
+  { const sz=$("#segPinSize"); if(sz) sz.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; store.set("fk_pin_size",b.dataset.v); setSeg("segPinSize",b.dataset.v); drawPinPreview(); applyPinStyle(); }); }
   $("#saveSettings").addEventListener("click",()=>{
     cfg.name=$("#sName").value.trim(); cfg.lan=$("#sLan").value.trim(); cfg.phone=$("#sPhone").value.trim();
     cfg.issue=$("#sIssue").value.trim(); cfg.work=$("#sWork").value.trim();
@@ -2596,9 +2599,22 @@ select.chip.sel{background-color:var(--amber)}
   function _rgb(h){ h=h.replace("#",""); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
   function _shade(hex,amt){ const c=_rgb(hex), f=x=>Math.max(0,Math.min(255,Math.round(x+amt))); return "rgb("+f(c[0])+","+f(c[1])+","+f(c[2])+")"; }
   function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  /* Utility pole from Lucide's "utility-pole" icon (v0.460.0, ISC, see the licence note above the
+     icon sprite): crossarm, four insulators and braces, in its 24-unit grid. */
+  const POLE_GLYPH=["M12 2v20","M2 5h20","M3 3v2","M7 3v2","M17 3v2","M21 3v2","m19 5-7 7-7-7"];
+  // The side-view "pole" pin: the same parts, with a taller pole, in a 30 x 44 unit box (base at y 40).
+  const POLE_SIDE=["M15 4v36","M4 9h22","M6 9V6","M11 9V6","M19 9V6","M24 9V6","m22 9-7 7-7-7"];
+  let _poleGlyph=null, _poleSide=null;
+  function polePaths(side){
+    if(side) return _poleSide||(_poleSide=POLE_SIDE.map(d=>new Path2D(d)));
+    return _poleGlyph||(_poleGlyph=POLE_GLYPH.map(d=>new Path2D(d)));
+  }
+  function strokePaths(ctx,paths,width,style){ ctx.lineWidth=width; ctx.strokeStyle=style; paths.forEach(pp=>ctx.stroke(pp)); }
   function pinGeom(shape,D){
     const P=Math.round(D*0.34);
-    if(shape==="pin"){ const r=D*0.42, bottomPad=D*0.12, cyHead=P+r, tipY=cyHead+r+D*0.6;
+    if(shape==="pole"){ const k=D*0.84/22, pad=Math.round(D*0.2);
+      return {w:Math.ceil(30*k+2*pad), h:Math.ceil(44*k+pad), anchor:"bottom"}; }
+    if(shape==="pin"||shape==="polepin"){ const r=D*0.42, bottomPad=D*0.12, cyHead=P+r, tipY=cyHead+r+D*0.6;
       return {w:Math.ceil(2*r+2*P), h:Math.ceil(tipY+bottomPad), anchor:"bottom"}; }
     return {w:D+2*P, h:D+2*P, anchor:"center"};
   }
@@ -2607,16 +2623,39 @@ select.chip.sel{background-color:var(--amber)}
     ctx.lineJoin="round"; ctx.lineCap="round";
     ctx.save();
     ctx.shadowColor="rgba(0,0,0,0.45)"; ctx.shadowBlur=D*0.16; ctx.shadowOffsetY=D*0.10;
-    if(shape==="pin"){
+    if(shape==="pole"){
+      ctx.restore();
+      const k=D*0.84/22, pad=Math.round(D*0.2);
+      ctx.save(); ctx.translate(pad,pad); ctx.scale(k,k);
+      ctx.beginPath(); ctx.ellipse(15,41,7,2.2,0,0,Math.PI*2); ctx.fillStyle="rgba(0,0,0,0.45)"; ctx.fill();   // ground shadow
+      const parts=polePaths(true);
+      if(sel){ ctx.beginPath(); ctx.ellipse(15,41,9,3,0,0,Math.PI*2); ctx.lineWidth=1.6; ctx.strokeStyle=PIN_GOLD; ctx.stroke(); }
+      if(sel) strokePaths(ctx,parts,7.4,PIN_GOLD);                     // selected: gold glow around the edge
+      strokePaths(ctx,parts,4.8,"rgba(8,10,14,0.9)");                  // dark edge so it reads on aerial photos
+      const g=ctx.createLinearGradient(0,4,0,40); g.addColorStop(0,_shade(base,60)); g.addColorStop(0.35,mid); g.addColorStop(1,_shade(base,-40));
+      strokePaths(ctx,parts,2.7,g);
+      ctx.restore();
+      return;
+    }
+    if(shape==="pin"||shape==="polepin"){
       const r=D*0.42, w=2*r+2*P, cx=w/2, cyHead=P+r, tipY=cyHead+r+D*0.6;
       const body=()=>{ ctx.beginPath(); ctx.moveTo(cx,tipY); ctx.quadraticCurveTo(cx-r*1.04,cyHead+r*0.55,cx-r,cyHead); ctx.arc(cx,cyHead,r,Math.PI,0,false); ctx.quadraticCurveTo(cx+r*1.04,cyHead+r*0.55,cx,tipY); ctx.closePath(); };
       body();
       const g=ctx.createLinearGradient(cx-r,cyHead-r,cx+r*0.4,tipY); g.addColorStop(0,lite); g.addColorStop(0.45,mid); g.addColorStop(1,dark);
       ctx.fillStyle=g; ctx.fill(); ctx.restore();
       body(); ctx.lineWidth=Math.max(1,D*0.05); ctx.strokeStyle=edge; ctx.stroke();
-      ctx.beginPath(); ctx.arc(cx,cyHead,r*0.42,0,Math.PI*2); ctx.fillStyle="rgba(255,255,255,0.92)"; ctx.fill();
-      ctx.lineWidth=Math.max(1,D*0.03); ctx.strokeStyle=_shade(base,-28); ctx.stroke();
       ctx.beginPath(); ctx.ellipse(cx-r*0.34,cyHead-r*0.42,r*0.34,r*0.2,-0.5,0,Math.PI*2); ctx.fillStyle="rgba(255,255,255,0.30)"; ctx.fill();
+      if(shape==="polepin"){
+        const s=r*1.32/20;                                              // the glyph spans 20 of its 24 units
+        ctx.save(); ctx.translate(cx-12*s,cyHead-12*s); ctx.scale(s,s);
+        const parts=polePaths(false);
+        strokePaths(ctx,parts,3.6,"rgba(0,0,0,0.32)");                  // soft edge for the light grey pins
+        strokePaths(ctx,parts,2.3,"rgba(255,255,255,0.96)");
+        ctx.restore();
+      } else {
+        ctx.beginPath(); ctx.arc(cx,cyHead,r*0.42,0,Math.PI*2); ctx.fillStyle="rgba(255,255,255,0.92)"; ctx.fill();
+        ctx.lineWidth=Math.max(1,D*0.03); ctx.strokeStyle=_shade(base,-28); ctx.stroke();
+      }
       if(sel){ body(); ctx.lineWidth=D*0.1; ctx.strokeStyle=PIN_GOLD; ctx.stroke(); }
       return;
     }
@@ -2669,6 +2708,10 @@ select.chip.sel{background-color:var(--amber)}
       try{ map.addImage(name,img,{pixelRatio:2}); }catch(e){}
     }); });
     return pinGeom(shape,D).anchor;
+  }
+  function applyPinStyle(){
+    if(!cmap||!cMapReady||!cmap.getLayer("sites-pts")) return;
+    try{ cmap.setLayoutProperty("sites-pts","icon-anchor",ensurePinImages(cmap)); cmap.triggerRepaint(); }catch(e){}
   }
   function drawPinPreview(){
     const cv=$("#pinPreview"); if(!cv)return; const ctx=cv.getContext("2d");
