@@ -304,9 +304,17 @@ manually** on the main screen creates a fresh record.)
   and your live GPS location — everything but a data connection. The app shell and
   map engine are cached automatically, so the whole app launches offline once it's
   on your Home Screen; **Save offline** is only for the *map tiles* of a specific
-  area. Saved tiles persist across app updates and stay until you remove them:
-  **Settings → Offline maps** shows how many areas you've saved and the storage
-  used, with **Clear offline maps** to free it all. Saving an area also stores the
+  area. **This view / A mission:** the save dialog can also save **a whole mission**
+  in one go: pick the mission and how much map to keep around each site (150 m – 2 km),
+  and it saves zoom 10–16 around every site that has a map position, without the empty
+  land in between (the same rule as mission packages, up to 8,000 tiles). Saving a
+  mission again replaces its old copy. Saved tiles persist across app updates and stay
+  until you remove them: **Settings → Offline maps** lists each saved area or mission
+  with its size and a **Delete** button (tiles another saved area still uses are kept),
+  plus the storage FieldKey uses and **Clear offline maps** to free it all. Before a
+  download, FieldKey asks the browser to keep its storage and checks there's room; if
+  the phone ever clears a saved map to free space, the list says so and asks you to
+  save it again. Saving an area also stores the
   **terrain elevation** for it, so the hillshade relief and 3-D view keep working with
   no signal. By default it **also saves aerial imagery** (USGS) for the area, so
   the **Aerial** and **Hybrid** basemaps keep working offline (Hybrid's street-line

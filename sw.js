@@ -1,5 +1,5 @@
 /* FieldKey offline shell. Bump CACHE when app files change. */
-const CACHE = "fieldkey-v73";          /* app shell + map engine (rebuilt on bump) */
+const CACHE = "fieldkey-v74";          /* app shell + map engine (rebuilt on bump) */
 const MAPCACHE = "fieldkey-maps";       /* basemap style/fonts/sprite/tiles (persists across bumps) */
 const SHELL = [
   "./", "./index.html", "./flyability.html", "./view3d.html", "./sync-engine.js", "./export-plan.js", "./manifest.webmanifest",

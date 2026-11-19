@@ -270,6 +270,8 @@
   .dlbarwrap{height:8px;border-radius:5px;background:#0E1116;border:1px solid #2A3340;overflow:hidden;margin-bottom:14px}
   .dlbarfill{height:100%;width:0;background:var(--amber);transition:width .15s}
   .dlrow{display:flex;gap:10px}
+.dlmode{margin:8px 0 12px}.dlmode button{padding:9px 6px;font-size:13px}
+.dlsel{width:100%;margin-bottom:10px}
   .dlrow>.btn{flex:1}
   .dlopt{display:flex;align-items:center;gap:8px;font:600 13px var(--ui);color:var(--ink);margin-bottom:14px;cursor:pointer}
   .dlopt input{width:18px;height:18px;accent-color:var(--amber);flex:none}
@@ -777,6 +779,11 @@
   <div class="dloverlay hidden" id="dlOverlay">
     <div class="dlcard">
       <div class="dltitle" id="dlTitle">Save this area offline</div>
+      <div class="seg dlmode hidden" id="dlMode"><button type="button" data-m="view" class="sel">This view</button><button type="button" data-m="mission">A mission</button></div>
+      <div class="hidden" id="dlMission">
+        <select id="dlMis" class="dlsel" aria-label="Mission"></select>
+        <select id="dlBuf" class="dlsel" aria-label="Map around each site"><option value="150">150 m around each site</option><option value="300" selected>300 m around each site</option><option value="800">800 m around each site</option><option value="2000">2 km around each site</option></select>
+      </div>
       <div class="dlsub" id="dlSub">Preparing…</div>
       <label class="dlopt hidden" id="dlOpt"><input type="checkbox" id="dlAerial" checked /> Include aerial imagery <span class="dlopthint">(larger)</span></label>
       <label class="dlopt hidden" id="dlOptTopo"><input type="checkbox" id="dlTopo" /> Include USGS Topo map</label>
@@ -1014,8 +1021,8 @@
   <div class="sgroup"><button class="btn danger" id="sClearDb">Clear database</button></div>
 
   <h2 style="margin-top:22px"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg>Offline maps</h2>
-  <p class="hint">Open the map, frame your work area, and tap <b>Save offline</b> to store it for use with no signal. Saved tiles stay on this device until you clear them.</p>
-  <div class="sgroup"><div class="note" id="offlineStat">No offline maps saved yet.</div></div>
+  <p class="hint">On the map, tap <b>Save offline</b>. Save <b>This view</b> (what's on screen) or <b>A mission</b> (the map around every site in it) for use with no signal. Saved maps stay on this device until you delete them.</p>
+  <div class="sgroup"><div id="offlineList"></div><div class="note" id="offlineStat">No offline maps saved yet.</div></div>
   <div class="sgroup"><button class="btn ghost danger" id="sClearMaps">Clear offline maps</button></div>
 
   <h2 style="margin-top:22px"><svg class="ico" aria-hidden="true"><use href="#i-mappin"/></svg>Map pins</h2>
@@ -1082,7 +1089,7 @@
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v73";
+  const APP_VER="v74";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -2851,71 +2858,154 @@
   function setDlBar(done,total){ const f=$("#dlBar"); if(f) f.style.width=(total?Math.round(done/total*100):0)+"%"; }
   function wantAerial(){ const c=$("#dlAerial"); return !!(c&&c.checked); }
   function wantTopo(){ const c=$("#dlTopo"); return !!(c&&c.checked); }
+  /* Save mission offline: the map around every site in a mission, planned with the same rule as
+     mission packages (export-plan.js). Tiles go into the same offline cache as "This view". */
+  const MAX_MISSION_TILES=8000;
+  let dlMode="view", dlChrome=null, dlViewPlan=null;
+  function tileMB(nv,nd,na,nt){ return Math.max(1,Math.round(nv*0.045 + nd*0.12 + na*0.03 + nt*0.02)); }
+  function offlineMissions(){
+    const m=new Map();
+    customers.forEach(c=>{ const a=(c.assignment||"").trim(), g=pointOf(c.lat,c.lng); if(!a||!g) return;
+      if(!m.has(a)) m.set(a,[]); m.get(a).push([+g.coordinates[0].toFixed(6),+g.coordinates[1].toFixed(6)]); });
+    return m;
+  }
+  /* The tile layers a saved area holds. zLo = its lowest zoom (view: screen zoom - 2; mission: 10). */
+  function offlineLayers(vt,zLo,aerial,topo){
+    const L=[];
+    (vt||[]).forEach(src=>{ const zHi=Math.min(src.maxzoom||14,16); (src.tiles||[]).forEach(tpl=>L.push({g:"v",tpl,z0:Math.min(zLo,zHi),z1:zHi})); });
+    L.push({g:"d",tpl:DEM_TILE,z0:Math.min(zLo,13),z1:13});
+    if(aerial) L.push({g:"a",tpl:USGS_IMG,z0:Math.min(zLo,16),z1:16});
+    if(topo) L.push({g:"t",tpl:USGS_TOPO,z0:Math.min(zLo,16),z1:16});
+    return L;
+  }
+  function missionTilePlan(pts,bufferM){
+    return FKExport.planTileList(pts.map(([lo,la])=>FKExport.bufferBbox([lo,la,lo,la],bufferM)),10,16,MAX_MISSION_TILES*2);
+  }
+  function planMission(name,bufferM,chrome){
+    const pts=offlineMissions().get(name)||[], chromeUrls=[MAP_STYLE].concat(chrome.glyphs,chrome.sprite,chrome.tilejson);
+    const empty={kind:"mission",name,pts,bufferM,zLo:10,chromeUrls,tiles:[],dem:[],aerial:[],topo:[],counts:{nv:0,nd:0,na:0,nt:0}};
+    if(!pts.length) return empty;
+    const p=missionTilePlan(pts,bufferM);
+    if(p.truncated) return Object.assign(empty,{tooBig:true});
+    const layers=offlineLayers(chrome.vectorTiles,10,true,true), of=g=>FKExport.layerUrls(layers.filter(L=>L.g===g),p.byZoom);
+    const tiles=of("v"), dem=of("d"), aerial=of("a"), topo=of("t");
+    return Object.assign(empty,{tiles,dem,aerial,topo,counts:{nv:tiles.length,nd:dem.length,na:aerial.length,nt:topo.length}});
+  }
   function updateDlEstimate(){
     if(!dlPlan) return;
+    const mission=dlPlan.kind==="mission", limit=mission?MAX_MISSION_TILES:MAX_OFFLINE_TILES, sub=$("#dlSub"), go=$("#dlGo");
+    const no=t=>{ sub.textContent=t; go.classList.add("hidden"); };
+    if(mission&&!dlPlan.pts.length) return no("No sites in this mission have a map position.");
+    if(mission&&dlPlan.tooBig) return no("Too large — pick a smaller area around each site.");
     const nv=dlPlan.counts.nv, nd=dlPlan.counts.nd, na=wantAerial()?dlPlan.counts.na:0, nt=wantTopo()?(dlPlan.counts.nt||0):0, total=nv+nd+na+nt;
-    if(!total){ $("#dlSub").textContent="Nothing to save for this view."; $("#dlGo").classList.add("hidden"); return; }
-    if(total>MAX_OFFLINE_TILES){ $("#dlSub").textContent="Too large ("+total+" tiles) \u2014 zoom in"+(na||nt?" or turn off "+(na&&nt?"aerial or topo":na?"aerial":"topo"):"")+"."; $("#dlGo").classList.add("hidden"); return; }
-    const mb=Math.max(1,Math.round(nv*0.045 + nd*0.12 + na*0.03 + nt*0.02));
-    $("#dlSub").textContent="~"+total+" tiles \u00B7 about "+mb+" MB \u00B7 basemap + terrain"+(na?" + aerial":"")+(nt?" + topo":"");
-    $("#dlGo").classList.remove("hidden");
+    if(!total) return no("Nothing to save for this view.");
+    if(total>limit) return no("Too large ("+total.toLocaleString()+" tiles) — "+(mission?"pick a smaller area around each site":"zoom in")+(na||nt?" or turn off "+(na&&nt?"aerial or topo":na?"aerial":"topo"):"")+".");
+    const mb=tileMB(nv,nd,na,nt); dlPlan.mb=mb;
+    sub.textContent=(mission?dlPlan.pts.length+" site"+(dlPlan.pts.length===1?"":"s")+" · ":"")+"~"+total.toLocaleString()+" tiles · about "+mb+" MB · basemap + terrain"+(na?" + aerial":"")+(nt?" + topo":"");
+    go.classList.remove("hidden");
+  }
+  function replanMission(){
+    if(!dlChrome) return;
+    dlPlan=planMission($("#dlMis").value, parseInt($("#dlBuf").value,10)||300, dlChrome);
+    updateDlEstimate();
+  }
+  function setDlMode(m){
+    dlMode=m;
+    document.querySelectorAll("#dlMode button").forEach(b=>b.classList.toggle("sel",b.dataset.m===m));
+    $("#dlMission").classList.toggle("hidden",m!=="mission");
+    $("#dlTitle").textContent=m==="mission"?"Save a mission offline":"Save this area offline";
+    if(m==="mission") replanMission(); else { dlPlan=dlViewPlan; updateDlEstimate(); }
   }
   async function beginSaveOffline(){
     if(dlBusy) return;
     if(!cmap||!cMapReady){ toast("Open the map first."); return; }
-    if(!navigator.onLine){ toast("You're offline \u2014 connect to save a new area."); return; }
+    if(!navigator.onLine){ toast("You're offline — connect to save a new area."); return; }
     const bb=cmap.getBounds(); dlBounds={w:bb.getWest(),s:bb.getSouth(),e:bb.getEast(),n:bb.getNorth()};
     const zoom=Math.floor(cmap.getZoom());
-    $("#dlTitle").textContent="Save this area offline"; $("#dlSub").textContent="Preparing\u2026";
+    $("#dlTitle").textContent=dlMode==="mission"?"Save a mission offline":"Save this area offline"; $("#dlSub").textContent="Preparing…";
     $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlOptTopo").classList.add("hidden"); $("#dlBarWrap").classList.add("hidden"); setDlBar(0,1);
+    $("#dlMode").classList.add("hidden"); $("#dlMission").classList.add("hidden");
     setBtnText($("#dlCancel"),"Cancel"); showDl();
     let style; try{ style=await fetch(MAP_STYLE,{mode:"cors"}).then(r=>r.json()); }catch(e){ hideDl(); toast("Couldn't reach the map server."); return; }
-    const chrome=await gatherStyleResources(style);
-    dlPlan=planOffline(dlBounds,zoom,chrome);
-    if(!dlPlan.counts.nv && !dlPlan.counts.nd){ hideDl(); toast("Nothing to save for this view."); return; }
+    dlChrome=await gatherStyleResources(style);
+    dlViewPlan=planOffline(dlBounds,zoom,dlChrome);
+    const ms=[...offlineMissions().entries()].sort((a,b)=>a[0].localeCompare(b[0])), sel=$("#dlMis"), keep=sel.value;
+    sel.innerHTML=ms.map(([n,p])=>'<option value="'+escapeHtml(n)+'">'+escapeHtml(n)+' ('+p.length+' site'+(p.length===1?'':'s')+')</option>').join("");
+    if(ms.length) sel.value=ms.some(x=>x[0]===keep)?keep:(cfg.latestKml&&ms.some(x=>x[0]===cfg.latestKml))?cfg.latestKml:ms[0][0];
+    if(!ms.length&&!dlViewPlan.counts.nv&&!dlViewPlan.counts.nd){ hideDl(); toast("Nothing to save for this view."); return; }
+    $("#dlMode").classList.toggle("hidden",!ms.length);
     $("#dlOpt").classList.remove("hidden"); $("#dlOptTopo").classList.remove("hidden");
     { const c=$("#dlTopo"); if(c) c.checked=store.get("fk_basemap","Dark")==="Topo"; }   // on by default when you're using Topo
-    updateDlEstimate();
+    setDlMode(ms.length&&dlMode==="mission"?"mission":"view");
+  }
+  /* Ask the browser to keep FieldKey's storage, and check there's room before downloading. */
+  async function offlineRoom(mb){
+    try{ if(navigator.storage&&navigator.storage.persist&&!(await navigator.storage.persisted())) await navigator.storage.persist(); }catch(e){}
+    try{
+      if(navigator.storage&&navigator.storage.estimate){
+        const est=await navigator.storage.estimate();
+        if(est&&est.quota){ const free=(est.quota-(est.usage||0))/1048576;
+          if(mb*1.5+20>free) return "Not enough space: this needs about "+mb+" MB and FieldKey can use about "+Math.max(0,Math.floor(free))+" MB more. Delete an offline map or free up space on the phone."; }
+      }
+    }catch(e){}
+    return null;
   }
   async function runSaveOffline(){
     if(dlBusy||!dlPlan) return;
-    dlBusy=true; dlCancel=false;
-    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlOptTopo").classList.add("hidden"); $("#dlBarWrap").classList.remove("hidden"); setBtnText($("#dlCancel"),"Stop");
+    dlBusy=true;
+    const plan=dlPlan, room=await offlineRoom(plan.mb||1);
+    if(room){ dlBusy=false; $("#dlSub").textContent=room; $("#dlGo").classList.add("hidden"); return; }
+    dlCancel=false;
+    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlOptTopo").classList.add("hidden"); $("#dlMode").classList.add("hidden"); $("#dlMission").classList.add("hidden");
+    $("#dlBarWrap").classList.remove("hidden"); setBtnText($("#dlCancel"),"Stop");
     const items=[];
-    dlPlan.chromeUrls.forEach(u=>items.push([u,false]));
-    dlPlan.tiles.forEach(u=>items.push([u,false]));
-    dlPlan.dem.forEach(u=>items.push([u,false]));
+    plan.chromeUrls.forEach(u=>items.push([u,false]));
+    const nChrome=items.length;
+    plan.tiles.forEach(u=>items.push([u,false]));
+    plan.dem.forEach(u=>items.push([u,false]));
     const withAerial=wantAerial();
-    if(withAerial) dlPlan.aerial.forEach(u=>items.push([u,true]));   // raster imagery
+    if(withAerial) plan.aerial.forEach(u=>items.push([u,true]));   // raster imagery
     const withTopo=wantTopo();
-    if(withTopo) (dlPlan.topo||[]).forEach(u=>items.push([u,true]));
-    const total=items.length;
+    if(withTopo) (plan.topo||[]).forEach(u=>items.push([u,true]));
+    const total=items.length, savedTiles=[];
     const save=$("#mSave"); if(save) save.classList.add("busy");
     let done=0, ok=0; const CONC=6;
     let cache; try{ cache=await caches.open(MAPCACHE); }
     catch(e){ dlBusy=false; if(save) save.classList.remove("busy"); hideDl(); toast("Couldn't open offline storage on this device."); return; }
     for(let i=0;i<items.length && !dlCancel;i+=CONC){
       const batch=items.slice(i,i+CONC);
-      await Promise.all(batch.map(async pair=>{
-        const u=pair[0], raster=pair[1];
+      await Promise.all(batch.map(async (pair,k)=>{
+        const u=pair[0], raster=pair[1], isTile=i+k>=nChrome;
         try{
           // CORS first (normal-sized cache entry); for raster imagery fall back to opaque if CORS is unavailable
           let r=await fetch(u,{mode:"cors"});
           if(!(r&&r.ok)&&raster){ try{ r=await fetch(u,{mode:"no-cors"}); }catch(e2){ r=null; } }
-          if(r&&(r.ok||r.type==="opaque")){ await cache.put(u,r.clone()); ok++; }
+          if(r&&(r.ok||r.type==="opaque")){ await cache.put(u,r.clone()); ok++; if(isTile) savedTiles.push(u); }
         }catch(e){
-          if(raster){ try{ const r2=await fetch(u,{mode:"no-cors"}); if(r2&&(r2.type==="opaque"||r2.ok)){ await cache.put(u,r2.clone()); ok++; } }catch(e3){} }
+          if(raster){ try{ const r2=await fetch(u,{mode:"no-cors"}); if(r2&&(r2.type==="opaque"||r2.ok)){ await cache.put(u,r2.clone()); ok++; if(isTile) savedTiles.push(u); } }catch(e3){} }
         }
         done++;
       }));
-      setDlBar(done,total); $("#dlSub").textContent=done+" / "+total+" tiles";
+      setDlBar(done,total); $("#dlSub").textContent=done.toLocaleString()+" / "+total.toLocaleString()+" tiles";
     }
     dlBusy=false; if(save) save.classList.remove("busy"); hideDl();
-    if(dlCancel){ toast("Stopped \u2014 partial area saved ("+ok+" tiles)"); }
-    else { toast("Saved "+ok+" tiles for offline"+(withAerial||withTopo?" (with "+[withAerial?"aerial":"",withTopo?"topo":""].filter(Boolean).join(" and ")+")":"")); }
-    try{ const regions=JSON.parse(store.get("fk_offline_regions","[]")||"[]");
-      regions.push({date:Date.now(), w:dlBounds.w,s:dlBounds.s,e:dlBounds.e,n:dlBounds.n, tiles:ok}); 
-      store.set("fk_offline_regions",JSON.stringify(regions)); }catch(e){}
+    const mission=plan.kind==="mission", label=mission?plan.name:"this area";
+    if(dlCancel){ toast("Stopped — part of "+label+" saved ("+ok+" tiles)"); }
+    else { toast("Saved "+(mission?label+" ":"")+"for offline · "+ok.toLocaleString()+" tiles"+(withAerial||withTopo?" (with "+[withAerial?"aerial":"",withTopo?"topo":""].filter(Boolean).join(" and ")+")":"")); }
+    try{
+      const regions=loadRegions();
+      const rec={v:2, id:Date.now().toString(36), kind:mission?"mission":"view", date:Date.now(), tiles:ok, mb:plan.mb||0,
+        aerial:withAerial, topo:withTopo, vt:(dlChrome&&dlChrome.vectorTiles)||[], zLo:plan.zLo, partial:!!dlCancel,
+        probe:[savedTiles[0],savedTiles[savedTiles.length>>1],savedTiles[savedTiles.length-1]].filter(Boolean)};
+      if(mission){
+        const b=FKExport.unionBbox(plan.pts.map(([lo,la])=>FKExport.bufferBbox([lo,la,lo,la],plan.bufferM)));
+        Object.assign(rec,{name:plan.name, pts:plan.pts, bufferM:plan.bufferM, w:b[0], s:b[1], e:b[2], n:b[3]});
+      }else Object.assign(rec,{w:dlBounds.w, s:dlBounds.s, e:dlBounds.e, n:dlBounds.n});
+      const older=mission?regions.filter(r=>r.kind==="mission"&&r.name===plan.name):[];
+      regions.push(rec); saveRegions(regions);
+      // Saving a mission again replaces its old copy; tiles both copies use stay.
+      for(const o of older) await deleteRegion(o.id,true);
+    }catch(e){}
     refreshOfflineStat();
   }
   $("#mSave") && $("#mSave").addEventListener("click",beginSaveOffline);
@@ -2923,17 +3013,71 @@
   $("#dlAerial") && $("#dlAerial").addEventListener("change",updateDlEstimate);
   $("#dlTopo") && $("#dlTopo").addEventListener("change",updateDlEstimate);
   $("#dlCancel") && $("#dlCancel").addEventListener("click",()=>{ if(dlBusy){ dlCancel=true; } else { hideDl(); } });
+  $("#dlMode") && $("#dlMode").addEventListener("click",ev=>{ const b=ev.target.closest("button"); if(b&&b.dataset.m&&!dlBusy) setDlMode(b.dataset.m); });
+  $("#dlMis") && $("#dlMis").addEventListener("change",replanMission);
+  $("#dlBuf") && $("#dlBuf").addEventListener("change",replanMission);
+
+  /* Saved offline areas. Areas saved before v74 have no id or zoom; they get an id here, and
+     deleting treats them as covering zoom 10-16 with every layer, so nothing they used is missed. */
+  function loadRegions(){
+    let a=[]; try{ a=JSON.parse(store.get("fk_offline_regions","[]")||"[]"); }catch(e){}
+    return (Array.isArray(a)?a:[]).map((r,i)=>Object.assign(r,{id:r.id||("old"+(r.date||i))}));
+  }
+  function saveRegions(a){ store.set("fk_offline_regions",JSON.stringify(a)); }
+  function regionName(r){ return r.kind==="mission"?r.name:"Map area"; }
+  function regionTileUrls(r){
+    const L=offlineLayers(r.vt,r.zLo,r.aerial,r.topo);
+    if(r.kind==="mission") return FKExport.layerUrls(L, missionTilePlan(r.pts||[],r.bufferM||300).byZoom);
+    const byZoom={};
+    for(let z=Math.min(...L.map(l=>l.z0)); z<=16; z++) byZoom[z]=tilesForBounds({w:r.w,s:r.s,e:r.e,n:r.n},z).map(t=>[t[1],t[2]]);
+    return FKExport.layerUrls(L,byZoom);
+  }
+  async function deleteRegion(id,quiet){
+    const regions=loadRegions(), r=regions.find(x=>x.id===id); if(!r) return;
+    const others=regions.filter(x=>x!==r), full=o=>o.v===2?o:Object.assign({kind:"view",zLo:10,aerial:true,topo:true,vt:r.vt||[]},o);
+    const keep=new Set(); others.forEach(o=>regionTileUrls(full(o)).forEach(u=>keep.add(u)));
+    const drop=regionTileUrls(full(r)).filter(u=>!keep.has(u));
+    let n=0;
+    try{
+      const cache=await caches.open(MAPCACHE);
+      for(let i=0;i<drop.length;i+=50){ const res=await Promise.all(drop.slice(i,i+50).map(u=>cache.delete(u))); n+=res.filter(Boolean).length; }
+    }catch(e){}
+    saveRegions(others);
+    if(!quiet){ toast("Deleted the offline map for "+regionName(r)+(n?" ("+n.toLocaleString()+" tiles)":"")); refreshOfflineStat(); }
+  }
   async function refreshOfflineStat(){
-    const el=$("#offlineStat"); if(!el) return;
-    let regions=[]; try{ regions=JSON.parse(store.get("fk_offline_regions","[]")||"[]"); }catch(e){}
-    let usage="";
-    if(navigator.storage&&navigator.storage.estimate){ try{ const est=await navigator.storage.estimate(); if(est&&est.usage) usage=" \u00B7 ~"+Math.round(est.usage/1048576)+" MB total app storage"; }catch(e){} }
-    if(!regions.length){ el.textContent="No offline maps saved yet."+usage; }
-    else { const t=regions.reduce((a,r)=>a+(r.tiles||0),0); el.textContent=regions.length+(regions.length===1?" area":" areas")+" saved \u00B7 "+t+" tiles"+usage; }
+    const el=$("#offlineStat"), list=$("#offlineList"); if(!el) return;
+    const regions=loadRegions();
+    let cache=null; try{ cache=await caches.open(MAPCACHE); }catch(e){}
+    const rows=[];
+    for(const r of regions.slice().reverse()){
+      let gone=false;
+      if(cache&&r.probe&&r.probe.length){ gone=true; for(const u of r.probe){ try{ if(await cache.match(u)){ gone=false; break; } }catch(e){ gone=false; } } }
+      const d=new Date(r.date||Date.now()).toLocaleDateString([], {month:"short",day:"numeric"});
+      const what=r.kind==="mission"?(r.pts||[]).length+" sites, "+((r.bufferM||300)>=1000?(r.bufferM/1000)+" km":(r.bufferM||300)+" m")+" around each":"";
+      const layers=[r.aerial?"aerial":"",r.topo?"topo":""].filter(Boolean).join(" + ");
+      const meta=[what,(r.tiles||0).toLocaleString()+" tiles"+(r.mb?" (~"+r.mb+" MB)":""),layers,d,r.partial?"stopped early":""].filter(Boolean).join(" · ");
+      rows.push('<div class="verrow"><div style="min-width:0"><b style="word-break:break-word">'+escapeHtml(regionName(r))+'</b><div class="vmeta">'+escapeHtml(meta)+'</div>'
+        +(gone?'<div class="vmeta" style="color:var(--red)">No longer on this phone (cleared to free space). Save it again before you go.</div>':'')
+        +'</div><button class="btn ghost sm offdel" data-id="'+escapeHtml(r.id)+'" type="button">Delete</button></div>');
+    }
+    if(list){
+      list.innerHTML=rows.join("");
+      list.querySelectorAll(".offdel").forEach(b=>b.addEventListener("click",()=>{
+        const r=loadRegions().find(x=>x.id===b.dataset.id);
+        if(r&&confirm("Delete the offline map for "+regionName(r)+"?")){ b.disabled=true; deleteRegion(b.dataset.id); }
+      }));
+    }
+    const parts=[];
+    if(!regions.length) parts.push("No offline maps saved yet.");
+    if(navigator.storage&&navigator.storage.estimate){ try{ const est=await navigator.storage.estimate(); if(est&&est.usage) parts.push("FieldKey is using about "+Math.round(est.usage/1048576)+" MB on this device."); }catch(e){} }
+    if(regions.length){ let kept=false; try{ kept=!!(navigator.storage&&navigator.storage.persisted&&await navigator.storage.persisted()); }catch(e){}
+      if(!kept) parts.push("The phone may clear saved maps if it runs low on space."); }
+    el.textContent=parts.join(" ");
   }
   async function clearOfflineMaps(){
     try{ await caches.delete(MAPCACHE); }catch(e){}
-    store.set("fk_offline_regions","[]"); toast("Offline maps cleared"); refreshOfflineStat();
+    saveRegions([]); toast("Offline maps cleared"); refreshOfflineStat();
   }
   $("#sClearMaps") && $("#sClearMaps").addEventListener("click",()=>{ if(confirm("Clear all saved offline maps?")) clearOfflineMaps(); });
 
