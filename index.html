@@ -291,7 +291,7 @@
   .grid3{display:grid;grid-template-columns:1fr;gap:10px}
   @media(min-width:520px){.grid3{grid-template-columns:repeat(3,1fr)}}
   .field label{display:block;margin-bottom:6px}
-  select,input[type=text],input[type=tel],input[type=number]{
+  select,input[type=text],input[type=tel],input[type=number],input[type=password],input[type=url],input[type=email]{
     width:100%;appearance:none;background:var(--bg3);color:var(--ink);
     border:1px solid var(--line2);border-radius:11px;padding:13px 12px;font-size:16px;font-family:var(--ui);
   }
@@ -379,9 +379,12 @@
   .rtlist li .rtmain{flex:1;min-width:0}
   .rtlist li .rttitle{font-size:14px;color:var(--ink);font-weight:600}
   .rtlist li .rtmeta{font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:2px}
-  .losbanner{position:absolute;top:calc(env(safe-area-inset-top) + 76px);left:50%;transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:10px;background:rgba(20,24,31,.96);border:1px solid var(--amber);border-radius:12px;padding:9px 12px;max-width:88%;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+  .losbanner{position:absolute;top:calc(env(safe-area-inset-top) + 76px);left:0;right:0;margin:0 auto;width:max-content;z-index:7;display:flex;align-items:center;gap:10px;background:rgba(20,24,31,.96);border:1px solid var(--amber);border-radius:12px;padding:9px 12px;max-width:88%;box-shadow:0 6px 20px rgba(0,0,0,.5)}
   .losbanner #losBannerText{font-size:13.5px;color:var(--ink);font-weight:600}
-  .losbanx{appearance:none;border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:600;padding:2px 4px}
+  .losbanx{appearance:none;border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:600;padding:2px 4px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+  .losbanx .ico{width:15px;height:15px}
+  #measVal{white-space:nowrap} #measHint{white-space:nowrap}
+  @media(max-width:400px){ #measBanner{gap:8px;padding:8px 10px} #measBanner.counted #measHint{display:none} }
   .losbanscan{appearance:none;background:transparent;color:var(--amber);border:1px solid var(--amber);border-radius:8px;padding:4px 9px;font-size:12px;font-weight:700;white-space:nowrap}
   #losScanList li{cursor:pointer}
   #losScanList li.candon .rttitle{color:var(--amber)}
@@ -486,14 +489,14 @@
   textarea:focus{outline:2px solid var(--amber);border-color:var(--amber)}
 
   /* guided send bar */
-  .guidebar{position:fixed;left:0;right:0;bottom:calc(var(--tabh) + env(safe-area-inset-bottom));z-index:65;background:var(--raise);border-top:1px solid var(--amber);padding:12px 16px;transform:translateY(160%);transition:transform .25s;box-shadow:0 -8px 30px rgba(0,0,0,.4)}
+  .guidebar{position:fixed;left:0;right:0;bottom:0;z-index:65;background:var(--raise);border-top:1px solid var(--amber);padding:12px 16px calc(12px + env(safe-area-inset-bottom));transform:translateY(160%);transition:transform .25s;box-shadow:0 -8px 30px rgba(0,0,0,.4)}
   .guidebar.show{transform:translateY(0)}
   .guidebar .gtop{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--muted)}
   .guidebar .gtop .gx{margin-left:auto;color:var(--muted);font-size:22px}
   .mapsheet{max-height:94vh}
   .maprow{display:flex;gap:10px;margin-top:10px}
   .maprow .btn{flex:1}
-  .navrow{display:flex;gap:6px;margin-top:8px}
+  .navrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   .navrow a{flex:1;text-align:center;background:var(--amber);color:#1a1300;font-weight:700;text-decoration:none;border-radius:8px;padding:8px 6px;font-size:12px;font-family:var(--ui);white-space:nowrap}
   .navrow a:active{background:var(--amber-press)}
   .navrow a.disabled{opacity:.4;pointer-events:none}
@@ -1105,7 +1108,7 @@ select.chip.sel{background-color:var(--amber)}
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v79";
+  const APP_VER="v80";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -2784,6 +2787,10 @@ select.chip.sel{background-color:var(--amber)}
     geoCtrl=new maplibregl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:true,showUserHeading:true});
     cmap.addControl(geoCtrl,"top-right");
     cmap.addControl(new maplibregl.AttributionControl({compact:true}),"top-right");
+    { const at=cmap.getContainer().querySelector(".maplibregl-ctrl-attrib");   // (i) still opens it
+      if(at){ let asked=false; const btn=at.querySelector(".maplibregl-ctrl-attrib-button"); if(btn) btn.addEventListener("click",()=>{ asked=true; });
+        const fold=()=>{ if(!asked&&at.classList.contains("maplibregl-compact-show")){ at.classList.remove("maplibregl-compact-show"); at.removeAttribute("open"); } };
+        new MutationObserver(fold).observe(at,{attributes:true,attributeFilter:["class","open"]}); fold(); } }
     cmap.on("error",()=>{});   // swallow tile/glyph fetch noise
     cmap.on("load",()=>{
       try{
@@ -3495,6 +3502,7 @@ select.chip.sel{background-color:var(--amber)}
       txt=fmtDistM(m); hint=measPts.length<2?"tap points":(measPts.length-1)+" leg"+(measPts.length>2?"s":"");
     }
     $("#measVal").textContent=txt; $("#measHint").textContent=hint;
+    $("#measBanner").classList.toggle("counted",!/^tap/.test(hint));   // phones drop the count, keep the instructions
   }
   function openMeasure(){
     if(!cmap||!cMapReady){ toast("Open the map first"); return; }
