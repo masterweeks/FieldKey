@@ -71,6 +71,16 @@ def one_site(table, name):
     return lyr
 
 
+def _ctx(layer, **values):
+    f = QgsFeature(layer.fields())
+    for k, v in values.items():
+        f[k] = v
+    ctx = QgsExpressionContext()
+    ctx.setFeature(f)
+    ctx.setFields(layer.fields())
+    return ctx
+
+
 def evaluate(expression, **variables):
     scope = QgsExpressionContextScope()
     for k, v in variables.items():
@@ -200,7 +210,13 @@ def main():
           "mission_id picks from Missions by name")
     check("get_feature('Missions'" in a.defaultValueDefinition(f.indexOf("owner_id")).expression(),
           "owner_id defaults to the mission's owner")
-    check(a.renderer().type() == "categorizedSymbol" and len(a.renderer().categories()) == 6, "assets styled by status")
+    check(a.renderer().type() == "categorizedSymbol" and len(a.renderer().categories()) == 7, "assets styled by status, with Access issue as one")
+    key = lambda status, issue: QgsExpression(fk.ASSET_STYLE_KEY).evaluate(_ctx(a, status=status, access_issue=issue))
+    cats = {c.value(): c for c in a.renderer().categories()}
+    check(key("texted", True) == "issue" and key("replied", True) == "issue" and key("texted", False) == "texted" and key("new", None) == "new",
+          "an access issue shows as the Access issue status, whatever the status")
+    check(cats["issue"].symbol().color().name().upper() == fk.ISSUE_COLOUR and cats["issue"].label() == "Access issue",
+          "Access issue in FieldKey's red, named in the legend")
     check(a.labelsEnabled(), "assets labelled")
     check(any(x.name().startswith("Soft delete") for x in a.actions().actions()), "soft delete action present")
 

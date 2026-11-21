@@ -160,7 +160,7 @@ and clear the filter.
 
 | Layer | Geometry | Styled by | Labels |
 |-------|----------|-----------|--------|
-| Assets | point (can be empty for hand-added contacts) | status, using FieldKey's pin colours | SAP ID, or name (closer than 1:10,000) |
+| Assets | point (can be empty for hand-added contacts) | status, using FieldKey's pin colours; a site with an access issue shows as **Access issue** (red), as on FieldKey's map | SAP ID, or name (closer than 1:10,000) |
 | Pins | point | kind: Entrance / Parking / Hazard / Note | label |
 | Photos | point (where taken) | white triangle | — |
 | Inspections | point | green square | — |

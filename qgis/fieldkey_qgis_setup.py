@@ -53,6 +53,9 @@ ASSET_STATUS = [  # value, label, colour (same colours as FieldKey's pins)
     ("new", "New", "#9aa4b0"), ("enriched", "New (details added)", "#b8c0ca"), ("texted", "Texted", "#FFB000"),
     ("replied", "Replied", "#5AA9FF"), ("scheduled", "Scheduled", "#41D88B"), ("done", "Done", "#5E6775"),
 ]
+ISSUE_COLOUR = "#FF4D4D"   # FieldKey's access-issue pin colour
+# as on FieldKey's map, an access issue shows as its own status, whatever the site's status is
+ASSET_STYLE_KEY = "CASE WHEN \"access_issue\" THEN 'issue' ELSE \"status\" END"
 PIN_KINDS = [("entrance", "Entrance / path", "#C084FC"), ("parking", "Parking", "#1E63FF"),
              ("hazard", "Hazard", "#FF4D4D"), ("note", "Note", "#3FB6A8")]
 MISSION_STATUS = [("planned", "Planned"), ("active", "Active"), ("complete", "Complete"), ("archived", "Archived")]
@@ -239,11 +242,11 @@ def configure_layer(layer, table, layers_by_name):
         layer.setEditorWidgetSetup(fields.indexOf("status"), value_map(ASSET_STATUS))
         layer.setEditorWidgetSetup(fields.indexOf("access_issue"), QgsEditorWidgetSetup("CheckBox", {}))
         cats = []
-        for value, label, colour in ASSET_STATUS:
+        for value, label, colour in ASSET_STATUS + [("issue", "Access issue", ISSUE_COLOUR)]:
             sym = QgsMarkerSymbol.createSimple({"name": "circle", "color": colour, "size": "3.4",
                                                 "outline_color": "#0E1116", "outline_width": "0.4"})
             cats.append(QgsRendererCategory(value, sym, label))
-        layer.setRenderer(QgsCategorizedSymbolRenderer("status", cats))
+        layer.setRenderer(QgsCategorizedSymbolRenderer(ASSET_STYLE_KEY, cats))
         set_labels(layer, "coalesce(\"sap_id\", \"name\")", 10000)
     elif table == "pins":
         layer.setEditorWidgetSetup(fields.indexOf("kind"), value_map(PIN_KINDS))
