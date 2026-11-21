@@ -109,16 +109,26 @@ manually** on the main screen creates a fresh record.)
   which shows whatever you've picked in the list or on the map) and a search box
   that matches name, address, SAP ID, or **phone number** — phone matching ignores
   formatting, so `5303398783`, `530-339-8783`, or even just the last few digits
-  all find the right customer.
+  all find the right customer. Street types match however they're written, so
+  "Main Street" finds "123 MAIN ST" and "west cypress" finds "W Cypress Ave".
+- **Voice search** — tap the **mic** in the search box and say a name, address, SAP ID
+  or phone number; the list filters when you stop talking (tap the mic again to stop
+  early). Spoken numbers are joined up, so "123 456 789" searches SAP `123456789`.
+  It uses your browser's own speech recognition: Chrome sends the audio to Google,
+  Safari to Apple, so it needs a connection. Where the browser has none (or it's
+  blocked in the installed app), the mic is hidden or says so; the keyboard's own
+  dictation mic still works in the search box.
 - **Collapsible controls** — the panel of buttons along the bottom of the map can be
   hidden: tap the small **Hide / Controls** tab at its top-right corner to slide it
   down for an unobstructed view of the map, and tap again to bring it back. Your choice
   is remembered.
 
-- **Map & export KML** — the **Map** button opens a **full-screen** map of the
-  customers you're currently working with: whatever the filter/search is showing,
-  or — if you've selected specific assets — just those. Close it with the **✕** in
-  the top-left corner. The map is a fast vector map you can **rotate and
+- **Map & export KML** — FieldKey **opens on the map**, showing all your mapped
+  sites. The **list** button in the top-left corner switches to the list (the search
+  box, filters and tiles), and the list's **Map** tile comes back to the map, showing
+  the customers you're currently working with: whatever the filter/search is showing,
+  or — if you've selected specific assets — just those. Without a connection, if the
+  map engine was never saved on the phone, FieldKey opens on the list instead. The map is a fast vector map you can **rotate and
   tilt** (twist or drag with two fingers). Use the switcher in the top-left corner
   to pick a basemap: **Dark** (a clean low-glare vector style that matches the app),
   **Aerial** (high-resolution Esri imagery with place labels — often the most
@@ -159,7 +169,7 @@ manually** on the main screen creates a fresh record.)
   zoom controls) drops a live dot showing **your current location** with an accuracy
   ring and heading, and tracks it as you move — handy for seeing which site you're
   closest to. Tap it once to start; the browser will ask permission the first time.
-  Location stops automatically when you close the map, to save battery. Tap a pin and
+  Location stops automatically when you switch to the list, to save battery. Tap a pin and
   it selects the site and shows a small popup with just its **SAP ID**; a **details ▸**
   button in that popup opens the rest (site name, access, and **Apple Maps / Google
   Maps** directions). Tap the same pin again to deselect it and close the popup in one
@@ -233,12 +243,12 @@ manually** on the main screen creates a fresh record.)
 - **Flyability** — FieldKey includes the Flyability drone-weather checker (go /
   caution / no-go from wind, gusts, rain chance, visibility, temperature and the Kp
   index, plus a 7-day outlook, wind by altitude and charts). Open it from the drone
-  button at the top of the home screen (your location), the **Flyability** button on
+  button at the top of the list (your location), the **Flyability** button on
   the map (the spot at the map's center), or **Flyability here** in a site's map
   details. Weather comes from two forecasts at once — Open-Meteo and the National Weather
   Service (US) — and wind, gusts, rain chance and visibility use the worse of the two,
   so one service being down doesn't stop it. It needs a connection.
-- **Home screen** — three tiles at the top import a CSV or KML file, an email
+- **List** — (tap the list button on the map) three tiles at the top import a CSV or KML file, an email
   return, or a contact added by hand. Under the search box and filters, four tiles
   open **Request**, **Map**, **Export** and **Text guide** (guided texting). When sites
   are selected, a bar offers Request, Issue (mark or clear an access issue) and clear.
@@ -378,6 +388,7 @@ Edit the text-message template anytime in **Settings → Text message**.
 - `supabase/migrations/` — the PostGIS schema, row-level security and sync functions
 - `qgis/` — script that builds the QGIS project; `docs/` — QGIS setup and runbook
 - `scripts/` — backup import and database-password tools
+- `search-text.js` — voice search clean-up and street-type matching (tests: `node --test tests/`)
 - `export-plan.js`, `worker/` — mission package size estimate and the GeoPackage export worker (Docker)
 
 ## Install on iPhone (no Mac, no App Store)
