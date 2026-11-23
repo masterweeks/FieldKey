@@ -16,7 +16,7 @@ How the labels work:
 
 The screenshots use made-up sites around Redding. They're in `docs/ui-map/`.
 
-Written for v80. When a version adds, moves or removes a control, this file and that screen's screenshot change with it.
+Written for v81. When a version adds, moves or removes a control, this file and that screen's screenshot change with it.
 
 ## Screens at a glance
 
@@ -109,7 +109,7 @@ Written for v80. When a version adds, moves or removes a control, this file and 
 |---|:-:|---|---|---|
 | MAP-40 |  | Site pin | One site, colored by status. Its shape and size come from **SET-40** and **SET-41**. | `cmap` pins layer |
 | MAP-41 |  | Site popup | Small bubble when you tap a site pin | `showPinPopup` |
-| MAP-41a |  | details ▸ | Inside **MAP-41**. Expands to address, access and issue. | `.popmore` |
+| MAP-41a |  | details ▸ | Inside **MAP-41**. Expands to name, issue and access notes. Long notes scroll inside the popup, and the map moves so the whole popup shows above the bottom panel. | `.popmore` |
 | MAP-42 |  | Custom pin | A pin you dropped (gate, path, hazard…) | `userPins` |
 | MAP-43 |  | Custom pin popup | Bubble for **MAP-42** | `showUserPinPopup` |
 | MAP-43a | <img src="ui-map/icons/edit.svg" width="18" alt=""> | edit | Inside **MAP-43**. Opens **PIN**. | `data-pact="edit"` |

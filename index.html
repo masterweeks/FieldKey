@@ -176,6 +176,8 @@
   .maplibregl-popup-content b{color:var(--amber)}
   .maplibregl-popup-close-button{color:var(--muted);font-size:17px;padding:0 7px}
   .popmin{display:flex;align-items:center;gap:10px}
+  .popbody{max-height:min(34vh,220px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;overflow-wrap:anywhere;white-space:pre-line;margin-top:2px;padding-right:4px}
+  .popbody.long{border-top:1px solid var(--line2);border-bottom:1px solid var(--line2);padding:4px 4px 4px 0}
   .popmin b{color:var(--amber)}
   .popmore{appearance:none;border:1px solid var(--line2);background:var(--bg3);color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.03em;border-radius:7px;padding:3px 8px;white-space:nowrap;flex:0 0 auto;cursor:pointer}
   .popmore:active{background:var(--amber);color:#10141a;border-color:var(--amber)}
@@ -1108,7 +1110,7 @@ select.chip.sel{background-color:var(--amber)}
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v80";
+  const APP_VER="v81";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -2578,12 +2580,16 @@ select.chip.sel{background-color:var(--amber)}
   }
   function refreshMarks(){ if(cmap&&cMapReady&&cmap.getSource("sites")) cmap.getSource("sites").setData(sitesGeo(cShown)); updateMCount(); updateSelBar(); }
   function closeMapPopup(){ if(mapPopup){ try{mapPopup.remove();}catch(e){} mapPopup=null; } }
-  function popupFullHTML(p){ return "<b>"+escapeHtml(p.title)+"</b>"+(p.sub?"<br>"+escapeHtml(p.sub):"")+(p.axs?"<br>"+escapeHtml(p.axs):"")+(p.issue?'<br><span class="popissue">\u26A0\uFE0E '+escapeHtml(p.issue)+'</span>':"")+navLinks(p.lat,p.lng)+
+  // title, directions and buttons stay put; the name, issue and access notes scroll if they're long (MAP-41a)
+  function popupFullHTML(p){ const body=[p.sub?escapeHtml(p.sub):"", p.issue?'<span class="popissue">\u26A0\uFE0E '+escapeHtml(p.issue)+'</span>':"", p.axs?escapeHtml(p.axs):""].filter(Boolean).join("\n");
+    return "<b>"+escapeHtml(p.title)+"</b>"+(body?'<div class="popbody">'+body+'</div>':"")+navLinks(p.lat,p.lng)+
     (p.lat!=null&&p.lng!=null?'<br><button type="button" class="popfly" data-fly="'+(+p.lat)+","+(+p.lng)+'" data-flyname="'+escapeHtml(p.title||"")+'">'+ICO("drone")+'Flyability here</button> <button type="button" class="popfly" data-v3d="'+(+p.lat)+","+(+p.lng)+'" data-flyname="'+escapeHtml(p.title||"")+'">'+ICO("3d")+'3D view</button>':""); }
   function showPinPopup(coords,p){
     closeMapPopup();
     mapPopup=new maplibregl.Popup({offset:12}).setLngLat(coords).setHTML('<div class="popmin"><b>'+escapeHtml(p.title)+'</b><button class="popmore" type="button" aria-label="Show details">details \u25B8</button></div>').addTo(cmap);
-    const el=mapPopup.getElement(); if(el){ const btn=el.querySelector(".popmore"); if(btn) btn.addEventListener("click",()=>{ if(mapPopup) mapPopup.setHTML(popupFullHTML(p)); }); }
+    const el=mapPopup.getElement(); if(el){ const btn=el.querySelector(".popmore"); if(btn) btn.addEventListener("click",()=>{ if(!mapPopup) return; mapPopup.setHTML(popupFullHTML(p));
+      const b=mapPopup.getElement()&&mapPopup.getElement().querySelector(".popbody"); if(b&&b.scrollHeight>b.clientHeight+2) b.classList.add("long");   // a line shows there's more to scroll
+      keepPopupOnScreen(mapPopup); }); }
   }
   function applyBasemap(choice){
     if(!cmap||!cMapReady)return;
@@ -3896,10 +3902,15 @@ select.chip.sel{background-color:var(--amber)}
     const pop=mapPopup;
     if(rainOn) wxRainAt(ev.lngLat).then(x=>{ const el=pop.getElement&&pop.getElement(), slot=el&&el.querySelector("[data-wxrain]");
       if(slot) slot.outerHTML=x||'<div class="ovln">Couldn’t load the forecast for this spot.</div>'; });
+    keepPopupOnScreen(pop);
+  }
+  function keepPopupOnScreen(pop){
     requestAnimationFrame(()=>{ if(mapPopup!==pop||!cmap) return; const el=pop.getElement(); if(!el) return;
       const r=el.getBoundingClientRect(), m=cmap.getContainer().getBoundingClientRect(), pad=10;
+      let bottom=m.bottom; const dk=$("#mapDock"); if(dk){ const d=dk.getBoundingClientRect(); if(d.height&&d.top<bottom) bottom=d.top; }   // the bottom panel covers the map
       const dx=r.right>m.right-pad ? r.right-(m.right-pad) : (r.left<m.left+pad ? r.left-(m.left+pad) : 0);
-      const dy=r.top<m.top+pad ? r.top-(m.top+pad) : 0;
+      const up=r.top-(m.top+pad);   // how far it can move up before the top goes off screen
+      const dy=up<0 ? up : (r.bottom>bottom-pad ? Math.min(r.bottom-(bottom-pad), up) : 0);
       if(dx||dy) cmap.panBy([dx,dy],{duration:250}); });
   }
   const LAANC_URL="https://portal.airspacelink.com/", DRONEZONE_URL="https://faadronezone-access.faa.gov/";
