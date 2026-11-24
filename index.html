@@ -198,6 +198,14 @@
   .maplegend i{width:9px;height:9px;border-radius:50%;border:1.5px solid #0E1116;flex:none}
   .maplegend i.ovsw{width:13px;height:0;border-radius:0;border:0;border-top:2.5px solid}
   .maplegend i.ovsw.dash{border-top-style:dashed}
+  .pccolors{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .pccolors .pclbl{font:600 11px var(--ui);color:var(--muted);margin-right:2px}
+  .pccolors button{appearance:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--line2);background:none;padding:0;display:grid;place-items:center;cursor:pointer;font-size:0}
+  .pccolors button i{width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.5)}
+  .pccolors button.sel{border-color:var(--amber)}
+  .seg.pcseg{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line2)}
+  .seg.pcseg button{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 4px;font-size:13px}
+  .seg.pcseg button i{width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.6);flex:none}
   #custMap .maplibregl-popup{z-index:9}   /* above the basemap switcher and map buttons */
   .ovpop{max-height:46vh;overflow:auto;font-family:var(--ui);font-size:12.5px;line-height:1.4}
   .ovhd{font:700 10.5px var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:2px 0 5px}
@@ -252,7 +260,7 @@
   .mapbldg{top:calc(env(safe-area-inset-top) + 232px)}
   .map3d{top:calc(env(safe-area-inset-top) + 276px)}
   /* map controls: icon tiles */
-  .mtiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .mtiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
   .tile{appearance:none;border:1px solid var(--line2);background:var(--bg3);color:#C9D1DB;border-radius:11px;padding:7px 2px 5px;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:600 12px var(--ui);line-height:1.15;cursor:pointer;min-width:0}
   .tile .ico{width:21px;height:21px}
   .tile .tl{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -543,12 +551,27 @@ select.chip.sel{background-color:var(--amber)}
   .reasonbtn{width:100%;text-align:left;background:var(--bg3);border:1px solid var(--line2);color:var(--ink);border-radius:10px;padding:13px 15px;font-size:15px;font-weight:600;font-family:var(--ui)}
   .reasonbtn:active{background:var(--raise)}
   #riScrim{z-index:100}
+  #hScrim{z-index:100} #hSheet{z-index:110}
+  .hrow{border:1px solid var(--line);background:var(--bg2);border-radius:12px;padding:11px 12px;margin-bottom:9px}
+  .hrow b{font-size:15px}
+  .hrow .htop{display:flex;align-items:flex-start;gap:8px}
+  .hrow .htop b{flex:1;min-width:0}
+  .hrow .hcopy{flex:none;display:inline-flex;align-items:center;gap:4px;appearance:none;border:1px solid var(--line2);background:var(--bg3);color:var(--ink);border-radius:8px;padding:5px 8px;font:600 12px var(--ui);cursor:pointer}
+  .hrow .hcopy .ico{width:14px;height:14px}
+  .hrow .hcopy:active{background:var(--amber);color:#1a1300}
+  .hrow .hmeta{color:var(--muted);font-size:12.5px;margin-top:3px}
+  .hrow .hbadges{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  .hrow .hbadge{font:700 10px var(--mono);letter-spacing:.04em;border:1px solid var(--line2);border-radius:5px;padding:2px 6px;color:var(--ink)}
+  .hrow .hbadge.tr{border-color:#7a2a3a;color:#FF9A9A}
+  .hrow .hcall{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;border:1px solid var(--line2);border-radius:8px;padding:8px;color:var(--ink);text-decoration:none;font:600 13px var(--ui)}
+  .tfrinfo{margin-top:6px}
+  .tfrinfo .popbody{max-height:min(26vh,160px);font-size:11px}
   #riSheet{z-index:110}
 </style>
 </head>
 <body>
 <!-- Icons from Lucide v0.460.0 (https://lucide.dev), ISC License. Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022. Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies. THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES. The drone icon is FieldKey's own. -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></symbol><symbol id="i-mountain" viewBox="0 0 24 24"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></symbol><symbol id="i-ruler" viewBox="0 0 24 24"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></symbol><symbol id="i-plane" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></symbol><symbol id="i-trees" viewBox="0 0 24 24"><path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5"/></symbol><symbol id="i-radar" viewBox="0 0 24 24"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/></symbol><symbol id="i-rain" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M19.914 11.105A7.298 7.298 0 0 0 20 10a8 8 0 0 0-16 0c0 4.993 5.539 10.193 7.399 11.799a1 1 0 0 0 1.202 0 32 32 0 0 0 .824-.738"/><circle cx="12" cy="10" r="3"/><path d="M16 18h6"/><path d="M19 15v6"/></symbol><symbol id="i-filedown" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></symbol><symbol id="i-lasso" viewBox="0 0 24 24"><path d="M7 22a5 5 0 0 1-2-4"/><path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8-4.5 8-10 8a12 12 0 0 1-5-1"/><path d="M5 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="i-selvis" viewBox="0 0 24 24"><path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h2"/><path d="M14 3h1"/><path d="M3 9v1"/><path d="M21 9v2"/><path d="M3 14v1"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol><symbol id="i-plot" viewBox="0 0 24 24"><path d="m12 8 6-3-6-3v10"/><path d="m8 11.99-5.5 3.14a1 1 0 0 0 0 1.74l8.5 4.86a2 2 0 0 0 2 0l8.5-4.86a1 1 0 0 0 0-1.74L16 12"/><path d="m6.49 12.85 11.02 6.3"/><path d="M17.51 12.85 6.5 19.15"/></symbol><symbol id="i-drone" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="18" r="2.4"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.2"/><path d="M7.6 7.6 9.6 9.6M16.4 7.6 14.4 9.6M7.6 16.4 9.6 14.4M16.4 16.4 14.4 14.4"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-fileup" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/></symbol><symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol><symbol id="i-userplus" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol><symbol id="i-map" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></symbol><symbol id="i-guide" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></symbol><symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol><symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol><symbol id="i-nav" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol><symbol id="i-key" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></symbol><symbol id="i-filetext" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol><symbol id="i-cal" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></symbol><symbol id="i-calclock" viewBox="0 0 24 24"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></symbol><symbol id="i-calplus" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><path d="M3 10h18"/><path d="M16 19h6"/><path d="M19 16v6"/></symbol><symbol id="i-notes" viewBox="0 0 24 24"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol><symbol id="i-reply" viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol><symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol><symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></symbol><symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol><symbol id="i-restore" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol><symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></symbol><symbol id="i-merge" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></symbol><symbol id="i-paste" viewBox="0 0 24 24"><path d="M15 2H9a1 1 0 0 0-1 1v2c0 .6.4 1 1 1h6c.6 0 1-.4 1-1V3c0-.6-.4-1-1-1Z"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2M16 4h2a2 2 0 0 1 2 2v2M11 14h10"/><path d="m17 10 4 4-4 4"/></symbol><symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol><symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol><symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></symbol><symbol id="i-sheet" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/></symbol><symbol id="i-json" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/><path d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/></symbol><symbol id="i-contact" viewBox="0 0 24 24"><path d="M16 2v2"/><path d="M7 22v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><path d="M8 2v2"/><circle cx="12" cy="11" r="3"/><rect x="3" y="4" width="18" height="18" rx="2"/></symbol><symbol id="i-mappin" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></symbol><symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></symbol><symbol id="i-bldg" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></symbol><symbol id="i-3d" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></symbol><symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></symbol><symbol id="i-cloudoff" viewBox="0 0 24 24"><path d="m2 2 20 20"/><path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193"/><path d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07"/></symbol><symbol id="i-cloudalert" viewBox="0 0 24 24"><path d="M12 12v4"/><path d="M12 20h.01"/><path d="M17 18h.5a1 1 0 0 0 0-9h-1.79A7 7 0 1 0 7 17.708"/></symbol><symbol id="i-login" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></symbol><symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></symbol><symbol id="i-package" viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7"/><path d="m7.5 4.27 9 5.15"/></symbol></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></symbol><symbol id="i-mountain" viewBox="0 0 24 24"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></symbol><symbol id="i-ruler" viewBox="0 0 24 24"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></symbol><symbol id="i-plane" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></symbol><symbol id="i-trees" viewBox="0 0 24 24"><path d="M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5"/></symbol><symbol id="i-radar" viewBox="0 0 24 24"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/></symbol><symbol id="i-rain" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M19.914 11.105A7.298 7.298 0 0 0 20 10a8 8 0 0 0-16 0c0 4.993 5.539 10.193 7.399 11.799a1 1 0 0 0 1.202 0 32 32 0 0 0 .824-.738"/><circle cx="12" cy="10" r="3"/><path d="M16 18h6"/><path d="M19 15v6"/></symbol><symbol id="i-filedown" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></symbol><symbol id="i-lasso" viewBox="0 0 24 24"><path d="M7 22a5 5 0 0 1-2-4"/><path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8-4.5 8-10 8a12 12 0 0 1-5-1"/><path d="M5 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="i-selvis" viewBox="0 0 24 24"><path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h2"/><path d="M14 3h1"/><path d="M3 9v1"/><path d="M21 9v2"/><path d="M3 14v1"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol><symbol id="i-plot" viewBox="0 0 24 24"><path d="m12 8 6-3-6-3v10"/><path d="m8 11.99-5.5 3.14a1 1 0 0 0 0 1.74l8.5 4.86a2 2 0 0 0 2 0l8.5-4.86a1 1 0 0 0 0-1.74L16 12"/><path d="m6.49 12.85 11.02 6.3"/><path d="M17.51 12.85 6.5 19.15"/></symbol><symbol id="i-drone" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="18" r="2.4"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.2"/><path d="M7.6 7.6 9.6 9.6M16.4 7.6 14.4 9.6M7.6 16.4 9.6 14.4M16.4 16.4 14.4 14.4"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-fileup" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/></symbol><symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol><symbol id="i-userplus" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></symbol><symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol><symbol id="i-cross" viewBox="0 0 24 24"><path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol><symbol id="i-map" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></symbol><symbol id="i-guide" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></symbol><symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol><symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol><symbol id="i-nav" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol><symbol id="i-key" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></symbol><symbol id="i-filetext" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol><symbol id="i-cal" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></symbol><symbol id="i-calclock" viewBox="0 0 24 24"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></symbol><symbol id="i-calplus" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><path d="M3 10h18"/><path d="M16 19h6"/><path d="M19 16v6"/></symbol><symbol id="i-notes" viewBox="0 0 24 24"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol><symbol id="i-reply" viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol><symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol><symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></symbol><symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></symbol><symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol><symbol id="i-restore" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol><symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></symbol><symbol id="i-merge" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></symbol><symbol id="i-paste" viewBox="0 0 24 24"><path d="M15 2H9a1 1 0 0 0-1 1v2c0 .6.4 1 1 1h6c.6 0 1-.4 1-1V3c0-.6-.4-1-1-1Z"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2M16 4h2a2 2 0 0 1 2 2v2M11 14h10"/><path d="m17 10 4 4-4 4"/></symbol><symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol><symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol><symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></symbol><symbol id="i-sheet" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/></symbol><symbol id="i-json" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/><path d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/></symbol><symbol id="i-contact" viewBox="0 0 24 24"><path d="M16 2v2"/><path d="M7 22v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><path d="M8 2v2"/><circle cx="12" cy="11" r="3"/><rect x="3" y="4" width="18" height="18" rx="2"/></symbol><symbol id="i-mappin" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></symbol><symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></symbol><symbol id="i-bldg" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></symbol><symbol id="i-3d" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></symbol><symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></symbol><symbol id="i-cloudoff" viewBox="0 0 24 24"><path d="m2 2 20 20"/><path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193"/><path d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07"/></symbol><symbol id="i-cloudalert" viewBox="0 0 24 24"><path d="M12 12v4"/><path d="M12 20h.01"/><path d="M17 18h.5a1 1 0 0 0 0-9h-1.79A7 7 0 1 0 7 17.708"/></symbol><symbol id="i-login" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></symbol><symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></symbol><symbol id="i-package" viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7"/><path d="m7.5 4.27 9 5.15"/></symbol></svg>
 <header>
   <div class="bar">
     <svg class="glyph" viewBox="0 0 48 60" aria-hidden="true"><path d="M24 4a17 17 0 0 1 17 17c0 11-17 33-17 33S7 32 7 21A17 17 0 0 1 24 4z" fill="#FFB000"/><circle cx="24" cy="20" r="9" fill="#0E1116"/><rect x="22" y="20" width="4" height="9" rx="2" fill="#0E1116"/></svg>
@@ -824,6 +847,7 @@ select.chip.sel{background-color:var(--amber)}
       <span><i style="background:#FF4D4D"></i>Access issue</span>
     </div>
     <div class="maplegend hidden" id="ovLegend"></div>
+    <div class="pccolors hidden" id="pcLegend" aria-label="Property line color"><span class="pclbl">Property lines</span><button type="button" data-v="auto" aria-label="Auto" title="Auto"><i style="background:linear-gradient(135deg,#FFFFFF 50%,#FFE14D 50%)"></i>Auto</button><button type="button" data-v="white" aria-label="White" title="White"><i style="background:#FFFFFF"></i>White</button><button type="button" data-v="yellow" aria-label="Yellow" title="Yellow"><i style="background:#FFE14D"></i>Yellow</button><button type="button" data-v="cyan" aria-label="Cyan" title="Cyan"><i style="background:#3DE7FF"></i>Cyan</button><button type="button" data-v="magenta" aria-label="Magenta" title="Magenta"><i style="background:#FF4FD8"></i>Magenta</button><button type="button" data-v="red" aria-label="Red" title="Red"><i style="background:#FF3B30"></i>Red</button><button type="button" data-v="black" aria-label="Black" title="Black"><i style="background:#111111"></i>Black</button></div>
     <div class="wxbar hidden" id="wxBar"></div>
     <div class="mapbar-row">
       <span class="mapcount" id="mNote"></span>
@@ -837,6 +861,7 @@ select.chip.sel{background-color:var(--amber)}
     <div class="mtiles">
       <button class="tile" id="mParcels" type="button" aria-pressed="false"><svg class="ico" aria-hidden="true"><use href="#i-plot"/></svg><span class="tl">Parcels</span><span class="ts"></span></button>
       <button class="tile" id="mAirspace" type="button" aria-pressed="false"><svg class="ico" aria-hidden="true"><use href="#i-plane"/></svg><span class="tl">Airspace</span><span class="ts"></span></button>
+      <button class="tile" id="mFire" type="button" aria-pressed="false"><svg class="ico" aria-hidden="true"><use href="#i-flame"/></svg><span class="tl">Fire</span><span class="ts"></span></button>
       <button class="tile" id="mEnv" type="button" aria-pressed="false"><svg class="ico" aria-hidden="true"><use href="#i-trees"/></svg><span class="tl">Protected</span><span class="ts"></span></button>
       <button class="tile" id="mRadar" type="button" aria-pressed="false"><svg class="ico" aria-hidden="true"><use href="#i-radar"/></svg><span class="tl">Radar</span><span class="ts"></span></button>
       <button class="tile" id="mRain" type="button" aria-pressed="false"><svg class="ico" aria-hidden="true"><use href="#i-rain"/></svg><span class="tl">Rain</span><span class="ts"></span></button>
@@ -1068,7 +1093,8 @@ select.chip.sel{background-color:var(--amber)}
   <div class="sgroup pinprev"><canvas id="pinPreview" width="252" height="120"></canvas></div>
 
   <h2 style="margin-top:22px"><svg class="ico" aria-hidden="true"><use href="#i-plot"/></svg>Property lines</h2>
-  <div class="sgroup"><label class="label">Parcels proxy URL (optional)</label><input type="url" id="sParcelsProxy" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://….supabase.co/functions/v1/parcels" /><p class="note"><b>Property lines</b> work without this: they use Regrid's free boundary tiles (lines only, zoom in close). Paste a parcels proxy endpoint here only if you have a paid Regrid key and want owner, parcel number and acreage when you tap a lot. Takes effect next time you open the map.</p></div>
+  <div class="sgroup"><span class="label">Line color</span><div class="seg pcseg" id="segParcelColor"><button type="button" data-v="auto" aria-label="Auto" title="Auto"><i style="background:linear-gradient(135deg,#FFFFFF 50%,#FFE14D 50%)"></i>Auto</button><button type="button" data-v="white" aria-label="White" title="White"><i style="background:#FFFFFF"></i>White</button><button type="button" data-v="yellow" aria-label="Yellow" title="Yellow"><i style="background:#FFE14D"></i>Yellow</button><button type="button" data-v="cyan" aria-label="Cyan" title="Cyan"><i style="background:#3DE7FF"></i>Cyan</button><button type="button" data-v="magenta" aria-label="Magenta" title="Magenta"><i style="background:#FF4FD8"></i>Magenta</button><button type="button" data-v="red" aria-label="Red" title="Red"><i style="background:#FF3B30"></i>Red</button><button type="button" data-v="black" aria-label="Black" title="Black"><i style="background:#111111"></i>Black</button></div><p class="note">Auto picks white on Dark, yellow on Aerial, cyan on Hybrid (its roads are yellow) and magenta on Streets and Topo. You can also change it on the map while property lines are on.</p></div>
+  <div class="sgroup"><label class="label">Parcels proxy URL (optional)</label><input type="url" id="sParcelsProxy" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://….supabase.co/functions/v1/parcels" /><p class="note"><b>Property lines</b> work without this: they use Regrid's free boundary tiles (lines only, from about zoom 12). Paste a parcels proxy endpoint here only if you have a paid Regrid key and want owner, parcel number and acreage when you tap a lot. Takes effect next time you open the map.</p></div>
   <p class="note" style="text-align:center;margin-top:14px">FieldKey · <span id="sAppVer">v54</span> · runs offline once added to your Home Screen</p>
   <div class="sgroup"><button class="btn ghost sm" id="sCheckUpdate" type="button">Check for update</button></div>
 </div>
@@ -1080,6 +1106,16 @@ select.chip.sel{background-color:var(--amber)}
   <h2><svg class="ico" aria-hidden="true"><use href="#i-history"/></svg>Earlier versions</h2>
   <p class="hint">A snapshot of your database is saved automatically the first time you open FieldKey each day (last 14 kept). Restore one to roll the whole database back to that day.</p>
   <div id="verList"></div>
+</div>
+
+<!-- nearest hospitals (FEMA RAPT hospitals layer) -->
+<div class="scrim" id="hScrim"></div>
+<div class="sheet" id="hSheet" role="dialog" aria-label="Nearest hospitals">
+  <div class="grab"></div>
+  <h2><svg class="ico" aria-hidden="true"><use href="#i-cross"/></svg>Nearest hospitals</h2>
+  <p class="hint" id="hFrom"></p>
+  <div id="hList"></div>
+  <p class="note" id="hNote">Straight-line distance; the drive is longer. Not every hospital has an emergency room, so call ahead. In an emergency, call 911.</p>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1110,7 +1146,7 @@ select.chip.sel{background-color:var(--amber)}
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v81";
+  const APP_VER="v82";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -1587,6 +1623,7 @@ select.chip.sel{background-color:var(--amber)}
     setProviderUI(cfg.provider);
     setSeg("segPinShape", store.get("fk_pin_shape","pin"));
     setSeg("segPinSize", store.get("fk_pin_size","medium"));
+    setSeg("segParcelColor", store.get("fk_parcelcolor","auto"));
     drawPinPreview();
     refreshOfflineStat();
     els.scrim.classList.add("show"); els.sheet.classList.add("show");
@@ -1603,6 +1640,8 @@ select.chip.sel{background-color:var(--amber)}
   { const k=$("#sGkey"), n=$("#sGkeyNote"); if(k&&n) k.addEventListener("input",()=>n.classList.toggle("hidden",!!k.value.trim())); }
   function setSeg(id,val){ document.querySelectorAll("#"+id+" button").forEach(b=>b.classList.toggle("sel",b.dataset.v===val)); }
   { const sh=$("#segPinShape"); if(sh) sh.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; store.set("fk_pin_shape",b.dataset.v); setSeg("segPinShape",b.dataset.v); drawPinPreview(); applyPinStyle(); }); }
+  { const pc=$("#segParcelColor"); if(pc) pc.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; setParcelColor(b.dataset.v); }); }
+  { const pc=$("#pcLegend"); if(pc) pc.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; setParcelColor(b.dataset.v); }); }
   { const sz=$("#segPinSize"); if(sz) sz.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; store.set("fk_pin_size",b.dataset.v); setSeg("segPinSize",b.dataset.v); drawPinPreview(); applyPinStyle(); }); }
   $("#saveSettings").addEventListener("click",()=>{
     cfg.name=$("#sName").value.trim(); cfg.lan=$("#sLan").value.trim(); cfg.phone=$("#sPhone").value.trim();
@@ -2170,7 +2209,7 @@ select.chip.sel{background-color:var(--amber)}
       if(hasC){ dir.href=IS_ANDROID?"geo:"+la+","+lo+"?q="+la+","+lo:"https://maps.apple.com/?daddr="+la+","+lo+"&dirflg=d"; if(IS_ANDROID) dir.removeAttribute("target"); else dir.target="_blank"; }
       else dir.removeAttribute("href"); }
     $("#dNavGroup").classList.toggle("hidden",!hasC);
-    $("#dNav").innerHTML=hasC?'Also: <a href="'+gUrl+'" target="_blank" rel="noopener">Google Maps</a><a href="#" data-v3dsite="1">3D view</a>':"";
+    $("#dNav").innerHTML=hasC?'Also: <a href="'+gUrl+'" target="_blank" rel="noopener">Google Maps</a><a href="#" data-v3dsite="1">3D view</a><a href="#" data-hospsite="1">Nearest hospital</a>':"";
     $("#dNameEdit").value=c.name||""; $("#dAddPhone").value="";
     renderDPhones(c);
     let ax=c.access?'<div class="axsval">'+escapeHtml(c.access)+'</div>':'<div class="note">None given</div>';
@@ -2583,7 +2622,7 @@ select.chip.sel{background-color:var(--amber)}
   // title, directions and buttons stay put; the name, issue and access notes scroll if they're long (MAP-41a)
   function popupFullHTML(p){ const body=[p.sub?escapeHtml(p.sub):"", p.issue?'<span class="popissue">\u26A0\uFE0E '+escapeHtml(p.issue)+'</span>':"", p.axs?escapeHtml(p.axs):""].filter(Boolean).join("\n");
     return "<b>"+escapeHtml(p.title)+"</b>"+(body?'<div class="popbody">'+body+'</div>':"")+navLinks(p.lat,p.lng)+
-    (p.lat!=null&&p.lng!=null?'<br><button type="button" class="popfly" data-fly="'+(+p.lat)+","+(+p.lng)+'" data-flyname="'+escapeHtml(p.title||"")+'">'+ICO("drone")+'Flyability here</button> <button type="button" class="popfly" data-v3d="'+(+p.lat)+","+(+p.lng)+'" data-flyname="'+escapeHtml(p.title||"")+'">'+ICO("3d")+'3D view</button>':""); }
+    (p.lat!=null&&p.lng!=null?'<br><button type="button" class="popfly" data-fly="'+(+p.lat)+","+(+p.lng)+'" data-flyname="'+escapeHtml(p.title||"")+'">'+ICO("drone")+'Flyability here</button> <button type="button" class="popfly" data-v3d="'+(+p.lat)+","+(+p.lng)+'" data-flyname="'+escapeHtml(p.title||"")+'">'+ICO("3d")+'3D view</button> <button type="button" class="popfly" data-hosp="'+(+p.lat)+","+(+p.lng)+'" data-flyname="'+escapeHtml(p.title||"")+'">'+ICO("cross")+'Nearest hospital</button>':""); }
   function showPinPopup(coords,p){
     closeMapPopup();
     mapPopup=new maplibregl.Popup({offset:12}).setLngLat(coords).setHTML('<div class="popmin"><b>'+escapeHtml(p.title)+'</b><button class="popmore" type="button" aria-label="Show details">details \u25B8</button></div>').addTo(cmap);
@@ -2612,6 +2651,7 @@ select.chip.sel{background-color:var(--amber)}
       if(cmap.getLayer("esri-rd")) cmap.setLayoutProperty("esri-rd","visibility","none");
     }catch(e){}
     store.set("fk_basemap",choice);
+    refreshParcelColor();
     const sw=$("#mBasemaps"); if(sw) sw.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.bm===choice));
   }
   window.addEventListener("online",()=>{ const bm=store.get("fk_basemap","Dark"); if(cmap&&cMapReady&&(bm==="Aerial"||bm==="Hybrid")) applyBasemap(bm); });
@@ -2894,17 +2934,21 @@ select.chip.sel{background-color:var(--amber)}
             try{
               cmap.addSource("parcels",{type:"vector",tiles:[px.replace(/\/+$/,"")+"/{z}/{x}/{y}.mvt"],minzoom:10,maxzoom:16,attribution:"Parcels \u00A9 Regrid"});
               cmap.addLayer({id:"parcels-fill",type:"fill",source:"parcels","source-layer":"parcels",layout:{visibility:"none"},paint:{"fill-color":"#FFB000","fill-opacity":["case",["boolean",["feature-state","sel"],false],0.22,0.03]}});
-              cmap.addLayer({id:"parcels-line",type:"line",source:"parcels","source-layer":"parcels",layout:{visibility:"none","line-join":"round"},paint:{"line-color":"#FFD24D","line-opacity":0.9,"line-width":["interpolate",["linear"],["zoom"],13,0.6,16,1.4,19,2.2]}});
+              cmap.addLayer({id:"parcels-line",type:"line",source:"parcels","source-layer":"parcels",layout:{visibility:"none","line-join":"round"},paint:{"line-color":parcelColorHex(),"line-opacity":0.9,"line-width":["interpolate",["linear"],["zoom"],13,0.6,16,1.4,19,2.2]}});
               cmap.addLayer({id:"parcels-lbl",type:"symbol",source:"parcels","source-layer":"parcels",minzoom:17,layout:{visibility:"none","text-field":["coalesce",["get","fields.parcelnumb"],["get","parcelnumb"],["get","address"]],"text-font":["Noto Sans Regular"],"text-size":10,"text-max-width":8},paint:{"text-color":"#FFE9A6","text-halo-color":"#0a0d12","text-halo-width":1.6}});
               cmap.on("mouseenter","parcels-fill",()=>{cmap.getCanvas().style.cursor="pointer";});
               cmap.on("mouseleave","parcels-fill",()=>{cmap.getCanvas().style.cursor="";});
               cmap.on("click","parcels-fill",ev=>{ if(measOn||pinPlacing) return; if(!parcelsOn) return; showParcelPopup(ev); });
             }catch(e){}
           } else {
-            // No proxy: Regrid's free nationwide boundary tiles (lines only, no owner details; z15+)
+            // No proxy: Regrid's free nationwide boundary tiles (lines only, no owner details). Regrid only
+            // publishes zoom 15-17; zoomed out, the zoom-15 tiles are drawn smaller (tileSize 64) so a big
+            // property can be seen whole from about zoom 12. Both load through fkparcel:// to take a colour.
             try{
-              cmap.addSource("parcels-free",{type:"raster",tiles:[PARCEL_FREE_TILES],tileSize:256,minzoom:15,maxzoom:17,attribution:"Parcels © Regrid"});
-              cmap.addLayer({id:"parcels-raster",type:"raster",source:"parcels-free",minzoom:14.5,layout:{visibility:"none"},paint:{"raster-brightness-min":0.8,"raster-opacity":0.95,"raster-fade-duration":150}},"meas-fill");
+              cmap.addSource("parcels-free",{type:"raster",tiles:parcelTileUrls(false),tileSize:256,minzoom:15,maxzoom:17,attribution:"Parcels © Regrid"});
+              cmap.addSource("parcels-far",{type:"raster",tiles:parcelTileUrls(true),tileSize:64,minzoom:15,maxzoom:15});
+              cmap.addLayer({id:"parcels-far-raster",type:"raster",source:"parcels-far",minzoom:12,maxzoom:14.5,layout:{visibility:"none"},paint:{"raster-opacity":0.95,"raster-fade-duration":150}},"meas-fill");
+              cmap.addLayer({id:"parcels-raster",type:"raster",source:"parcels-free",minzoom:14.5,layout:{visibility:"none"},paint:{"raster-opacity":0.95,"raster-fade-duration":150}},"meas-fill");
             }catch(e){}
           }
         }
@@ -2913,7 +2957,7 @@ select.chip.sel{background-color:var(--amber)}
           const la=ev.lngLat.lat, lo=ev.lngLat.lng;
           if(measOn){ measPts.push([la,lo]); measUpdate(); return; }
           if(pinPlacing){ pinPlacing=false; $("#pinBanner").classList.add("hidden"); openPinSheet(null,la,lo); return; }
-          if(airOn||envOn||rainOn){
+          if(airOn||envOn||fireOn||rainOn){
             const pins=["sites-pts","user-pins"].filter(L=>cmap.getLayer(L));
             const onParcel=parcelsOn&&cmap.getLayer("parcels-fill")&&cmap.queryRenderedFeatures(ev.point,{layers:["parcels-fill"]}).length;
             if(!onParcel&&!cmap.queryRenderedFeatures(ev.point,{layers:pins}).length) showOverlayPopup(ev);   // parcel popup includes it
@@ -2931,9 +2975,9 @@ select.chip.sel{background-color:var(--amber)}
         applyBasemap(store.get("fk_basemap","Dark"));
         if(store.get("fk_parcels_on","0")==="1") setParcels(true);
         cmap.on("zoomend",parcelBtn);
-        setOverlay("air",store.get("fk_air_on","0")==="1",true); setOverlay("env",store.get("fk_env_on","0")==="1",true);
+        setOverlay("air",store.get("fk_air_on","0")==="1",true); setOverlay("env",store.get("fk_env_on","0")==="1",true); setOverlay("fire",store.get("fk_fire_on","0")==="1",true);
         setRadar(store.get("fk_radar_on","0")==="1"); setRain(store.get("fk_rain_on","0")==="1");
-        cmap.on("moveend",()=>{ if(airOn||envOn) ovRefresh(); });
+        cmap.on("moveend",()=>{ if(airOn||envOn||fireOn) ovRefresh(); });
         applyTerrain();
         fitToSites();
         setTimeout(()=>{ if(cmap) try{cmap.resize();}catch(e){} },140);
@@ -3452,7 +3496,7 @@ select.chip.sel{background-color:var(--amber)}
   $("#impCancel").addEventListener("click",reqCloseImport);
 
   (function addSheetCloseButtons(){
-    const closers={ dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, addSheet:closeAdd, pinSheet:closePinSheet, mpSheet:closePkg };
+    const closers={ dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, addSheet:closeAdd, pinSheet:closePinSheet, mpSheet:closePkg, hSheet:closeHosp };
     Object.keys(closers).forEach(id=>{
       const sh=document.getElementById(id); if(!sh)return;
       const bar=document.createElement("div"); bar.className="sheettop";
@@ -3545,7 +3589,7 @@ select.chip.sel{background-color:var(--amber)}
     const t=pinType(p.type);
     const html='<b>'+escapeHtml(p.label||t.n)+'</b><br><span style="color:'+t.c+'">\u25CF</span> '+escapeHtml(t.n)
       +(p.notes?'<br>'+escapeHtml(p.notes):'')+navLinks(p.lat,p.lng)
-      +'<div class="poprow"><button class="popmore" data-pact="edit" type="button">'+ICO("edit")+'edit</button><button class="popmore" data-pact="del" type="button">'+ICO("trash")+'delete</button></div>';
+      +'<div class="poprow"><button class="popmore" data-pact="edit" type="button">'+ICO("edit")+'edit</button><button class="popmore" data-pact="del" type="button">'+ICO("trash")+'delete</button><button class="popmore" data-hosp="'+(+p.lat)+","+(+p.lng)+'" data-flyname="'+escapeHtml(p.label||t.n)+'" type="button">'+ICO("cross")+'hospital</button></div>';
     mapPopup=new maplibregl.Popup({offset:12}).setLngLat([p.lng,p.lat]).setHTML(html).addTo(cmap);
     const el=mapPopup.getElement();
     if(el) el.querySelectorAll("[data-pact]").forEach(b=>b.addEventListener("click",()=>{
@@ -3584,13 +3628,44 @@ select.chip.sel{background-color:var(--amber)}
   /* ---------------- property lines ----------------
      Default: Regrid's free nationwide parcel-boundary tiles (lines only, zoom 15+).
      With a Parcels proxy URL in Settings: Regrid vector parcels with owner / APN / acreage. */
-  const PARCEL_FREE_TILES="https://tiles.arcgis.com/tiles/KzeiCaQsMoeCfoCq/arcgis/rest/services/Regrid_Nationwide_Parcel_Boundaries_v1/MapServer/tile/{z}/{y}/{x}";
-  const PARCEL_LAYERS=["parcels-fill","parcels-line","parcels-lbl","parcels-raster"];
+  const PARCEL_FREE_BASE="https://tiles.arcgis.com/tiles/KzeiCaQsMoeCfoCq/arcgis/rest/services/Regrid_Nationwide_Parcel_Boundaries_v1/MapServer/tile/";
+  const PARCEL_LAYERS=["parcels-fill","parcels-line","parcels-lbl","parcels-raster","parcels-far-raster"];
+  /* Line colour. The free tiles draw plain grey lines; each tile is recoloured as it loads, so any colour works.
+     Auto: white on Dark, yellow on Aerial, cyan on Hybrid (its roads are yellow), magenta on Streets and Topo. */
+  const PARCEL_COLORS={white:"#FFFFFF",yellow:"#FFE14D",cyan:"#3DE7FF",magenta:"#FF4FD8",red:"#FF3B30",black:"#111111"};
+  function parcelColorHex(){ const k=store.get("fk_parcelcolor","auto"); if(PARCEL_COLORS[k]) return PARCEL_COLORS[k];
+    const bm=store.get("fk_basemap","Dark"); return bm==="Aerial"?PARCEL_COLORS.yellow:bm==="Hybrid"?PARCEL_COLORS.cyan:bm==="Dark"?PARCEL_COLORS.white:"#D6336C"; }
+  function parcelTileUrls(far){ return ["fkparcel://"+(far?"far":"near")+"/"+parcelColorHex().slice(1)+"/{z}/{y}/{x}"]; }
+  let parcelBlank=null;
+  if(window.maplibregl&&maplibregl.addProtocol) maplibregl.addProtocol("fkparcel",async(params,ac)=>{
+    const m=/^fkparcel:\/\/(far|near)\/([0-9a-fA-F]{6})\/(\d+)\/(\d+)\/(\d+)$/.exec(params.url);
+    if(!m) throw new Error("Bad parcel tile address");
+    const blank=async()=>({data:parcelBlank||(parcelBlank=await createImageBitmap(new ImageData(1,1)))});
+    const r=await fetch(PARCEL_FREE_BASE+m[3]+"/"+m[4]+"/"+m[5],{signal:ac.signal});
+    if(!r.ok) return blank();                                    // no parcels in this tile
+    const img=await createImageBitmap(await r.blob()), w=img.width, h=img.height;
+    const cv=typeof OffscreenCanvas!=="undefined"?new OffscreenCanvas(w,h):Object.assign(document.createElement("canvas"),{width:w,height:h});
+    const g=cv.getContext("2d"); g.drawImage(img,0,0);
+    const d=g.getImageData(0,0,w,h), px=d.data, c=parseInt(m[2],16), R=c>>16, G=(c>>8)&255, B=c&255;
+    const boost=m[1]==="far"?2.2:1.35;                            // drawn small, thin lines need more weight
+    for(let i=0;i<px.length;i+=4){ const a=px[i+3]; if(!a) continue; px[i]=R; px[i+1]=G; px[i+2]=B; px[i+3]=Math.min(255,a*boost); }
+    g.putImageData(d,0,0);
+    return {data:await createImageBitmap(cv)};
+  });
+  function refreshParcelColor(){
+    if(cmap){ [["parcels-free",false],["parcels-far",true]].forEach(([id,far])=>{ const s=cmap.getSource(id); if(s&&s.setTiles){ const t=parcelTileUrls(far); if(!s.tiles||s.tiles[0]!==t[0]) s.setTiles(t); } });
+      if(cmap.getLayer("parcels-line")) cmap.setPaintProperty("parcels-line","line-color",parcelColorHex()); }
+    parcelLegend();
+  }
+  function setParcelColor(v){ store.set("fk_parcelcolor",v); setSeg("segParcelColor",v); refreshParcelColor(); }
+  // MAP-39: colour chips on the map while property lines are on
+  function parcelLegend(){ const el=$("#pcLegend"); if(!el) return; el.classList.toggle("hidden",!parcelsOn);
+    const v=store.get("fk_parcelcolor","auto"); el.querySelectorAll("button").forEach(b=>b.classList.toggle("sel",b.dataset.v===v)); }
   let parcelsOn=false, parcelSelId=null;
   function parcelsAvailable(){ return !!(cmap && cmap.getLayer && (cmap.getLayer("parcels-line")||cmap.getLayer("parcels-raster"))); }
   function parcelBtn(){
     const btn=$("#mParcels"); if(!btn) return;
-    const minz=cmap&&cmap.getLayer("parcels-raster")?15:10, far=parcelsOn&&cmap&&cmap.getZoom()<minz-0.5;
+    const minz=cmap&&cmap.getLayer("parcels-raster")?12:10, far=parcelsOn&&cmap&&cmap.getZoom()<minz;
     const st=parcelsOn?(far?"zoom in":"on"):""; setTile(btn,parcelsOn,st,"Property lines: "+(st||"off"));
   }
   function setParcels(on){
@@ -3599,8 +3674,9 @@ select.chip.sel{background-color:var(--amber)}
     PARCEL_LAYERS.forEach(L=>{ if(cmap.getLayer(L)) cmap.setLayoutProperty(L,"visibility",on?"visible":"none"); });
     parcelBtn();
     if(!on) closeMapPopup();
-    else if(cmap.getZoom()<14.5 && cmap.getLayer("parcels-raster")) toast("Zoom in to see property lines.");
+    else if(cmap.getZoom()<12 && cmap.getLayer("parcels-raster")) toast("Zoom in to see property lines.");
     store.set("fk_parcels_on", on?"1":"0");
+    parcelLegend();
   }
   function showParcelPopup(ev){
     const f=ev.features&&ev.features[0]; if(!f) return;
@@ -3623,6 +3699,7 @@ select.chip.sel{background-color:var(--amber)}
 
   /* ---------------- airspace + protected-area overlays (FAA AIS / USGS PAD-US, online) ---------------- */
   const FAA_FS="https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/";
+  const WFIGS="https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/";   // NIFC current wildfires (public domain)
   // one GeoJSON source per FAA/USGS layer; each loads for the current view once zoomed in past `minz`
   const OV_SRC={
     "ov-class":{group:"air", minz:7, url:FAA_FS+"Class_Airspace/FeatureServer/0",
@@ -3637,13 +3714,22 @@ select.chip.sel{background-color:var(--amber)}
       fields:"Facility,Base,Branch,Reason,Floor,Ceiling,ADVISENOTE"},
     "ov-uasfm":{group:"air", minz:11, url:FAA_FS+"FAA_UAS_FacilityMap_Data/FeatureServer/0", where:"1=1",
       fields:"CEILING,APT1_NAME,APT1_ICAO,APT1_LAANC,MAP_EFF"},
+    "ov-tfr":{group:"air", minz:6, fetch:b=>tfrFetch(b)},
+    "ov-rfw":{group:"fire", minz:5, fetch:b=>rfwFetch(b)},
+    "ov-fireper":{group:"fire", minz:5, url:WFIGS+"WFIGS_Interagency_Perimeters_Current/FeatureServer/0", where:"attr_IncidentTypeCategory='WF'",
+      fields:"poly_IncidentName,poly_GISAcres,attr_PercentContained,poly_DateCurrent,attr_UniqueFireIdentifier"},
+    "ov-fire":{group:"fire", minz:5, url:WFIGS+"WFIGS_Incident_Locations_Current/FeatureServer/0", where:"IncidentTypeCategory='WF'",
+      fields:"IncidentName,IncidentSize,PercentContained,FireDiscoveryDateTime,ModifiedOnDateTime_dt,UniqueFireIdentifier"},
     "ov-env":{group:"env", minz:8, url:"https://services.arcgis.com/v01gqwM5QqNysAAi/arcgis/rest/services/Manager_Name_PADUS/FeatureServer/0",
       where:"Mang_Name IN ('NPS','FWS') OR Des_Tp IN ('NWR','WPA','WA','WSA','MPA') OR (Mang_Type='STAT' AND (Mang_Name IN ('SPR','SFW') OR Des_Tp IN ('SP','SREC','SW')))",
       fields:"Unit_Nm,Des_Tp,Mang_Name,Mang_Type"}
   };
-  const OV_AIR_LAYERS=["ov-uasfm-fill","ov-uasfm-line","ov-uasfm-lbl","ov-sua-fill","ov-sua-line","ov-class-fill","ov-class-line","ov-class-dash","ov-nsr-fill","ov-nsr-line","ov-nsrpt-fill","ov-nsrpt-line"];
+  const OV_AIR_LAYERS=["ov-tfr-fill","ov-tfr-line","ov-uasfm-fill","ov-uasfm-line","ov-uasfm-lbl","ov-sua-fill","ov-sua-line","ov-class-fill","ov-class-line","ov-class-dash","ov-nsr-fill","ov-nsr-line","ov-nsrpt-fill","ov-nsrpt-line"];
   const OV_ENV_LAYERS=["ov-env-fill","ov-env-line"];
-  const OV_HIT_AIR=["ov-class-fill","ov-sua-fill","ov-nsr-fill","ov-nsrpt-fill","ov-uasfm-fill"];
+  const OV_FIRE_LAYERS=["ov-rfw-fill","ov-rfw-line","ov-fireper-fill","ov-fireper-line","ov-fire-pt"];
+  const OV_HIT_AIR=["ov-tfr-fill","ov-class-fill","ov-sua-fill","ov-nsr-fill","ov-nsrpt-fill","ov-uasfm-fill"];
+  const OV_HIT_FIRE=["ov-rfw-fill","ov-fireper-fill","ov-fire-pt"];
+  const TFR_COLOR="#FF2D55", FIRE_COLOR="#FF5A1F", RFW_COLORS={"Red Flag Warning":"#FF1744","Fire Weather Watch":"#FF9100"};
   const CLASS_COLORS={B:"#3B7BFF",C:"#D6336C",D:"#4DABF7",E:"#E64980"};
   const SUA_INFO={
     P:{c:"#FF3B3B",L:"Prohibited area",t:"No flight of any kind."},
@@ -3668,7 +3754,8 @@ select.chip.sel{background-color:var(--amber)}
     if(d==="MPA") return "mpa";
     if(m==="SFW") return "stwild";
     return "stpark"; }
-  let airOn=false, envOn=false, ovTimer=null, ovFailToast=0, ovLaanc=null;
+  let airOn=false, envOn=false, fireOn=false, ovTimer=null, ovFailToast=0, ovLaanc=null, ovPt=null;
+  const ovIsOn=g=>g==="air"?airOn:g==="env"?envOn:fireOn;
   const ovFailed={}, ovRetry={};
   const ovEmpty=()=>({type:"FeatureCollection",features:[]});
 
@@ -3679,6 +3766,10 @@ select.chip.sel{background-color:var(--amber)}
     const envColor=["match",["get","cat"],"nps",ENV_INFO.nps.c,"fws",ENV_INFO.fws.c,"wild",ENV_INFO.wild.c,"stwild",ENV_INFO.stwild.c,"mpa",ENV_INFO.mpa.c,ENV_INFO.stpark.c];
     map.addLayer({id:"ov-env-fill",type:"fill",source:"ov-env",layout:hide,paint:{"fill-color":envColor,"fill-opacity":0.15}});
     map.addLayer({id:"ov-env-line",type:"line",source:"ov-env",layout:hide,paint:{"line-color":envColor,"line-width":1.6,"line-opacity":0.9}});
+    // Red Flag Warning / Fire Weather Watch zones: a light wash under the airspace
+    const rfwColor=["match",["get","event"],"Red Flag Warning",RFW_COLORS["Red Flag Warning"],RFW_COLORS["Fire Weather Watch"]];
+    map.addLayer({id:"ov-rfw-fill",type:"fill",source:"ov-rfw",layout:hide,paint:{"fill-color":rfwColor,"fill-opacity":0.1}});
+    map.addLayer({id:"ov-rfw-line",type:"line",source:"ov-rfw",layout:hide,paint:{"line-color":rfwColor,"line-width":1.5,"line-dasharray":[4,2]}});
     // LAANC grid: colour by the max altitude that can be auto-approved
     const ceilColor=["step",["to-number",["get","CEILING"],0],"#FA5252",50,"#FD7E14",150,"#FCC419",250,"#94D82D",350,"#40C057"];
     map.addLayer({id:"ov-uasfm-fill",type:"fill",source:"ov-uasfm",layout:hide,paint:{"fill-color":ceilColor,"fill-opacity":0.13}});
@@ -3699,6 +3790,14 @@ select.chip.sel{background-color:var(--amber)}
       map.addLayer({id:id+"-fill",type:"fill",source:id,layout:hide,paint:{"fill-color":"#FF2D2D","fill-opacity":0.2}});
       map.addLayer({id:id+"-line",type:"line",source:id,layout:hide,paint:{"line-color":"#FF2D2D","line-width":2}});
     });
+    // TFRs (FAA, through the FieldKey relay): no drones inside while active without FAA permission
+    map.addLayer({id:"ov-tfr-fill",type:"fill",source:"ov-tfr",layout:hide,paint:{"fill-color":TFR_COLOR,"fill-opacity":0.16}});
+    map.addLayer({id:"ov-tfr-line",type:"line",source:"ov-tfr",layout:hide,paint:{"line-color":TFR_COLOR,"line-width":2.6,"line-dasharray":[2,1]}});
+    // wildfires (NIFC): perimeters and incident points on top
+    map.addLayer({id:"ov-fireper-fill",type:"fill",source:"ov-fireper",layout:hide,paint:{"fill-color":FIRE_COLOR,"fill-opacity":0.3}});
+    map.addLayer({id:"ov-fireper-line",type:"line",source:"ov-fireper",layout:hide,paint:{"line-color":FIRE_COLOR,"line-width":2}});
+    map.addLayer({id:"ov-fire-pt",type:"circle",source:"ov-fire",layout:hide,paint:{"circle-color":FIRE_COLOR,"circle-radius":["interpolate",["linear"],["zoom"],5,4,10,7,14,9],
+      "circle-stroke-color":"#FFFFFF","circle-stroke-width":1.5}});
   }
 
   /* Overlays load in fixed web-map tiles with resultType=tile + cacheHint, so identical requests are
@@ -3711,6 +3810,7 @@ select.chip.sel{background-color:var(--amber)}
     return {w:x/n*360-180, e:(x+1)/n*360-180, n:lat(y), s:lat(y+1)}; }
   async function ovFetchTile(src,x,y,tz){
     const b=ovTileBounds(x,y,tz), px=360/(256*Math.pow(2,tz));   // ~1 pixel at this tile zoom: simplify to what can be seen
+    if(src.fetch) return src.fetch(b);                            // TFRs and fire-weather zones have their own loaders
     const q="where="+encodeURIComponent(src.where)+"&geometry="+[b.w,b.s,b.e,b.n].map(v=>v.toFixed(6)).join(",")+
       "&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=OBJECTID,"+src.fields+
       "&outSR=4326&geometryPrecision=6&maxAllowableOffset="+px.toFixed(7)+"&resultType=tile&cacheHint=true&f=geojson";
@@ -3737,7 +3837,7 @@ select.chip.sel{background-color:var(--amber)}
     if(!cmap||!cMapReady) return;
     const z=cmap.getZoom(), bb=cmap.getBounds(), gen=ovGen;
     Object.keys(OV_SRC).forEach(id=>{
-      const src=OV_SRC[id], on=src.group==="air"?airOn:envOn, source=cmap.getSource(id); if(!source) return;
+      const src=OV_SRC[id], on=ovIsOn(src.group), source=cmap.getSource(id); if(!source) return;
       if(!on || z<src.minz){ if(ovWant[id]){ delete ovWant[id]; source.setData(ovEmpty()); } return; }
       // tiles one zoom coarser than the view (2-4 per screen), never finer than z12
       const tz=Math.max(src.minz-1, Math.min(12, Math.floor(z)-1));
@@ -3765,7 +3865,7 @@ select.chip.sel{background-color:var(--amber)}
           ovStatus();
           if(gen!==ovGen) return;
           if(navigator.onLine && (ovRetry[id]||0)<2){ ovRetry[id]=(ovRetry[id]||0)+1; setTimeout(()=>{ if(ovFailed[id]&&gen===ovGen) ovLoad(); }, err&&err.code===429?46000:4000*ovRetry[id]); return; }
-          if(Date.now()-ovFailToast>15000){ ovFailToast=Date.now(); toast(navigator.onLine?"Couldn't load "+(src.group==="air"?"airspace":"protected areas")+" — try again in a moment.":"Airspace and protected areas need a connection."); }
+          if(Date.now()-ovFailToast>15000){ ovFailToast=Date.now(); toast(navigator.onLine?"Couldn't load "+(id==="ov-tfr"?"TFRs":src.group==="air"?"airspace":src.group==="fire"?"fire data":"protected areas")+" — try again in a moment.":"Airspace, fire and protected areas need a connection."); }
         });
       });
     });
@@ -3781,22 +3881,25 @@ select.chip.sel{background-color:var(--amber)}
       if(ids.length&&ids.every(k=>ovFailed[k])) return !navigator.onLine?"no signal":Date.now()<ovBusyUntil?"retrying":"unavailable";
       return "on";
     };
-    const as=lbl("air",airOn,7), es=lbl("env",envOn,8);
+    const as=lbl("air",airOn,7), es=lbl("env",envOn,8), fs=lbl("fire",fireOn,5);
     setTile("#mAirspace",airOn,as,"Airspace: "+(as||"off"));
     setTile("#mEnv",envOn,es,"Protected areas: "+(es||"off"));
+    setTile("#mFire",fireOn,fs,"Wildfires and fire weather: "+(fs||"off"));
     const lg=$("#ovLegend"); if(!lg) return;
     const sw=(c,t,dash)=>'<span><i class="ovsw'+(dash?" dash":"")+'" style="border-color:'+c+'"></i>'+t+'</span>';
     let h="";
     if(airOn) h+=sw(CLASS_COLORS.B,"B")+sw(CLASS_COLORS.C,"C")+sw(CLASS_COLORS.D,"D",1)+sw(CLASS_COLORS.E,"E surface",1)+sw("#FF3B3B","No drones / restricted")+sw(SUA_INFO.MOA.c,"MOA",1)+(z>=11?sw("#FCC419","LAANC grid (ft)"):"");
+    if(airOn) h+=sw(TFR_COLOR,"TFR",1);
+    if(fireOn) h+=sw(FIRE_COLOR,"Wildfire")+sw(RFW_COLORS["Red Flag Warning"],"Red Flag Warning",1)+sw(RFW_COLORS["Fire Weather Watch"],"Fire Weather Watch",1);
     if(envOn) h+=sw(ENV_INFO.nps.c,"Nat'l park")+sw(ENV_INFO.fws.c,"Wildlife refuge")+sw(ENV_INFO.wild.c,"Wilderness")+sw(ENV_INFO.stpark.c,"State park")+sw(ENV_INFO.stwild.c,"State wildlife");
     lg.innerHTML=h; lg.classList.toggle("hidden",!h);
   }
   function setOverlay(group,on,quiet){
-    if(group==="air") airOn=on; else envOn=on;
-    store.set(group==="air"?"fk_air_on":"fk_env_on", on?"1":"0");
+    if(group==="air") airOn=on; else if(group==="env") envOn=on; else fireOn=on;
+    store.set("fk_"+group+"_on", on?"1":"0");
     if(cmap&&cMapReady){
-      (group==="air"?OV_AIR_LAYERS:OV_ENV_LAYERS).forEach(L=>{ if(cmap.getLayer(L)) cmap.setLayoutProperty(L,"visibility",on?"visible":"none"); });
-      if(on&&!quiet){ const minz=group==="air"?7:8; if(cmap.getZoom()<minz) toast("Zoom in to see "+(group==="air"?"airspace":"protected areas")); }
+      (group==="air"?OV_AIR_LAYERS:group==="env"?OV_ENV_LAYERS:OV_FIRE_LAYERS).forEach(L=>{ if(cmap.getLayer(L)) cmap.setLayoutProperty(L,"visibility",on?"visible":"none"); });
+      if(on&&!quiet){ const minz=group==="air"?7:group==="env"?8:5; if(cmap.getZoom()<minz) toast("Zoom in to see "+(group==="air"?"airspace":group==="env"?"protected areas":"wildfires")); }
       else closeMapPopup();
       ovLoad();
     }
@@ -3834,8 +3937,8 @@ select.chip.sel{background-color:var(--amber)}
     return '<div class="ovitem"><i style="background:'+color+'"></i><div><b>'+escapeHtml(title)+'</b>'+lines.filter(Boolean).map(l=>'<div class="ovln">'+l+'</div>').join("")+'</div></div>';
   }
   function overlayHTML(point){
-    if(!cmap||!(airOn||envOn)) return "";
-    const z=cmap.getZoom(), parts=[];
+    if(!cmap||!(airOn||envOn||fireOn)) return "";
+    const z=cmap.getZoom(), parts=[]; ovPt=cmap.unproject(point);
     if(airOn){
       if(z<7) parts.push('<div class="ovhd">Airspace</div><div class="ovln">Zoom in to load airspace.</div>');
       else{
@@ -3844,6 +3947,12 @@ select.chip.sel{background-color:var(--amber)}
         fs.forEach(f=>{ const p=f.properties||{}, src=f.source;
           if(src==="ov-uasfm"){ if(!grid) grid=p; return; }
           let key, html;
+          if(src==="ov-tfr"){ controlled=true; key="t|"+p.id;
+            html=ovItem(TFR_COLOR,"TFR "+p.id+(p.type?" · "+tfrType(p.type):""),[escapeHtml(p.title||""),"No drone flights inside while it's active unless the FAA has approved yours.",
+              '<span class="ovbtns"><button type="button" class="ovbtn" data-tfr="'+escapeHtml(p.id)+'">'+ICO("info")+'Times &amp; altitudes</button>'
+              +'<a class="ovbtn" href="https://tfr.faa.gov/tfr3/?page=detail_'+escapeHtml(String(p.id).replace("/","_"))+'" target="_blank" rel="noopener">'+ICO("ext")+'FAA page</a></span>'
+              +'<div class="tfrinfo" data-tfrinfo="'+escapeHtml(p.id)+'"></div>']);
+            if(!seen.has(key)){ seen.add(key); items.push(html); } return; }
           if(src==="ov-class"){ const ci=classInfo(p), fl=floorNote(p); if(!fl){ controlled=true; inClass=true; }
             key="c|"+p.NAME+"|"+p.LOWER_VAL+"|"+p.UPPER_VAL;
             const hrs=p.WKHR_CODE&&p.WKHR_CODE!=="H24" ? "Hours: "+escapeHtml(p.WKHR_RMK||p.WKHR_CODE)+(p.CLASS==="D"?" (outside tower hours it reverts to E or G)":"") : "";
@@ -3881,8 +3990,30 @@ select.chip.sel{background-color:var(--amber)}
         parts.push('<div class="ovhd">Protected areas</div>'+items.join(""));
       }
     }
+    if(fireOn){
+      if(z<5) parts.push('<div class="ovhd">Fire</div><div class="ovln">Zoom in to load wildfires.</div>');
+      else{
+        const L=OV_HIT_FIRE.filter(id=>cmap.getLayer(id)), box=[[point.x-12,point.y-12],[point.x+12,point.y+12]];
+        const fs=L.length?cmap.queryRenderedFeatures(box,{layers:L}):[], seen=new Set(), fires=[], wx=[];
+        fs.forEach(f=>{ const p=f.properties||{};
+          if(f.source==="ov-rfw"){ const k="w|"+p.event+"|"+p.zone; if(seen.has(k)) return; seen.add(k);
+            wx.push(ovItem(RFW_COLORS[p.event]||RFW_COLORS["Fire Weather Watch"],p.event||"Fire weather alert",[escapeHtml(p.zoneName||p.area||""),
+              p.ends?"Until "+escapeHtml(fmtWhen(p.ends)):"",p.event==="Red Flag Warning"?"Critical fire weather now: a spark can start a fast-moving fire.":"Critical fire weather is possible soon."])); return; }
+          const per=f.source==="ov-fireper", k="f|"+(per?p.attr_UniqueFireIdentifier:p.UniqueFireIdentifier||"")+"|"+(per?p.poly_IncidentName:p.IncidentName);
+          if(seen.has(k)) return; seen.add(k);
+          const name=per?p.poly_IncidentName:p.IncidentName, acres=per?(p.poly_GISAcres||p.attr_IncidentSize):p.IncidentSize, pc=per?p.attr_PercentContained:p.PercentContained;
+          const when=per?p.poly_DateCurrent:p.ModifiedOnDateTime_dt;
+          fires.push(ovItem(FIRE_COLOR,(name?titleCase(String(name)):"Wildfire")+(per?" · perimeter":""),[
+            [acres!=null&&acres!==""?Math.round(+acres).toLocaleString()+" acres":"",pc!=null&&pc!==""?Math.round(+pc)+"% contained":""].filter(Boolean).join(" · "),
+            when?"Updated "+escapeHtml(fmtWhen(when)):""])); });
+        const items=fires.concat(wx);
+        if(!items.length) items.push('<div class="ovln">No active wildfire or fire-weather alert mapped here.</div>');
+        parts.push('<div class="ovhd">Fire</div>'+items.join(""));
+      }
+    }
     if(!parts.length) return "";
-    return '<div class="ovpop">'+parts.join("")+'<div class="ovfoot">TFRs and NOTAMs aren’t shown — check B4UFLY or tfr.faa.gov before flying.</div></div>';
+    const foot=airOn?'<div class="ovfoot">NOTAMs aren’t shown. <button type="button" class="ovbtn" data-notam="1">'+ICO("ext")+'Check NOTAMs</button></div>':"";
+    return '<div class="ovpop">'+parts.join("")+foot+'</div>';
   }
   let ovTapTimer=null;
   function showOverlayPopup(ev){
@@ -3921,8 +4052,85 @@ select.chip.sel{background-color:var(--amber)}
       L.apt ? "Airport: "+L.apt : "",
       L.eff ? "UAS facility map effective "+L.eff : ""].filter(Boolean).join("\n");
   }
+  /* --- TFRs (FAA through the FieldKey relay) and fire-weather zones (NWS) --- */
+  const TFR_TYPES={VIP:"VIP movement",SECURITY:"Security",HAZARDS:"Hazard (e.g. wildfire)",SPACE:"Space operations",SPORTS:"Stadium / sporting event",
+    "SPECIAL":"Special event",UAS:"Drone restriction",EMERGENCY:"Emergency"};
+  function tfrType(t){ const k=String(t||"").toUpperCase(); return TFR_TYPES[k]||titleCase(k.toLowerCase()); }
+  function titleCase(s){ return String(s||"").toLowerCase().replace(/(^|[\s\-\/(])([a-z])/g,(m,a,b)=>a+b.toUpperCase()); }
+  function fmtWhen(v){ const d=typeof v==="number"?new Date(v):new Date(String(v)); if(isNaN(d)) return String(v);
+    return d.toLocaleString([], {weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}); }
+  async function tfrFetch(b){
+    const r=await fetch(SB_URL+"/functions/v1/tfr?bbox="+[b.w,b.s,b.e,b.n].map(v=>v.toFixed(4)).join(","));
+    if(!r.ok){ const e=new Error("HTTP "+r.status); e.code=r.status; throw e; }
+    const gj=await r.json(); if(gj.error) throw new Error(gj.error);
+    return gj.features||[];
+  }
+  function tfrAlt(a){ if(!a||a.val==="") return "?"; if(String(a.uom).toUpperCase()==="FL") return "FL"+a.val;
+    const n=+a.val; if(!n) return "the surface"; return n.toLocaleString()+" ft "+(String(a.code).toUpperCase()==="HEI"?"AGL":"MSL"); }
+  async function tfrDetails(id,slot){
+    slot.innerHTML='<div class="ovln">Loading from the FAA…</div>';
+    try{
+      const r=await fetch(SB_URL+"/functions/v1/tfr?id="+encodeURIComponent(id)); const d=await r.json();
+      if(!r.ok||d.error) throw new Error(d.error||("HTTP "+r.status));
+      const utc=v=>v?fmtWhen(v+"Z"):"?";
+      slot.innerHTML='<div class="ovln"><b>'+escapeHtml(utc(d.effective))+' to '+escapeHtml(utc(d.expires))+'</b> (your time)</div>'
+        +'<div class="ovln">From '+escapeHtml(tfrAlt(d.lower))+' up to '+escapeHtml(tfrAlt(d.upper))+'</div>'
+        +(d.text?'<div class="popbody long" style="margin-top:4px">'+escapeHtml(d.text)+'</div>':"");
+    }catch(err){ slot.innerHTML='<div class="ovln">Couldn’t load the details. Use the FAA page.</div>'; }
+    if(mapPopup) keepPopupOnScreen(mapPopup);
+  }
+  // Red Flag Warnings / Fire Weather Watches: one nationwide list (10 min), shapes from each alert's fire zones.
+  // Zone shapes rarely change, so they're kept for the session; only zones in states near the view are fetched.
+  const NWS="https://api.weather.gov";
+  const STATE_BOX={AL:[-88.5,30.1,-84.9,35],AK:[-180,51,-129.9,71.5],AZ:[-114.9,31.3,-109,37],AR:[-94.7,33,-89.6,36.5],CA:[-124.5,32.5,-114.1,42],CO:[-109.1,36.9,-102,41],
+    CT:[-73.8,40.9,-71.8,42.1],DE:[-75.8,38.4,-75,39.9],DC:[-77.2,38.8,-76.9,39],FL:[-87.7,24.4,-80,31],GA:[-85.7,30.3,-80.8,35],HI:[-160.3,18.9,-154.8,22.3],ID:[-117.3,41.9,-111,49],
+    IL:[-91.6,36.9,-87.4,42.6],IN:[-88.1,37.7,-84.7,41.8],IA:[-96.7,40.3,-90.1,43.6],KS:[-102.1,36.9,-94.5,40.1],KY:[-89.6,36.4,-81.9,39.2],LA:[-94.1,28.9,-88.8,33.1],ME:[-71.1,43,-66.9,47.5],
+    MD:[-79.5,37.9,-75,39.8],MA:[-73.6,41.2,-69.9,42.9],MI:[-90.5,41.6,-82.1,48.3],MN:[-97.3,43.4,-89.4,49.4],MS:[-91.7,30.1,-88,35],MO:[-95.8,35.9,-89.1,40.7],MT:[-116.1,44.3,-104,49],
+    NE:[-104.1,39.9,-95.3,43.1],NV:[-120.1,35,-114,42],NH:[-72.6,42.6,-70.6,45.4],NJ:[-75.6,38.9,-73.9,41.4],NM:[-109.1,31.3,-103,37],NY:[-79.8,40.5,-71.8,45.1],NC:[-84.4,33.8,-75.4,36.6],
+    ND:[-104.1,45.9,-96.5,49],OH:[-84.9,38.4,-80.5,42],OK:[-103.1,33.6,-94.4,37.1],OR:[-124.7,41.9,-116.4,46.3],PA:[-80.6,39.7,-74.7,42.3],RI:[-71.9,41.1,-71.1,42.1],SC:[-83.4,32,-78.5,35.3],
+    SD:[-104.1,42.4,-96.4,46],TN:[-90.4,34.9,-81.6,36.7],TX:[-106.7,25.8,-93.5,36.6],UT:[-114.1,36.9,-109,42.1],VT:[-73.5,42.7,-71.4,45.1],VA:[-83.7,36.5,-75.2,39.5],WA:[-124.8,45.5,-116.9,49.1],
+    WV:[-82.7,37.2,-77.7,40.7],WI:[-92.9,42.4,-86.8,47.1],WY:[-111.1,40.9,-104,45.1],PR:[-67.3,17.9,-65.2,18.6]};
+  let rfwList=null, rfwAt=0, rfwBusy=null; const rfwZones=new Map();
+  async function rfwAlerts(){
+    if(rfwList&&Date.now()-rfwAt<600000) return rfwList;
+    if(rfwBusy) return rfwBusy;
+    rfwBusy=(async()=>{ try{
+      const r=await fetch(NWS+"/alerts/active?event="+encodeURIComponent("Red Flag Warning,Fire Weather Watch"),{headers:{Accept:"application/geo+json"}});
+      if(!r.ok){ const e=new Error("HTTP "+r.status); e.code=r.status; throw e; }
+      const gj=await r.json();
+      rfwList=(gj.features||[]).map(f=>{ const p=f.properties||{}; return {id:p.id||f.id, event:p.event, ends:p.ends||p.expires, area:p.areaDesc, geom:f.geometry,
+        zones:(p.affectedZones||[]).filter(u=>/\/zones\/(fire|forecast|county)\/[A-Z]{2}[CZ]\d{3}$/.test(u))}; });
+      rfwAt=Date.now(); return rfwList; } finally { rfwBusy=null; } })();
+    return rfwBusy;
+  }
+  const boxHit=(a,b)=>a[0]<=b.e&&a[2]>=b.w&&a[1]<=b.n&&a[3]>=b.s;
+  function geomBox(g){ let w=180,s=90,e=-180,n=-90; const walk=c=>{ if(typeof c[0]==="number"){ if(c[0]<w)w=c[0]; if(c[0]>e)e=c[0]; if(c[1]<s)s=c[1]; if(c[1]>n)n=c[1]; } else c.forEach(walk); };
+    walk(g.coordinates); return [w,s,e,n]; }
+  async function rfwZone(url){
+    if(rfwZones.has(url)) return rfwZones.get(url);
+    const p=fetch(url,{headers:{Accept:"application/geo+json"}}).then(r=>r.ok?r.json():null).then(z=>z&&z.geometry?{geom:z.geometry,box:geomBox(z.geometry),name:(z.properties&&z.properties.name)||""}:null).catch(()=>null);
+    rfwZones.set(url,p); const z=await p; if(!z) rfwZones.delete(url); return z;
+  }
+  async function rfwFetch(b){
+    const out=[];
+    for(const a of await rfwAlerts()){
+      if(a.geom){ const bx=geomBox(a.geom); if(boxHit(bx,b)) out.push({type:"Feature",id:a.id,geometry:a.geom,properties:{event:a.event,ends:a.ends,area:a.area,zone:a.id}}); continue; }
+      const near=a.zones.filter(u=>{ const st=u.split("/").pop().slice(0,2), sb=STATE_BOX[st]; return !sb||boxHit(sb,b); });
+      const zs=await Promise.all(near.slice(0,40).map(rfwZone));
+      zs.forEach((z,i)=>{ if(z&&boxHit(z.box,b)) out.push({type:"Feature",id:a.id+"|"+near[i],geometry:z.geom,properties:{event:a.event,ends:a.ends,area:a.area,zone:near[i],zoneName:z.name}}); });
+    }
+    return out;
+  }
+  const NOTAM_SEARCH="https://notams.aim.faa.gov/notamSearch/nsapp.html#/";
+
   // popups are rebuilt on every tap, so listen once on the map container
   { const mc=$("#custMap"); if(mc) mc.addEventListener("click",e=>{
+      const t=e.target&&e.target.closest?e.target.closest("[data-tfr],[data-notam]"):null;
+      if(t){ e.stopPropagation();
+        if(t.dataset.tfr){ const slot=t.closest(".ovitem").querySelector("[data-tfrinfo]"); if(slot) tfrDetails(t.dataset.tfr,slot); t.disabled=true; }
+        else { if(ovPt) copyText(ovPt.lat.toFixed(5)+", "+ovPt.lng.toFixed(5)); window.open(NOTAM_SEARCH,"_blank","noopener");
+          toast(ovLaanc&&ovLaanc.apt?"Coordinates copied. Search NOTAMs for "+ovLaanc.apt:"Coordinates copied. Search NOTAMs near this spot",3200); }
+        return; }
       const b=e.target&&e.target.closest?e.target.closest("[data-laanc]"):null; if(!b||!ovLaanc) return;
       e.stopPropagation();
       if(b.dataset.laanc==="copy"){ copyText(laancText(ovLaanc)); toast("Copied — paste into your LAANC app"); }
@@ -3934,6 +4142,7 @@ select.chip.sel{background-color:var(--amber)}
     } }
   { const b=$("#mAirspace"); if(b) b.addEventListener("click",()=>setOverlay("air",!airOn)); }
   { const b=$("#mEnv"); if(b) b.addEventListener("click",()=>setOverlay("env",!envOn)); }
+  { const b=$("#mFire"); if(b) b.addEventListener("click",()=>setOverlay("fire",!fireOn)); }
 
   /* ---------------- weather: live radar (NOAA nowCOAST) + rain forecast (NWS WPC QPF), online ---------------- */
   const WX_RADAR_WMS="https://nowcoast.noaa.gov/geoserver/weather_radar/wms";
@@ -4165,6 +4374,63 @@ select.chip.sel{background-color:var(--amber)}
       e.stopPropagation(); const [la,lo]=b.dataset.fly.split(",").map(Number); openFly(la,lo,b.dataset.flyname||"");
     }); }
   document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("#flySheet")&&$("#flySheet").classList.contains("show")) closeFly(); });
+
+  /* ---------------- nearest hospitals (FEMA RAPT hospitals: HIFLD-derived, public use) ---------------- */
+  const HOSP_URL="https://services.arcgis.com/XG15cJAlne2vxtgt/arcgis/rest/services/Hospitals_RAPT/FeatureServer/6/query";
+  const HOSP_TYPES=["GENERAL ACUTE CARE","CRITICAL ACCESS","CHILDREN","MILITARY"];   // the kinds that may treat an injury; psychiatric, rehab and long-term care are left out
+  function kmBetween(a,b,c,d){ const R=6371, r=x=>x*Math.PI/180, dl=r(c-a), dn=r(d-b);
+    const h=Math.sin(dl/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(dn/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
+  function compass(a,b,c,d){ const r=x=>x*Math.PI/180, y=Math.sin(r(d-b))*Math.cos(r(c)), x=Math.cos(r(a))*Math.sin(r(c))-Math.sin(r(a))*Math.cos(r(c))*Math.cos(r(d-b));
+    return ["N","NE","E","SE","S","SW","W","NW"][Math.round(((Math.atan2(y,x)*180/Math.PI)+360)%360/45)%8]; }
+  async function hospQuery(lat,lng,meters){
+    const q="where="+encodeURIComponent("STATUS='OPEN' AND TYPE IN ("+HOSP_TYPES.map(t=>"'"+t+"'").join(",")+")")+"&geometry="+lng.toFixed(5)+","+lat.toFixed(5)
+      +"&geometryType=esriGeometryPoint&inSR=4326&distance="+meters+"&units=esriSRUnit_Meter&outFields=NAME,ADDRESS,CITY,STATE,TELEPHONE,TYPE,TRAUMA,HELIPAD,LATITUDE,LONGITUDE&returnGeometry=false&f=json";
+    const r=await fetch(HOSP_URL+"?"+q); if(!r.ok) throw new Error("HTTP "+r.status);
+    const j=await r.json(); if(j.error) throw new Error(j.error.message||"query failed");
+    return (j.features||[]).map(f=>f.attributes);
+  }
+  function hospRow(h,lat,lng){
+    const km=kmBetween(lat,lng,h.LATITUDE,h.LONGITUDE), mi=km*0.621371;
+    const tel=String(h.TELEPHONE||"").replace(/[^\d+]/g,""), tr=String(h.TRAUMA||"");
+    const badges=[titleCase(h.TYPE||"")];
+    const trauma=/LEVEL/i.test(tr)?'<span class="hbadge tr">TRAUMA '+escapeHtml(tr.replace(/LEVEL\s*/i,"").trim())+'</span>':"";
+    const nm=titleCase(h.NAME||"Hospital");
+    return '<div class="hrow"><div class="htop"><b>'+escapeHtml(nm)+'</b><button type="button" class="hcopy" data-hcopy="'+escapeHtml(nm)+'" aria-label="Copy the hospital name" title="Copy name">'+ICO("copy")+'Copy</button></div>'
+      +'<div class="hmeta">'+mi.toFixed(mi<10?1:0)+' mi '+compass(lat,lng,h.LATITUDE,h.LONGITUDE)+' · '+escapeHtml(titleCase(h.ADDRESS||""))+(h.CITY?", "+escapeHtml(titleCase(h.CITY)):"")+'</div>'
+      +'<div class="hbadges"><span class="hbadge">'+escapeHtml(badges.join(""))+'</span>'+trauma+(String(h.HELIPAD).toUpperCase()==="Y"?'<span class="hbadge">HELIPAD</span>':"")+'</div>'
+      +(tel?'<a class="hcall" href="tel:'+escapeHtml(tel)+'">'+ICO("phone")+'Call '+escapeHtml(h.TELEPHONE)+'</a>':"")
+      +navLinks(h.LATITUDE,h.LONGITUDE)+'</div>';
+  }
+  async function openHosp(lat,lng,name){
+    if(!isFinite(lat)||!isFinite(lng)) return;
+    const list=$("#hList"), key="fk_hosp:"+lat.toFixed(1)+","+lng.toFixed(1);
+    $("#hFrom").textContent="From "+(name?name+" · ":"")+lat.toFixed(4)+", "+lng.toFixed(4);
+    list.innerHTML='<p class="note">Finding hospitals…</p>';
+    $("#hScrim").classList.add("show"); $("#hSheet").classList.add("show");
+    let rows=null, saved=null;
+    try{
+      rows=await hospQuery(lat,lng,60000);
+      if(rows.length<3) rows=await hospQuery(lat,lng,200000);
+      rows.sort((a,b)=>kmBetween(lat,lng,a.LATITUDE,a.LONGITUDE)-kmBetween(lat,lng,b.LATITUDE,b.LONGITUDE)); rows=rows.slice(0,5);
+      try{ localStorage.setItem(key,JSON.stringify({at:Date.now(),rows})); }catch(e){}
+    }catch(err){
+      try{ saved=JSON.parse(localStorage.getItem(key)||"null"); }catch(e){}
+      if(saved) rows=saved.rows;
+    }
+    if(!rows){ list.innerHTML='<p class="note">'+(navigator.onLine?"Couldn't reach the hospital list. Try again in a moment.":"No connection, and no saved list for this area yet. Open this once with signal and it's kept for offline use.")+'</p>'; return; }
+    if(!rows.length){ list.innerHTML='<p class="note">No hospitals found within 125 miles.</p>'; return; }
+    list.innerHTML=(saved?'<p class="note">Offline: showing the list saved '+escapeHtml(fmtWhen(saved.at))+'.</p>':"")+rows.map(h=>hospRow(h,lat,lng)).join("");
+  }
+  { const l=$("#hList"); if(l) l.addEventListener("click",e=>{ const b=e.target.closest("[data-hcopy]"); if(!b) return;
+      copyText(b.dataset.hcopy); toast("Copied: "+b.dataset.hcopy,2200); }); }
+  function closeHosp(){ $("#hScrim").classList.remove("show"); $("#hSheet").classList.remove("show"); }
+  { const s=$("#hScrim"); if(s) s.addEventListener("click",closeHosp); }
+  document.addEventListener("click",e=>{
+    const b=e.target&&e.target.closest?e.target.closest("[data-hosp],[data-hospsite]"):null; if(!b) return;
+    e.preventDefault(); e.stopPropagation();
+    if(b.dataset.hosp){ const [la,lo]=b.dataset.hosp.split(",").map(Number); openHosp(la,lo,b.dataset.flyname||""); }
+    else { const c=findById(curId); if(c) openHosp(+c.lat,+c.lng,assetTitle(c)); }
+  },true);
 
   /* ---------------- icons on the plain panel buttons (Lucide sprite) ---------------- */
   { const BTN_ICONS={saveSettings:"save",sBackup:"download",sVersions:"history",sClearDb:"trash",sClearMaps:"trash",sCheckUpdate:"refresh",

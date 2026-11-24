@@ -12,7 +12,8 @@ PostgreSQL. Running it again rebuilds the FieldKey group and saves again.
 
 It also adds what FieldKey's map shows around the data, read live from the same online
 sources: the five basemaps (Dark, Aerial, Hybrid, Streets, Topo), the terrain behind 3D
-views, FAA airspace and protected areas. Set ADD_REFERENCE_LAYERS = False to leave them out.
+views, FAA airspace with TFRs, wildfires and fire weather, hospitals and protected areas.
+Set ADD_REFERENCE_LAYERS = False to leave them out.
 
 No passwords live in this file: AUTHCFG is the id of a QGIS authentication configuration
 that holds the qgis_editor login, stored in QGIS's encrypted password database.
@@ -109,6 +110,10 @@ DEM_ZMAX = 15
 RELIEF_TO_SCALE = 12000
 
 FAA = "https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/"
+WFIGS = "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/"    # NIFC current wildfires (public domain)
+HOSPITALS = "https://services.arcgis.com/XG15cJAlne2vxtgt/arcgis/rest/services/Hospitals_RAPT/FeatureServer/6"   # FEMA copy of HIFLD
+RELAY = "https://%s.supabase.co/functions/v1/tfr" % PROJECT_REF     # FieldKey's relay: FAA TFRs and NWS fire-weather zones
+HOSPITAL_TYPES = ("GENERAL ACUTE CARE", "CRITICAL ACCESS", "CHILDREN", "MILITARY")   # the kinds that may treat an injury
 # key: service, its CRS, filter (the one FieldKey uses), and the scale beyond which it hides
 OVERLAYS = {
     # B/C/D and surface-area E only: Class A and E with a 700 ft+ floor sit above drone altitudes
@@ -118,14 +123,28 @@ OVERLAYS = {
     "nsr": (FAA + "DoD_Mar_13/FeatureServer/0", "EPSG:4326", "", 2500000),
     "nsrpt": (FAA + "Part_Time_National_Security_UAS_Flight_Restrictions/FeatureServer/0", "EPSG:4326", "", 2500000),
     "uasfm": (FAA + "FAA_UAS_FacilityMap_Data/FeatureServer/0", "EPSG:4326", "", 150000),
+    # GeoJSON from the relay; its first shape is a blank placeholder so the layer keeps its type when nothing is active
+    "tfr": (RELAY + "?bbox=-180,15,-60,72&qgis=1", "EPSG:4326", '"placeholder" IS NULL', 10000000),
+    "rfw": (RELAY + "?fire=1&qgis=1", "EPSG:4326", '"placeholder" IS NULL', 10000000),
+    "fireper": (WFIGS + "WFIGS_Interagency_Perimeters_Current/FeatureServer/0", "EPSG:4326", "attr_IncidentTypeCategory = 'WF'", 10000000),
+    "fire": (WFIGS + "WFIGS_Incident_Locations_Current/FeatureServer/0", "EPSG:4326", "IncidentTypeCategory = 'WF'", 10000000),
+    "hosp": (HOSPITALS, "EPSG:3857", "STATUS = 'OPEN' AND TYPE IN (%s)" % ",".join("'%s'" % t for t in HOSPITAL_TYPES), 1000000),
     "env": ("https://services.arcgis.com/v01gqwM5QqNysAAi/arcgis/rest/services/Manager_Name_PADUS/FeatureServer/0", "EPSG:3857",
             "Mang_Name IN ('NPS','FWS') OR Des_Tp IN ('NWR','WPA','WA','WSA','MPA') OR "
             "(Mang_Type='STAT' AND (Mang_Name IN ('SPR','SFW') OR Des_Tp IN ('SP','SREC','SW')))", 1000000),
 }
 AIRSPACE_LAYERS = [   # top of the group first; the LAANC grid sits lowest
-    ("nsr", "National security restrictions"), ("nsrpt", "Part-time national security restrictions"),
+    ("tfr", "TFRs"), ("nsr", "National security restrictions"), ("nsrpt", "Part-time national security restrictions"),
     ("class", "Controlled airspace"), ("sua", "Special use airspace"), ("uasfm", "LAANC grid"),
 ]
+FIRE_GROUP = "Wildfire"
+FIRE_LAYERS = [("fire", "Wildfires"), ("fireper", "Fire perimeters"), ("rfw", "Red Flag Warnings and Fire Weather Watches")]
+HOSPITAL_LAYER = "Hospitals"
+LIVE = ("tfr", "rfw", "fire", "fireper")   # these change through the day: reloaded every LIVE_MINUTES
+LIVE_MINUTES = 10
+TFR_COLOUR, FIRE_COLOUR, HOSPITAL_COLOUR = "#FF2D55", "#FF5A1F", "#E03131"
+FIRE_WEATHER = [("Red Flag Warning", "#FF1744", "Critical fire weather now: a spark can start a fast-moving fire."),
+                ("Fire Weather Watch", "#FF9100", "Critical fire weather is possible soon.")]
 AIR_CLASSES = [("B", "Class B", "#3B7BFF"), ("C", "Class C", "#D6336C"), ("D", "Class D", "#4DABF7"),
                ("E", "Class E surface area", "#E64980")]
 SPECIAL_USE = [   # code, label, colour, drone rule; the empty code catches every other type
@@ -359,6 +378,23 @@ def _without_geometry_tests(styles):
     return styles
 
 
+LABEL_REPEAT_MM = 30   # the same name drawn again within this distance on screen is left out
+
+
+def _no_duplicate_labels(styles):
+    """Vector tiles repeat a town near a tile edge in each neighbouring tile, and QGIS would draw every copy
+    side by side ("Healdsburg Healdsburg"). Drop a name when the same one is already drawn close by."""
+    for st in styles:
+        s = st.labelSettings()
+        thin = s.thinningSettings()
+        thin.setAllowDuplicateRemoval(True)
+        thin.setMinimumDistanceToDuplicate(LABEL_REPEAT_MM)
+        thin.setMinimumDistanceToDuplicateUnit(Qgis.RenderUnit.Millimeters)
+        s.setThinningSettings(thin)
+        st.setLabelSettings(s)
+    return styles
+
+
 def dark_layer(tile_url, name="Dark map"):
     lyr = vector_tiles(tile_url, name, OFM_DARK_STYLE)
     if lyr.isValid():
@@ -367,7 +403,7 @@ def dark_layer(tile_url, name="Dark map"):
         renderer.setStyles(_without_geometry_tests(renderer.styles()))
         lyr.setRenderer(renderer)
         if labeling:
-            labeling.setStyles(_without_geometry_tests(labeling.styles()))
+            labeling.setStyles(_no_duplicate_labels(_without_geometry_tests(labeling.styles())))
             lyr.setLabeling(labeling)
     return lyr
 
@@ -435,7 +471,7 @@ def hybrid_roads_layer(tile_url, name="Roads and names"):
         ls.setLabelSettings(s)
         labels.append(ls)
     labeling = QgsVectorTileBasicLabeling()
-    labeling.setStyles(labels)
+    labeling.setStyles(_no_duplicate_labels(labels))
     lyr.setLabeling(labeling)
     return lyr
 
@@ -477,7 +513,12 @@ def set_terrain(project, dem):
 def feature_service_layer(key, name):
     """One of the FAA or USGS layers FieldKey draws, read live from its ArcGIS feature service."""
     url, crs, where, _scale = OVERLAYS[key]
-    lyr = QgsVectorLayer(f"crs='{crs}' url='{url}'", name, "arcgisfeatureserver")
+    if url.startswith(RELAY):     # TFRs and fire-weather zones: GeoJSON read by GDAL straight from the relay
+        opts = QgsVectorLayer.LayerOptions()
+        opts.forceReadOnly = True                 # a web file can't be edited; this stops GDAL asking to
+        lyr = QgsVectorLayer(url, name, "ogr", opts)
+    else:
+        lyr = QgsVectorLayer(f"crs='{crs}' url='{url}'", name, "arcgisfeatureserver")
     if lyr.isValid() and where:
         lyr.setSubsetString(where)
     return lyr
@@ -523,6 +564,37 @@ def style_overlay(layer, key):
         tip = ("<b>LAANC grid: [% \"CEILING\" %] ft AGL</b><br>[% coalesce(\"APT1_NAME\", '') %]"
                "<br>[% CASE WHEN \"CEILING\" = 0 THEN 'No automatic approval here: request authorization through FAA DroneZone.'"
                " ELSE 'Automatic approval up to ' || \"CEILING\" || ' ft AGL through a LAANC provider, if the airport is LAANC-enabled.' END %]")
+    elif key == "tfr":
+        layer.setRenderer(QgsSingleSymbolRenderer(_area(TFR_COLOUR, 0.16, 2.6, True)))
+        tip = ("<b>TFR [% \"id\" %] · [% title(lower(\"type\")) %]</b><br>[% \"title\" %]"
+               "<br>No drone flights inside while it's active unless the FAA has approved yours."
+               "<br><a href=\"https://tfr.faa.gov/tfr3/?page=detail_[% replace(\"id\", '/', '_') %]\">Times, altitudes and NOTAM text (FAA)</a>")
+    elif key == "rfw":
+        cats = [QgsRendererCategory(event, _area(colour, 0.1, 1.5, True), event) for event, colour, _rule in FIRE_WEATHER]
+        layer.setRenderer(QgsCategorizedSymbolRenderer("event", cats))
+        tip = ("<b>[% \"event\" %]</b><br>[% coalesce(nullif(\"zoneName\", ''), \"area\") %]"
+               "<br>Until [% \"ends\" %]<br>[% CASE " + _rule_cases("\"event\"", [(e, e, c, r) for e, c, r in FIRE_WEATHER]) + " END %]")
+    elif key == "fireper":
+        layer.setRenderer(QgsSingleSymbolRenderer(_area(FIRE_COLOUR, 0.3, 2)))
+        tip = ("<b>[% title(lower(\"poly_IncidentName\")) %] fire · perimeter</b>"
+               "<br>[% format_number(\"poly_GISAcres\", 0) %] acres · [% coalesce(\"attr_PercentContained\", '?') %]% contained"
+               "<br>Mapped [% format_date(\"poly_DateCurrent\", 'd MMM yyyy h:mm ap') %]")
+    elif key == "fire":
+        layer.setRenderer(QgsSingleSymbolRenderer(QgsMarkerSymbol.createSimple(
+            {"name": "circle", "color": FIRE_COLOUR, "outline_color": "#ffffff", "outline_width": "0.4", "size": "3"})))
+        set_labels(layer, "title(lower(\"IncidentName\"))", 500000)
+        tip = ("<b>[% title(lower(\"IncidentName\")) %] fire</b>"
+               "<br>[% format_number(\"IncidentSize\", 0) %] acres · [% coalesce(\"PercentContained\", '?') %]% contained"
+               "<br>Updated [% format_date(\"ModifiedOnDateTime_dt\", 'd MMM yyyy h:mm ap') %]")
+    elif key == "hosp":
+        layer.setRenderer(QgsSingleSymbolRenderer(QgsMarkerSymbol.createSimple(
+            {"name": "cross_fill", "color": HOSPITAL_COLOUR, "outline_color": "#ffffff", "outline_width": "0.3", "size": "4.2"})))
+        set_labels(layer, "title(lower(\"NAME\"))", 150000)
+        tip = ("<b>[% title(lower(\"NAME\")) %]</b><br>[% title(lower(\"ADDRESS\")) %], [% title(lower(\"CITY\")) %]"
+               "<br>[% title(lower(\"TYPE\")) %][% CASE WHEN \"TRAUMA\" LIKE 'LEVEL%' THEN ' · Trauma ' || replace(\"TRAUMA\", 'LEVEL ', '') END %]"
+               "[% CASE WHEN \"HELIPAD\" = 'Y' THEN ' · Helipad' END %]"
+               "<br><a href=\"tel:[% regexp_replace(\"TELEPHONE\", '[^0-9+]', '') %]\">[% \"TELEPHONE\" %]</a>"
+               "<br>Not every hospital has an emergency room: call ahead. In an emergency, call 911.")
     else:                   # protected areas
         cats = [QgsRendererCategory(cat, _area(colour, 0.15, 1.6, line_opacity=0.9), label) for cat, label, colour, _rule in PROTECTED]
         layer.setRenderer(QgsCategorizedSymbolRenderer(PROTECTED_CATEGORY, cats))
@@ -531,6 +603,12 @@ def style_overlay(layer, key):
     layer.setScaleBasedVisibility(True)
     layer.setMinimumScale(OVERLAYS[key][3])      # hidden when zoomed out beyond this, as in FieldKey
     layer.setReadOnly(True)
+    if key in LIVE:                              # fires and TFRs change through the day
+        layer.setAutoRefreshInterval(LIVE_MINUTES * 60000)
+        try:
+            layer.setAutoRefreshMode(Qgis.AutoRefreshMode.ReloadData)
+        except AttributeError:                   # before QGIS 3.34
+            layer.setAutoRefreshEnabled(True)
 
 
 def remove_reference_layers(project):
@@ -569,7 +647,7 @@ def data_extent(layers, crs, project):
 
 def add_reference_layers(project, make_feature_layer=feature_service_layer, online=True, default_basemap=None,
                          data_layers=()):
-    """Basemaps, 3D terrain, airspace and protected areas from the sources FieldKey uses.
+    """Basemaps, 3D terrain, airspace (with TFRs), wildfire, hospitals and protected areas from the sources FieldKey uses.
 
     Returns (layers by key, names that couldn't be loaded). A source that can't be reached is
     skipped: run the script again later to add it.
@@ -594,10 +672,20 @@ def add_reference_layers(project, make_feature_layer=feature_service_layer, onli
         if lyr:
             style_overlay(lyr, key)
             air.addLayer(lyr)
+    fire = _tag(root.insertGroup(at + 1, FIRE_GROUP), "wildfire")
+    for key, name in FIRE_LAYERS:
+        lyr = keep(make_feature_layer(key, name), key, name)
+        if lyr:
+            style_overlay(lyr, key)
+            fire.addLayer(lyr)
+    hosp = keep(make_feature_layer("hosp", HOSPITAL_LAYER), "hosp", HOSPITAL_LAYER)
+    if hosp:
+        style_overlay(hosp, "hosp")
+        root.insertLayer(at + 2, hosp)
     env = keep(make_feature_layer("env", PROTECTED_LAYER), "env", PROTECTED_LAYER)
     if env:
         style_overlay(env, "env")
-        root.insertLayer(at + 1, env)
+        root.insertLayer(at + 3 if hosp else at + 2, env)
 
     tile_url = openfreemap_tiles() if online else OFM_OFFLINE_TILES
     if not tile_url:

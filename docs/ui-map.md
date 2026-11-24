@@ -16,7 +16,7 @@ How the labels work:
 
 The screenshots use made-up sites around Redding. They're in `docs/ui-map/`.
 
-Written for v81. When a version adds, moves or removes a control, this file and that screen's screenshot change with it.
+Written for v82. When a version adds, moves or removes a control, this file and that screen's screenshot change with it.
 
 ## Screens at a glance
 
@@ -41,6 +41,7 @@ Written for v81. When a version adds, moves or removes a control, this file and 
 | **VER** | Earlier versions | **SET-32** |
 | **FLY** | Flyability (drone weather) | **HDR-03**, **MAP-06** |
 | **V3D** | Photorealistic 3D view | **MAP-08**, **SITE-04b** |
+| **HOSP** | Nearest hospitals | **MAP-41d**, **MAP-43c** or **SITE-04c** |
 | **TOAST** | Short message at the bottom | Appears by itself after an action |
 
 ---
@@ -88,8 +89,9 @@ Written for v81. When a version adds, moves or removes a control, this file and 
 | MAP-24 | <img src="ui-map/icons/lasso.svg" width="18" alt=""> | Lasso | Draw around sites to select them | `mLasso` |
 | MAP-25 | <img src="ui-map/icons/selvis.svg" width="18" alt=""> | Select visible | Selects every site on screen | `mSelVis` |
 | MAP-26 | <img src="ui-map/icons/x.svg" width="18" alt=""> | Clear selection | × button | `mClear` |
-| MAP-27 | <img src="ui-map/icons/plot.svg" width="18" alt=""> | Parcels | Property lines layer | `mParcels` |
-| MAP-28 | <img src="ui-map/icons/plane.svg" width="18" alt=""> | Airspace | FAA airspace and LAANC grid layer | `mAirspace` |
+| MAP-27 | <img src="ui-map/icons/plot.svg" width="18" alt=""> | Parcels | Property lines layer. Shows from about zoom 12. | `mParcels` |
+| MAP-28 | <img src="ui-map/icons/plane.svg" width="18" alt=""> | Airspace | FAA airspace, LAANC grid and TFRs (pink dashed). TFRs show from about zoom 6. | `mAirspace` |
+| MAP-48 | <img src="ui-map/icons/flame.svg" width="18" alt=""> | Fire | Wildfires and perimeters (NIFC, orange) plus Red Flag Warnings and Fire Weather Watches (NWS, dashed red / orange zones). Shows from about zoom 5. | `mFire` |
 | MAP-29 | <img src="ui-map/icons/trees.svg" width="18" alt=""> | Protected | Parks, wildlife and protected areas layer | `mEnv` |
 | MAP-30 | <img src="ui-map/icons/radar.svg" width="18" alt=""> | Radar | Weather radar layer | `mRadar` |
 | MAP-31 | <img src="ui-map/icons/rain.svg" width="18" alt=""> | Rain | Rain forecast layer | `mRain` |
@@ -98,24 +100,34 @@ Written for v81. When a version adds, moves or removes a control, this file and 
 | MAP-34 | <img src="ui-map/icons/filedown.svg" width="18" alt=""> | KML | Exports the shown or selected sites as KML | `mExport` |
 | MAP-35 | <img src="ui-map/icons/send.svg" width="18" alt=""> | Build request | Big amber button. Builds the access request (**REQ**). | `mReq` |
 | MAP-36 |  | Pin color legend | New, Texted, Replied, Scheduled, Access issue | `mLegend` |
-| MAP-37 |  | Layer legend | Key for whichever of **MAP-27** to **MAP-31** is on | `ovLegend` |
+| MAP-37 |  | Layer legend | Key for whichever of **MAP-28**, **MAP-29** and **MAP-48** are on | `ovLegend` |
 | MAP-38 |  | Weather bar | Radar or rain time and status line | `wxBar` |
+| MAP-39 |  | Property line colors | Row of color dots above the site count while **MAP-27** is on: Auto, White, Yellow, Cyan, Magenta, Red, Black | `pcLegend` |
 
 **Things on the map**
 
-<img src="ui-map/map-popup.jpg" width="260" alt="Site popup and pin color legend"> <img src="ui-map/map-pin-popup.jpg" width="260" alt="Custom pin popup">
+<img src="ui-map/map-popup.jpg" width="260" alt="Site popup and pin color legend"> <img src="ui-map/map-pin-popup.jpg" width="260" alt="Custom pin popup"> <img src="ui-map/map-tfr.jpg" width="260" alt="Layer popup on a TFR">
+
+The third screenshot is the layer popup (**MAP-45**) inside the Beale AFB TFR.
 
 | Label | Icon | Name | What it is | Code |
 |---|:-:|---|---|---|
 | MAP-40 |  | Site pin | One site, colored by status. Its shape and size come from **SET-40** and **SET-41**. | `cmap` pins layer |
 | MAP-41 |  | Site popup | Small bubble when you tap a site pin | `showPinPopup` |
 | MAP-41a |  | details ▸ | Inside **MAP-41**. Expands to name, issue and access notes. Long notes scroll inside the popup, and the map moves so the whole popup shows above the bottom panel. | `.popmore` |
+| MAP-41b | <img src="ui-map/icons/drone.svg" width="18" alt=""> | Flyability here | Inside the expanded **MAP-41**. Opens **FLY** for the site. | `data-fly` |
+| MAP-41c | <img src="ui-map/icons/3d.svg" width="18" alt=""> | 3D view | Inside the expanded **MAP-41**. Opens **V3D**. | `data-v3d` |
+| MAP-41d | <img src="ui-map/icons/cross.svg" width="18" alt=""> | Nearest hospital | Inside the expanded **MAP-41**. Opens **HOSP** for the site. | `data-hosp` |
 | MAP-42 |  | Custom pin | A pin you dropped (gate, path, hazard…) | `userPins` |
 | MAP-43 |  | Custom pin popup | Bubble for **MAP-42** | `showUserPinPopup` |
 | MAP-43a | <img src="ui-map/icons/edit.svg" width="18" alt=""> | edit | Inside **MAP-43**. Opens **PIN**. | `data-pact="edit"` |
 | MAP-43b | <img src="ui-map/icons/trash.svg" width="18" alt=""> | delete | Inside **MAP-43** | `data-pact="del"` |
+| MAP-43c | <img src="ui-map/icons/cross.svg" width="18" alt=""> | hospital | Inside **MAP-43**. Opens **HOSP** for the pin. | `data-hosp` |
 | MAP-44 |  | Parcel popup | Owner and parcel info when **MAP-27** is on | `showParcelPopup` |
-| MAP-45 |  | Layer popup | Airspace or protected-area info when you tap that layer | `openOverlayPopup` |
+| MAP-45 |  | Layer popup | What's at the spot you tapped: Airspace (with TFRs), Fire and Protected sections for the layers that are on | `openOverlayPopup` |
+| MAP-45a | <img src="ui-map/icons/info.svg" width="18" alt=""> | Times & altitudes | On a TFR in **MAP-45**. Loads its active times (your time), floor and ceiling, and the NOTAM text. | `data-tfr` |
+| MAP-45b | <img src="ui-map/icons/ext.svg" width="18" alt=""> | FAA page | On a TFR in **MAP-45**. Opens the TFR on tfr.faa.gov. | `tfr.faa.gov` link |
+| MAP-45c | <img src="ui-map/icons/ext.svg" width="18" alt=""> | Check NOTAMs | Bottom of **MAP-45** when Airspace is on. Copies the spot's coordinates and opens FAA NOTAM Search; names the nearest airport when it knows it. | `data-notam` |
 | MAP-46 |  | Lasso drawing | The line you draw with **MAP-24** | `lassoLayer` |
 | MAP-47 | <img src="ui-map/icons/nav.svg" width="18" alt=""> | Directions buttons | "Google Maps" and "Open in Maps" inside **MAP-41**, **MAP-43** and **MAP-44** | `navLinks` |
 
@@ -256,6 +268,7 @@ Sheet that slides up from the bottom. Right: the access issue box on a flagged s
 | SITE-04 |  | "Also:" links | Under the tiles | `dNav` |
 | SITE-04a |  | Google Maps | Directions in Google Maps | `dNav a` |
 | SITE-04b |  | 3D view | Opens **V3D** for this site | `data-v3dsite` |
+| SITE-04c |  | Nearest hospital | Opens **HOSP** for this site | `data-hospsite` |
 | SITE-05 |  | Name | Editable | `dNameEdit` |
 | SITE-06 |  | Phones | One line for each number | `dPhones` |
 | SITE-06a | <img src="ui-map/icons/phone.svg" width="18" alt=""> | Call | On each phone line | `dPhones a[href^=tel]` |
@@ -484,8 +497,26 @@ Long sheet, shown here in three parts from top to bottom. The requestor details 
 | Label | Icon | Name | What it is | Code |
 |---|:-:|---|---|---|
 | SET-45 |  | Parcels proxy URL | Optional | `sParcelsProxy` |
-| SET-50 |  | Version line | "FieldKey · v79 · …" | `sAppVer` |
+| SET-46 |  | Line color | Same choices as **MAP-39**. Auto: white on Dark, yellow on Aerial, cyan on Hybrid, magenta on Streets and Topo. | `segParcelColor` |
+| SET-50 |  | Version line | "FieldKey · v82 · …" | `sAppVer` |
 | SET-51 | <img src="ui-map/icons/refresh.svg" width="18" alt=""> | Check for update | | `sCheckUpdate` |
+
+## HOSP: Nearest hospitals
+
+<img src="ui-map/hosp.jpg" width="300" alt="Nearest hospitals sheet">
+
+The five closest open hospitals that may treat an injury (general acute care, critical access, children's, military), nearest first. Data: FEMA's copy of the national hospitals list (HIFLD). It has no "has an ER" flag, so call ahead. Each list is saved on the phone and shown again offline for the same area.
+
+| Label | Icon | Name | What it is | Code |
+|---|:-:|---|---|---|
+| HOSP-00 | <img src="ui-map/icons/x.svg" width="18" alt=""> | Close | | `.sheetclose` |
+| HOSP-01 |  | From | The site or pin and its coordinates | `hFrom` |
+| HOSP-02 |  | Hospital card | Name, straight-line miles and direction, address | `.hrow` |
+| HOSP-02a |  | Badges | Type, trauma level, helipad | `.hbadges` |
+| HOSP-02b | <img src="ui-map/icons/phone.svg" width="18" alt=""> | Call | Calls the hospital | `.hcall` |
+| HOSP-02c | <img src="ui-map/icons/nav.svg" width="18" alt=""> | Directions | "Google Maps" and "Open in Maps", as in **MAP-47** | `.navrow` |
+| HOSP-02d | <img src="ui-map/icons/copy.svg" width="18" alt=""> | Copy | Copies the hospital's name, to paste into a message or your notes | `data-hcopy` |
+| HOSP-03 |  | Note | Straight-line distance, call ahead, call 911 | `hNote` |
 
 ## VER: Earlier versions
 

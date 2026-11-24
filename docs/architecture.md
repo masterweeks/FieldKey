@@ -35,6 +35,7 @@ flowchart LR
 | FieldKey | `index.html`, `sync-engine.js`, `export-plan.js` | Offline-first app. Saves locally, queues changes in an outbox, syncs when online. |
 | QGIS project | `qgis/fieldkey_qgis_setup.py`, `docs/qgis-setup.md` | Builds the "FieldKey" project stored in the database, with forms and styles, plus FieldKey's basemaps, terrain, airspace and protected areas from their online sources. |
 | Export worker | `worker/`, `docs/export.md` | Builds mission GeoPackages from queued jobs. |
+| TFR relay | `supabase/functions/tfr/` | Edge function that passes tfr.faa.gov's active TFR shapes and details to FieldKey and QGIS (the FAA site blocks browser calls), and NWS Red Flag / Fire Weather zones to QGIS as one file of shapes. Public data only: no keys, no database access, runs without login. |
 | Runbook | `docs/runbook.md` | Passwords, accounts, conflicts, exports, paused project. |
 
 ## Who can see what

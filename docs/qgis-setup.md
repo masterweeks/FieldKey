@@ -100,15 +100,20 @@ untick.
 Aerial and Hybrid use USGS photos, not the Esri photos FieldKey shows online: Esri's terms
 restrict use outside its own apps. They are the same photos FieldKey shows offline.
 
-**Airspace** (group) and **Protected areas** are the same live FAA and USGS PAD-US layers, with
-FieldKey's filters and colours:
+**Airspace** (group), **Wildfire** (group), **Hospitals** and **Protected areas** are the same live
+layers FieldKey shows, with FieldKey's filters and colours:
 
 | Layer | Shows | Appears closer than |
 |---|---|---|
+| TFRs | pink dashed: active FAA Temporary Flight Restrictions, from tfr.faa.gov through FieldKey's relay | 1:10,000,000 |
 | National security restrictions, and the part-time ones | red: no drones | 1:2,500,000 |
 | Controlled airspace | Class B and C solid, Class D and surface Class E dashed | 1:2,500,000 |
 | Special use airspace | prohibited, restricted, military operations, warning and alert areas | 1:5,000,000 |
 | LAANC grid | the altitude that can be approved automatically, red (0 ft) to green (400 ft) | 1:150,000 |
+| Wildfires | orange dots: current wildfires (NIFC), labelled closer than 1:500,000; prescribed burns left out | 1:10,000,000 |
+| Fire perimeters | orange areas: mapped fire perimeters (NIFC) | 1:10,000,000 |
+| Red Flag Warnings and Fire Weather Watches | red / orange dashed: the National Weather Service fire-weather zones under an alert | 1:10,000,000 |
+| Hospitals | red crosses: open hospitals that may treat an injury (general acute care, critical access, children's, military), named closer than 1:150,000 | 1:1,000,000 |
 | Protected areas | national parks, wildlife refuges, wilderness, state parks and wildlife areas, marine protected areas | 1:1,000,000 |
 
 - Untick a layer or the whole group to hide it. The legend under each layer explains the colours.
@@ -116,7 +121,16 @@ FieldKey's filters and colours:
   and the drone rule. The **Identify** tool shows every field.
 - These layers load a few seconds after you stop panning, because each one asks its service for
   the area in view.
-- As in FieldKey, TFRs and NOTAMs aren't shown. Check B4UFLY or tfr.faa.gov before flying.
+- **TFRs, wildfires and fire weather reload every 10 minutes** while the project is open. Hospitals,
+  airspace and protected areas load when you pan.
+- A TFR's hover tip links to its FAA page (times, altitudes and the NOTAM text). The hospital tip has
+  the phone number, trauma level and helipad. The source has no "has an emergency room" flag, so call ahead.
+- **NOTAMs aren't shown**, as in FieldKey: there's no free feed. Use FAA NOTAM Search
+  (notams.aim.faa.gov) before flying.
+- **TFRs and fire-weather zones** come from FieldKey's relay, a Supabase edge function
+  (`supabase/functions/tfr`), because tfr.faa.gov blocks other websites and NWS alerts name zones
+  rather than shapes. It reads only public FAA and NWS data and holds no keys. Its first shape is a
+  blank placeholder at 0°, 0° that the layers filter out, so they keep their type when nothing is active.
 
 **3D.** The script makes the **Terrain (elevation)** layer the project's terrain. It stays
 unticked: it isn't drawn on the flat map.
@@ -146,6 +160,10 @@ latitude and longitude.
 | Terrain Tiles on AWS | 3D terrain, Dark's shaded relief | open data, credits listed by the provider |
 | FAA Aeronautical Information Services | Airspace | US Government work, public domain |
 | USGS PAD-US | Protected areas | US Government work, public domain |
+| FAA tfr.faa.gov (through FieldKey's relay) | TFRs | US Government work, public domain |
+| NIFC WFIGS current incidents and perimeters | Wildfires, Fire perimeters | US Government work, public domain |
+| National Weather Service (api.weather.gov, through FieldKey's relay) | Red Flag Warnings and Fire Weather Watches | US Government work, public domain |
+| FEMA RAPT Hospitals (from HIFLD) | Hospitals | public use |
 
 To leave all of this out, set `ADD_REFERENCE_LAYERS = False` at the top of the script: you then
 get the FieldKey group and one OpenStreetMap layer.
@@ -263,6 +281,9 @@ select
 - **`password authentication failed`:** the username must be
   `qgis_editor.fdclbfqgsookhxfboxpn`, and the password the one you saved in step 1.
 - **`null value in column "owner_id"`:** pick a Mission for the new feature.
+- **Town names shown twice ("Healdsburg Healdsburg"):** a project built before v82. The map tiles repeat
+  a town near each tile edge; the script now tells QGIS to drop a repeat within 30 mm. Run the script
+  again to update the project.
 - **`… belongs to a different user`:** the Mission, Asset or Pin you picked belongs to another
   user. Pick one of this feature owner's.
 - **`permission denied for table …` when deleting:** use the Soft delete action.

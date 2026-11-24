@@ -42,7 +42,13 @@ OVERLAY_COLUMNS = {
     "nsrpt": ["Facility:string", "Base:string"],
     "uasfm": ["CEILING:integer", "APT1_NAME:string"],
     "env": ["Unit_Nm:string", "Des_Tp:string", "Mang_Name:string", "Mang_Type:string"],
+    "tfr": ["id:string", "type:string", "title:string", "placeholder:integer"],
+    "rfw": ["event:string", "headline:string", "ends:string", "area:string", "zoneName:string", "placeholder:integer"],
+    "fireper": ["poly_IncidentName:string", "poly_GISAcres:double", "attr_PercentContained:double", "poly_DateCurrent:datetime"],
+    "fire": ["IncidentName:string", "IncidentSize:double", "PercentContained:double", "ModifiedOnDateTime_dt:datetime"],
+    "hosp": ["NAME:string", "ADDRESS:string", "CITY:string", "TYPE:string", "TELEPHONE:string", "TRAUMA:string", "HELIPAD:string"],
 }
+POINT_OVERLAYS = ("fire", "hosp")
 BASEMAPS = ["Dark", "Aerial", "Hybrid", "Streets", "Topo"]
 OFFLINE = {"make_feature_layer": None, "online": False}     # make_feature_layer is filled in below
 
@@ -54,7 +60,8 @@ def memory_layer(table, name):
 
 def memory_overlay(key, name):
     fields = "&".join("field=" + f for f in OVERLAY_COLUMNS[key])
-    return QgsVectorLayer(f"MultiPolygon?crs=EPSG:4326&{fields}", name, "memory")
+    geom = "Point" if key in POINT_OVERLAYS else "MultiPolygon"
+    return QgsVectorLayer(f"{geom}?crs=EPSG:4326&{fields}", name, "memory")
 
 
 OFFLINE["make_feature_layer"] = memory_overlay
@@ -102,10 +109,24 @@ def check_reference_layers(proj, check):
     check(base is not None and [c.name() for c in base.children()] == BASEMAPS, "five basemaps, named as in FieldKey")
     check(base.isMutuallyExclusive() and checked(base) == [fk.DEFAULT_BASEMAP], "one basemap on at a time, Dark first")
     order = [c.name() for c in root.children()]
-    check(order[:3] == [fk.GROUP_NAME, fk.AIRSPACE_GROUP, fk.PROTECTED_LAYER] and order[-2:] == [fk.BASEMAP_GROUP, "Terrain (elevation)"],
-          "order: FieldKey data, airspace, protected areas ... basemaps, terrain")
+    check(order[:5] == [fk.GROUP_NAME, fk.AIRSPACE_GROUP, fk.FIRE_GROUP, fk.HOSPITAL_LAYER, fk.PROTECTED_LAYER]
+          and order[-2:] == [fk.BASEMAP_GROUP, "Terrain (elevation)"],
+          "order: FieldKey data, airspace, wildfire, hospitals, protected areas ... basemaps, terrain")
     air = root.findGroup(fk.AIRSPACE_GROUP)
-    check([c.name() for c in air.children()] == [n for _k, n in fk.AIRSPACE_LAYERS], "airspace: restrictions on top, LAANC grid lowest")
+    check([c.name() for c in air.children()] == [n for _k, n in fk.AIRSPACE_LAYERS], "airspace: TFRs and restrictions on top, LAANC grid lowest")
+    fire = root.findGroup(fk.FIRE_GROUP)
+    check(fire is not None and [c.name() for c in fire.children()] == [n for _k, n in fk.FIRE_LAYERS], "wildfire group: fires, perimeters, fire weather")
+    tfr = by["TFRs"].renderer().symbol().symbolLayer(0)
+    check(tfr.strokeColor().name().upper() == fk.TFR_COLOUR and int(tfr.strokeStyle()) != 1, "TFRs in FieldKey's pink, dashed")
+    rfw = by["Red Flag Warnings and Fire Weather Watches"].renderer()
+    check(rfw.type() == "categorizedSymbol" and [c.value() for c in rfw.categories()] == ["Red Flag Warning", "Fire Weather Watch"],
+          "fire weather by alert type")
+    live = [by[n] for k, n in fk.AIRSPACE_LAYERS + fk.FIRE_LAYERS if k in fk.LIVE]
+    check(len(live) == 4 and all(l.autoRefreshInterval() == fk.LIVE_MINUTES * 60000 for l in live),
+          "TFRs and fire layers reload every %d minutes" % fk.LIVE_MINUTES)
+    hosp = by[fk.HOSPITAL_LAYER]
+    check(hosp.renderer().type() == "singleSymbol" and hosp.labelsEnabled() and "tel:" in hosp.mapTipTemplate(),
+          "hospitals: red cross, names, a tap-to-call number in the tip")
 
     cls = by["Controlled airspace"].renderer()
     check(cls.type() == "categorizedSymbol" and [c.value() for c in cls.categories()] == ["B", "C", "D", "E"], "controlled airspace by class")
@@ -140,7 +161,7 @@ def check_reference_layers(proj, check):
         got.append(QgsExpression(fk.PROTECTED_CATEGORY).evaluate(ctx))
     check(got == [c for _d, _m, c in want], "protected areas sorted into kinds the way FieldKey does")
 
-    for key, name in fk.AIRSPACE_LAYERS + [("env", fk.PROTECTED_LAYER)]:
+    for key, name in fk.AIRSPACE_LAYERS + fk.FIRE_LAYERS + [("hosp", fk.HOSPITAL_LAYER), ("env", fk.PROTECTED_LAYER)]:
         lyr = by[name]
         if not (lyr.hasScaleBasedVisibility() and lyr.minimumScale() == fk.OVERLAYS[key][3] and lyr.mapTipTemplate()
                 and lyr.customProperty(fk.REF_TAG) == key):
@@ -162,6 +183,11 @@ def check_reference_layers(proj, check):
     check(isinstance(roads, QgsVectorTileLayer) and len(roads.renderer().styles()) == 8 and len(roads.labeling().styles()) == 2,
           "Hybrid: four road kinds with an edge and a surface, plus road and town names")
     check(proj.crs().authid() == "EPSG:3857", "project drawn in Web Mercator like FieldKey")
+    names = [st.labelSettings().thinningSettings() for st in roads.labeling().styles()]
+    if "Dark map" in by and by["Dark map"].labeling():
+        names += [st.labelSettings().thinningSettings() for st in by["Dark map"].labeling().styles()]
+    check(names and all(t.allowDuplicateRemoval() and t.minimumDistanceToDuplicate() == fk.LABEL_REPEAT_MM for t in names),
+          "town and road names drawn once, not repeated from neighbouring tiles")
 
 
 def main():
@@ -293,6 +319,13 @@ def main():
         check(any("Whiskeytown" in (f["Unit_Nm"] or "") for f in parks), "protected areas: Whiskeytown is there")
         check(by["Special use airspace"].featureCount() != 0 and by["National security restrictions"].featureCount() != 0,
               "special use airspace and national security restrictions have features")
+        tfrs = list(by["TFRs"].getFeatures())
+        check(len(tfrs) > 0 and all(f["id"] for f in tfrs), "TFRs: %d active shapes from the relay, placeholder left out" % len(tfrs))
+        check(by["Red Flag Warnings and Fire Weather Watches"].isValid() and "event" in by["Red Flag Warnings and Fire Weather Watches"].fields().names(),
+              "fire weather layer loads (%d zone(s) active)" % by["Red Flag Warnings and Fire Weather Watches"].featureCount())
+        check(by["Wildfires"].isValid() and by["Fire perimeters"].isValid(), "NIFC wildfires and perimeters load")
+        hosp = near(fk.HOSPITAL_LAYER, -122.45, 40.55, -122.35, 40.62)
+        check(any("MERCY" in (f["NAME"] or "") for f in hosp), "hospitals: Mercy Medical Center Redding is there")
 
     app.exitQgis()
     print("\n%d check(s) failed" % len(failures) if failures else "\nall checks passed")

@@ -227,6 +227,20 @@ manually** on the main screen creates a fresh record.)
   or the airport isn't LAANC-enabled. FieldKey can't submit the request to the FAA
   itself — only FAA-approved LAANC providers can — so the authorization is filed and
   approved in that app or site, and the approval comes to you from there.
+- **TFRs and NOTAMs** — with **Airspace** on, active FAA **TFRs** (Temporary Flight
+  Restrictions) are drawn as pink dashed areas from about zoom 6. Tap inside one for its
+  NOTAM number, type and place; **Times & altitudes** loads when it's active (in your
+  local time), its floor and ceiling, and the full NOTAM text, and **FAA page** opens it
+  on tfr.faa.gov. TFRs come from tfr.faa.gov through a small FieldKey relay (a Supabase
+  edge function, `supabase/functions/tfr`), because the FAA site doesn't allow direct
+  calls from web pages. NOTAMs aren't shown: there's no free source a web page can use.
+  **Check NOTAMs** at the bottom of the details card copies the spot's coordinates and
+  opens FAA NOTAM Search (naming the nearest airport when the LAANC grid knows it).
+- **Fire** — the **Fire** toggle shows current wildfires from NIFC (incident points and
+  mapped perimeters in orange; prescribed burns left out) and National Weather Service
+  **Red Flag Warnings** (red dashed) and **Fire Weather Watches** (orange dashed), drawn
+  as the affected fire-weather zones. Tap for the fire's name, acres, containment and last
+  update, or the alert and when it ends. Shows from about zoom 5; needs a connection.
 - **Protected areas** — the **Protected areas** toggle shows land where drone flight
   is commonly banned or restricted (from the USGS Protected Areas Database, online):
   **National Park Service** units (orange), **National Wildlife Refuges** (green),
@@ -248,6 +262,13 @@ manually** on the main screen creates a fresh record.)
   details. Weather comes from two forecasts at once — Open-Meteo and the National Weather
   Service (US) — and wind, gusts, rain chance and visibility use the worse of the two,
   so one service being down doesn't stop it. It needs a connection.
+- **Nearest hospital** — **Nearest hospital** in a site's map details, **hospital** on a
+  custom pin, or **Nearest hospital** under a site's tiles lists the five closest hospitals
+  that may treat an injury (general acute care, critical access, children's and military),
+  nearest first: straight-line miles and direction, address, trauma level, helipad, a
+  **Call** button and directions. Data is FEMA's copy of the national hospitals list
+  (formerly HIFLD). It has no emergency-room flag, so call ahead; in an emergency call 911.
+  Each list is kept on the phone, so the same area works offline afterwards.
 - **List** — (tap the list button on the map) three tiles at the top import a CSV or KML file, an email
   return, or a contact added by hand. Under the search box and filters, four tiles
   open **Request**, **Map**, **Export** and **Text guide** (guided texting). When sites
@@ -259,7 +280,7 @@ manually** on the main screen creates a fresh record.)
   the texts-sent counter, notes and **Delete asset**. Every panel uses the same Lucide icons
   on its headings and buttons.
 - **Map controls** — the panel under the map is a grid of icon tiles: **Parcels**,
-  **Airspace**, **Protected**, **Radar**, **Rain**, **Issue**, **Pin** and **KML**, with
+  **Airspace**, **Fire**, **Protected**, **Radar**, **Rain**, **Issue**, **Pin** and **KML**, with
   **Build request** below. A tile turns amber when it's on, and its second line shows
   status such as "zoom in" or "no signal". The small buttons beside the site count are
   pin colors (the legend), lasso, select visible and clear. On the map's left edge are
@@ -277,8 +298,10 @@ manually** on the main screen creates a fresh record.)
   the expected amount at that spot. Both weather layers cover the US, need a connection,
   and are free — no key or account.
 - **Property lines** — the **Property lines** toggle draws parcel boundaries for the
-  whole US from Regrid's free tile layer. Zoom in to street level (the button says
-  "zoom in" until you're close enough). The free layer is lines only; to get owner,
+  whole US from Regrid's free tile layer, from about zoom 12, so a large property can be
+  seen whole. Pick the line color in the row of dots that appears above the site count
+  (or in Settings → Property lines): **Auto** uses white on Dark, yellow on Aerial, cyan
+  on Hybrid and magenta on Streets and Topo. The free layer is lines only; to get owner,
   parcel number and acreage when you tap a lot, add a paid Regrid **Parcels proxy URL**
   in Settings. Property lines need a connection and aren't part of **Save offline**,
   though areas you've already viewed are kept for later.
