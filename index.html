@@ -454,6 +454,9 @@
   .csel{flex:0 0 auto;align-self:center;width:22px;height:22px;border-radius:50%;border:2px solid var(--line2);background:transparent;margin-left:12px;cursor:pointer;position:relative;appearance:none;-webkit-appearance:none}
   .csel.on{background:var(--amber);border-color:var(--amber)}
   .csel.on::after{content:"";position:absolute;left:6px;top:2.5px;width:5px;height:9px;border:solid #1a1300;border-width:0 2px 2px 0;transform:rotate(45deg)}
+  .kmlbar{display:flex;align-items:center;gap:8px;margin:-4px 2px 12px;padding:6px 8px 6px 12px;background:var(--bg2);border:1px solid var(--line2);border-radius:10px}
+  .kmlbar>.ico{width:16px;height:16px;flex:none;color:var(--amber)}
+  .kmlbar .kn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 13px var(--ui)}
   .selbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:-4px 2px 12px;padding:8px 12px;background:rgba(255,176,0,.08);border:1px solid var(--amber);border-radius:10px}
   .selbar #selCount{margin-right:auto}
   .impbar{height:8px;border-radius:5px;background:var(--bg3);overflow:hidden;margin:4px 0 10px}
@@ -683,6 +686,7 @@ select.chip.sel{background-color:var(--amber)}
       <button class="chip" data-f="replied">Replied</button>
       <button class="chip" data-f="scheduled">Scheduled</button>
     </div>
+    <div class="kmlbar hidden" id="kmlBar"><svg class="ico" aria-hidden="true"><use href="#i-filetext"/></svg><span class="kn" id="kmlBarName"></span><button class="sbtn" id="kmlRenameBtn" type="button"><svg class="ico" aria-hidden="true"><use href="#i-edit"/></svg>Rename</button></div>
     <div class="htiles c4">
       <button class="tile" id="buildReqBtn" type="button" title="Build request"><svg class="ico" aria-hidden="true"><use href="#i-send"/></svg><span class="tl">Request</span></button>
       <button class="tile" id="mapBtn" type="button" title="Open the map"><svg class="ico" aria-hidden="true"><use href="#i-map"/></svg><span class="tl">Map</span></button>
@@ -918,6 +922,16 @@ select.chip.sel{background-color:var(--amber)}
 </div>
 
 <!-- add contact manually -->
+<div class="scrim" id="kmlScrim"></div>
+<div class="sheet" id="kmlSheet" role="dialog" aria-label="Rename file">
+  <div class="grab"></div>
+  <h2><svg class="ico" aria-hidden="true"><use href="#i-edit"/></svg>Rename file</h2>
+  <p class="hint" id="kmlHint"></p>
+  <div class="sgroup"><label class="label" for="kmlNewName"><svg class="ico" aria-hidden="true"><use href="#i-filetext"/></svg>New name</label><input type="text" id="kmlNewName" autocomplete="off" maxlength="80" /></div>
+  <p class="note" id="kmlStat"></p>
+  <button class="btn primary" id="kmlSave" style="margin-top:12px">Rename</button>
+</div>
+
 <div class="scrim" id="addScrim"></div>
 <div class="sheet" id="addSheet" role="dialog" aria-label="Add contact">
   <div class="grab"></div>
@@ -1188,7 +1202,7 @@ select.chip.sel{background-color:var(--amber)}
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v85";
+  const APP_VER="v86";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -2013,6 +2027,8 @@ select.chip.sel{background-color:var(--amber)}
     const sel=$("#custKml"); if(!sel) return;
     const files=kmlFiles(), sig=files.map(f=>f.name+"\u0001"+f.n).join("\u0002")+"|"+custKml;
     if(custFilter==="kml"&&!files.some(f=>f.name===custKml)){ custFilter="all"; custKml=""; setFilterChips(); }
+    { const bar=$("#kmlBar"), f=custFilter==="kml"&&files.find(x=>x.name===custKml);
+      if(bar){ bar.classList.toggle("hidden",!f); if(f) $("#kmlBarName").textContent=f.name+" \u00B7 "+f.n+(f.n===1?" site":" sites"); } }
     if(sig===kmlSig) return; kmlSig=sig;
     sel.innerHTML='<option value="">'+(files.length?"KML file":"No files yet")+'</option>'+files.map(f=>
       '<option value="'+escapeHtml(f.name)+'">'+escapeHtml(f.name)+' ('+f.n+')'+(f.name===cfg.latestKml?" \u00B7 latest":"")+'</option>').join("");
@@ -2023,6 +2039,65 @@ select.chip.sel{background-color:var(--amber)}
     const sel=$("#custKml"); if(sel&&custFilter!=="kml") sel.value="";
   }
   function showKmlFile(name){ custFilter="kml"; custKml=name; kmlSig=""; setFilterChips(); renderCustomers(); }
+
+  /* ---- rename an imported file ----
+     A file's name is on each of its sites (c.assignment), and also keys its import date, "latest",
+     its saved offline mission and, when signed in, its synced mission. The synced mission keeps its
+     id and only changes its name, so the server, QGIS and other phones see a rename (fkApplyRemote
+     renames there too). Renaming to another file's name combines the two. */
+  function renameKmlLocal(from,to){
+    const moved=[];
+    customers.forEach(c=>{ if((c.assignment||"").trim()===from){ c.assignment=to; moved.push(c); } });
+    let when={}; try{ when=JSON.parse(store.get("fk_kml_dates","{}")||"{}"); }catch(e){}
+    if(when[from]!=null){ when[to]=Math.max(when[to]||0,when[from]); delete when[from]; store.set("fk_kml_dates",JSON.stringify(when)); }
+    if(cfg.latestKml===from){ cfg.latestKml=to; store.set("fk_latestKml",to); }
+    const regs=loadRegions(); let rc=false;
+    regs.forEach(r=>{ if(r.kind==="mission"&&r.name===from){ r.name=to; rc=true; } });
+    if(rc) saveRegions(regs);
+    if(custKml===from) custKml=to;
+    kmlSig="";
+    return moved;
+  }
+  async function renameKml(from,to){
+    if(sbSession&&!missionIdByName.has(to)){
+      let id=missionIdByName.get(from);
+      if(!id){ try{ id=await uuidFor("mission",from); }catch(e){} }
+      if(id){ missionIdByName.delete(from); missionIdByName.set(to,id); missionNameById.set(id,to); }
+    }
+    const moved=renameKmlLocal(from,to);
+    await persist(); renderCustomers();
+    return moved.length;
+  }
+  let kmlRenameFrom="", kmlCombineArmed="";
+  function openKmlRename(){
+    if(custFilter!=="kml"||!custKml) return;
+    kmlRenameFrom=custKml; kmlCombineArmed="";
+    const f=kmlFiles().find(x=>x.name===custKml), n=f?f.n:0;
+    $("#kmlHint").textContent="\u201C"+custKml+"\u201D \u00B7 "+n+(n===1?" site":" sites")+". The new name shows in the KML file filter, on each site, in saved offline maps and, when signed in, in your synced missions.";
+    $("#kmlNewName").value=custKml; $("#kmlStat").textContent=""; setBtnText($("#kmlSave"),"Rename");
+    $("#kmlScrim").classList.add("show"); $("#kmlSheet").classList.add("show");
+    setTimeout(()=>{ const e=$("#kmlNewName"); if(e){ e.focus(); e.select(); } },80);
+  }
+  function closeKmlRename(){ $("#kmlScrim").classList.remove("show"); $("#kmlSheet").classList.remove("show"); }
+  async function saveKmlRename(){
+    const to=cleanText($("#kmlNewName").value).replace(/\s+/g," ").trim(), from=kmlRenameFrom;
+    if(!to){ $("#kmlStat").textContent="Type a name."; return; }
+    if(to===from){ closeKmlRename(); return; }
+    const exists=kmlFiles().some(x=>x.name===to);
+    if(exists&&kmlCombineArmed!==to){
+      kmlCombineArmed=to;
+      $("#kmlStat").textContent="A file named \u201C"+to+"\u201D already exists. Tap again to combine the two into one file.";
+      setBtnText($("#kmlSave"),"Combine"); return;
+    }
+    const n=await renameKml(from,to);
+    closeKmlRename();
+    toast(exists?"Combined into \u201C"+to+"\u201D \u00B7 "+n+" sites moved":"Renamed to \u201C"+to+"\u201D");
+  }
+  $("#kmlRenameBtn").addEventListener("click",openKmlRename);
+  $("#kmlSave").addEventListener("click",saveKmlRename);
+  $("#kmlScrim").addEventListener("click",closeKmlRename);
+  $("#kmlNewName").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); saveKmlRename(); } });
+  $("#kmlNewName").addEventListener("input",()=>{ if(kmlCombineArmed){ kmlCombineArmed=""; $("#kmlStat").textContent=""; setBtnText($("#kmlSave"),"Rename"); } });
   function renderCustomers(){
     renderKmlPicker();
     const list=$("#custList"), empty=$("#custEmpty"), dbc=$("#dbCount");
@@ -3835,7 +3910,7 @@ select.chip.sel{background-color:var(--amber)}
   $("#impCancel").addEventListener("click",reqCloseImport);
 
   (function addSheetCloseButtons(){
-    const closers={ dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, addSheet:closeAdd, pinSheet:closePinSheet, mpSheet:closePkg, hSheet:closeHosp };
+    const closers={ kmlSheet:closeKmlRename, dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, addSheet:closeAdd, pinSheet:closePinSheet, mpSheet:closePkg, hSheet:closeHosp };
     Object.keys(closers).forEach(id=>{
       const sh=document.getElementById(id); if(!sh)return;
       const bar=document.createElement("div"); bar.className="sheettop";
@@ -4920,7 +4995,10 @@ select.chip.sel{background-color:var(--amber)}
       for(const c of customers){ if(!c.uuid){ c.uuid=await uuidFor("asset",c.id); touched.push(c); } }
       for(const p of userPins){ if(!p.uuid){ p.uuid=await uuidFor("pin",p.id); } }
       const names=[...new Set(customers.map(c=>(c.assignment||"").trim()).filter(Boolean))];
-      for(const n of names){ if(!missionIdByName.has(n)){ const id=await uuidFor("mission",n); missionIdByName.set(n,id); missionNameById.set(id,n); } }
+      for(const n of names){ if(!missionIdByName.has(n)){
+        let id=await uuidFor("mission",n);
+        for(let k=2;missionNameById.has(id)&&missionNameById.get(id)!==n;k++) id=await uuidFor("mission",n+"#"+k);   // that id was renamed away
+        missionIdByName.set(n,id); missionNameById.set(id,n); } }
       for(const n of names){ const id=missionIdByName.get(n), row=missionRow(n,id), h=fingerprint(row), sh=shadow.get("missions:"+id);
         if(!sh||sh.h!==h){ await syncEngine.enqueue("missions",Object.assign({},row,{client_updated_at:now,_base_updated_at:sh?sh.su:null})); await shadowPut("missions",id,h,sh&&sh.su); queued++; } }
       const live=new Set();
@@ -4945,6 +5023,12 @@ select.chip.sel{background-color:var(--amber)}
   let remoteChanged=false;
   async function fkApplyRemote(table,row){
     if(table==="missions"){
+      const was=missionNameById.get(row.id);
+      if(was&&row.name&&was!==row.name){   // renamed on another phone or in QGIS
+        missionIdByName.delete(was);
+        for(const c of renameKmlLocal(was,row.name)) await rawPutCustomer(c);
+        remoteChanged=true;
+      }
       missionNameById.set(row.id,row.name); missionIdByName.set(row.name,row.id);
       await shadowPut("missions",row.id,fingerprint(missionRow(row.name,row.id)),row.updated_at); return;
     }

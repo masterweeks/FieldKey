@@ -33,6 +33,7 @@ Written for v82. When a version adds, moves or removes a control, this file and 
 | **IMP** | Import file | **LIST-01** |
 | **EMAIL** | Import return email | **LIST-02** |
 | **ADD** | Add contact | **LIST-03** |
+| **KREN** | Rename file | **LIST-16a** |
 | **REQ** | Access requests | **LIST-08**, **LIST-13b** or **MAP-35** |
 | **EXP** | Export | **LIST-10** |
 | **PKG** | Mission package | **EXP-07** or **SET-08** |
@@ -217,6 +218,8 @@ The top bar (**HDR**) is tagged here too.
 | LIST-13d | <img src="ui-map/icons/x.svg" width="18" alt=""> | Clear | × clears the selection | `selClear` |
 | LIST-14 |  | Site list | The cards; each one is a **ROW** | `custList` |
 | LIST-15 |  | Empty message | "Nothing here yet…" when the list is empty | `custEmpty` |
+| LIST-16 |  | File bar | Shows while **LIST-07d** shows one file: its name and site count | `kmlBar` |
+| LIST-16a | <img src="ui-map/icons/edit.svg" width="18" alt=""> | Rename | Opens **KREN** | `kmlRenameBtn` |
 
 ## ROW: One site in the list
 
@@ -357,6 +360,17 @@ Sheet that slides up from the bottom. Right: the access issue box on a flagged s
 | ADD-05 |  | Notes | Optional | `acNotes` |
 | ADD-06 |  | Message | What to fix, such as a missing name or phone | `acStat` |
 | ADD-07 | <img src="ui-map/icons/userplus.svg" width="18" alt=""> | Add contact | | `acSave` |
+
+## KREN: Rename file
+
+Renames the file shown in **LIST-07d**. Typing another file's name combines the two: the first tap on **KREN-03** says so, and the second combines them.
+
+| Label | Icon | Name | What it is | Code |
+|---|:-:|---|---|---|
+| KREN-00 | <img src="ui-map/icons/x.svg" width="14" alt=""> | Close | | `sheetclose` |
+| KREN-01 |  | New name | | `kmlNewName` |
+| KREN-02 |  | Message | "Type a name", or that the name is taken and a second tap combines | `kmlStat` |
+| KREN-03 |  | Rename / Combine | | `kmlSave` |
 
 ## REQ: Access requests
 

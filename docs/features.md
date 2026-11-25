@@ -76,7 +76,8 @@ lists every saved area with its size and a Delete button.
 - **Import a CSV, KML or KMZ**, or in the iPhone app open one with FieldKey from Files, Mail or
   Safari. It finds the SAP ID, latitude and longitude columns and merges by SAP
   ID, then name, then address, keeping the phones, access notes and history you already have.
-  Each file is tagged, so you can filter to one day's file.
+  Each file is tagged, so you can filter to one day's file, and **rename** it (or combine two files
+  by giving one the other's name).
 - **Search** by name, address, SAP ID or phone number (any format, or just the last digits). The
   **mic** searches by voice.
 - **Filters:** all, selected, access issue, one imported file.

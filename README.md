@@ -41,6 +41,10 @@ you immediately see just what you loaded — which is also the set you'll usuall
 requests for. (If you pick the wrong file, close the sheet before tapping Import,
 and the daily snapshot is your undo otherwise.)
 
+While the filter shows one file, a bar under the filters has **Rename**: the new name follows
+the file everywhere (its sites, saved offline maps, and your synced missions when signed in), and
+typing another file's name combines the two.
+
 This is how a fresh daily KML merges with everything you've built up. **Addresses
 are resolved on demand:** when you tap **Build request** (list or map), FieldKey
 looks up street addresses just for the selected assets that don't have one yet —
