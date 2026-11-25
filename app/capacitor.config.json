@@ -1,0 +1,10 @@
+{
+  "appId": "io.github.masterweeks.fieldkey",
+  "appName": "FieldKey",
+  "webDir": "www",
+  "backgroundColor": "#0E1116",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0E1116"
+  }
+}

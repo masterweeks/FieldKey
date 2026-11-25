@@ -410,6 +410,7 @@ Edit the text-message template anytime in **Settings → Text message**.
 - `sync-engine.js` — offline outbox + push/pull sync (tests: `node --test tests/`)
 - `supabase/migrations/` — the PostGIS schema, row-level security and sync functions
 - `qgis/` — script that builds the QGIS project; `docs/` — QGIS setup, runbook, and `ui-map.md` (a label for every screen and button)
+- `app/` — the iOS app (Capacitor) that wraps this web app; see `docs/ios-app.md`
 - `scripts/` — backup import and database-password tools
 - `search-text.js` — voice search clean-up and street-type matching (tests: `node --test tests/`)
 - `export-plan.js`, `worker/` — mission package size estimate and the GeoPackage export worker (Docker)

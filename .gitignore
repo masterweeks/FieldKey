@@ -4,3 +4,7 @@ worker/.env
 *.gpkg
 *.gpkg-journal
 __pycache__/
+
+# iOS app (app/): dependencies and the generated copy of the web app
+app/node_modules/
+app/www/

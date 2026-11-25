@@ -1125,6 +1125,8 @@ select.chip.sel{background-color:var(--amber)}
 (function(){
   /* platform flag: true on Android (native app or Chrome) */
   const IS_ANDROID = (typeof navigator!=="undefined" && /Android/i.test(navigator.userAgent||"")) || (window.Capacitor && Capacitor.getPlatform && Capacitor.getPlatform()==="android");
+  /* true inside the iOS app (Capacitor, app/ in the repo): no service worker there, updates come from TestFlight / the App Store */
+  const IS_NATIVE = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
   /* ---------------- storage (degrades if sandboxed) ---------------- */
   const store = {
     get(k,d){ try{const v=localStorage.getItem(k);return v===null?d:v;}catch(e){return d;} },
@@ -2477,6 +2479,7 @@ select.chip.sel{background-color:var(--amber)}
   /* settings: SMS template load + save */
   els.settingsBtn.addEventListener("click",()=>{ $("#sSms").value=cfg.smsTemplate; { const v=$("#sAppVer"); if(v) v.textContent=APP_VER; } });
   { const b=$("#sCheckUpdate"); if(b) b.addEventListener("click",async()=>{
+      if(IS_NATIVE){ toast("The app updates through TestFlight or the App Store."); return; }
       if(!("serviceWorker" in navigator)){ toast("Updates run in the browser."); return; }
       toast("Checking for update\u2026");
       try{
@@ -4910,7 +4913,7 @@ select.chip.sel{background-color:var(--amber)}
   })();
 
   /* ---------------- service worker (offline) ---------------- */
-  if("serviceWorker" in navigator){
+  if("serviceWorker" in navigator && !IS_NATIVE){   // the iOS app ships its files inside the app instead
     let __swReloaded=false;
     navigator.serviceWorker.addEventListener("controllerchange",()=>{
       if(__swReloaded) return; __swReloaded=true; window.location.reload();
