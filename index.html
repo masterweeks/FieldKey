@@ -2248,7 +2248,7 @@ select.chip.sel{background-color:var(--amber)}
   /* Today's scheduled sites on the Lock Screen and the CarPlay dashboard (iOS app, Settings can turn it
      off): "Next: SAP 12345 · 10:30" / "Gate code 2211 · 412 Oak Ridge Rd", with done-of-total. Kept in
      step whenever sites change; ends when nothing is left for today. */
-  var routeLiveKey="", routeLiveTimer=null;   // var: persist() can call refreshRouteLive() before this line runs
+  var routeLiveKey="", routeLiveTimer=null, carPlayKey="";   // var: persist() can call refreshRouteLive() before this line runs
   function todaysRoute(){
     const t=new Date(), same=d=>d.getFullYear()===t.getFullYear()&&d.getMonth()===t.getMonth()&&d.getDate()===t.getDate();
     return customers.filter(c=>c.scheduledAt&&(c.status==="scheduled"||c.status==="done")&&same(new Date(c.scheduledAt)))
@@ -2258,9 +2258,15 @@ select.chip.sel{background-color:var(--amber)}
     if(!IS_NATIVE||!Capacitor.nativePromise) return;
     clearTimeout(routeLiveTimer);
     routeLiveTimer=setTimeout(()=>{
-      const list=store.get("fk_route_live","1")==="1"?todaysRoute():[], next=list.find(c=>c.status==="scheduled");
+      const today=todaysRoute(), fmt=d=>new Date(d).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+      /* the CarPlay app's list (FieldKeyCarPlay.swift), kept whatever the Live Activity setting */
+      const cp=JSON.stringify(today.map(c=>({name:displayName(c),time:fmt(c.scheduledAt),address:stripUSA(c.address),
+        access:c.access||"",notes:c.accessNotes||"",phone:(c.phones&&c.phones[0]&&c.phones[0].tel)||"",
+        lat:c.lat!=null&&!isNaN(+c.lat)?+c.lat:null,lng:c.lng!=null&&!isNaN(+c.lng)?+c.lng:null,done:c.status==="done"})));
+      if(cp!==carPlayKey){ carPlayKey=cp; Capacitor.nativePromise("FieldKeyCarPlay","setSites",{sites:JSON.parse(cp)}).catch(()=>{}); }
+      const list=store.get("fk_route_live","1")==="1"?today:[], next=list.find(c=>c.status==="scheduled");
       if(!next){ if(routeLiveKey){ routeLiveKey=""; Capacitor.nativePromise("FieldKeyLiveActivity","end",{kind:"route"}).catch(()=>{}); } return; }
-      const time=new Date(next.scheduledAt).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+      const time=fmt(next.scheduledAt);
       const st={kind:"route",headline:"Next: "+displayName(next)+" \u00B7 "+time,
         detail:[next.access,next.accessNotes,stripUSA(next.address)].filter(Boolean).join(" \u00B7 ")||"No access notes",
         done:list.filter(c=>c.status==="done").length,total:list.length};

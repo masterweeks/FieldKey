@@ -26,6 +26,7 @@ needs a connection for Google's 3D tiles anyway. Inside the app, `window.Capacit
 | `FieldKeyTexting` (`FieldKeyTexting.swift`) | Texts open Apple's message composer over FieldKey; iOS reports sent or cancelled |
 | `FieldKeyLiveActivity` (`FieldKeyLiveActivity.swift`, `FieldKeyActivity.swift`) | Live Activities: guided texting progress and today's sites |
 | `FieldKeyIntents` (`FieldKeyIntents.swift`) | Siri and Shortcuts: "Text the next site in FieldKey" |
+| `FieldKeyCarPlay` (`FieldKeyCarPlay.swift`) | The CarPlay app's list of today's sites (built; waits for Apple, step 6) |
 | `FieldKeyAI` (`FieldKeyAI.swift`) | Email import with Apple's on-device model |
 
 `app/ios/App/FieldKeyWidgets/` is a widget extension (its own target, iOS 18 or later) that draws
@@ -75,7 +76,11 @@ Follow-up reminders use the official `@capacitor/local-notifications` plugin.
    - **"Today's sites" home-screen and CarPlay widget:** waiting for the Developer Program. A
      widget runs outside the app, so it needs an **App Group** to read the app's data, and App
      Groups need a paid team.
-6. **A full CarPlay app** (waiting for Apple): see "CarPlay entitlement" below.
+6. **A full CarPlay app** (built; waiting for Apple): today's scheduled sites as a list on the
+   car's screen, each with its time, access notes and address, and **Directions** (Apple Maps)
+   and **Call** buttons. It shows the last list FieldKey saved today, even if the app was started
+   from the car. It only appears in a car once Apple grants the entitlement; see "CarPlay
+   entitlement" below.
 
 ## First run on your Mac
 
@@ -203,5 +208,14 @@ Apple to grant the **CarPlay driving task** entitlement. This needs the Develope
    one-tap Call or Directions. The CarPlay app shows today's scheduled sites as a list with those
    actions and no other content."
 4. Apple replies by email, which can take weeks. Once granted, the entitlement appears in your
-   App ID's capabilities; then the CarPlay scene can be built (a `CPTemplateApplicationScene` with
-   a list template, fed from the same data as the Today's sites Live Activity).
+   App ID's capabilities.
+5. Switch it on for phone builds: in Xcode, select the **App** target → **Build Settings**, search
+   for **Code Signing Entitlements**, and set it to `App/FieldKeySimulator.entitlements` for
+   **Any SDK**, not only the simulator (or add the CarPlay capability under **Signing &
+   Capabilities**). Then Run on the phone and connect to CarPlay.
+
+The CarPlay app is already built (`FieldKeyCarPlay.swift`, and the CarPlay scene in
+`Info.plist`). Until the entitlement is granted it's only switched on in simulator builds, so phone
+builds keep signing with a free Apple ID. To try it: Run in the iOS Simulator, then in Simulator
+choose **I/O → External Displays → CarPlay** and open FieldKey in the CarPlay window. Set a few
+sites to **Scheduled** for today first.

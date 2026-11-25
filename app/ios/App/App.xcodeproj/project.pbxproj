@@ -22,6 +22,7 @@
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
+		9582C0A12FF0100100A1B2C3 /* FieldKeyCarPlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582C0A22FF0100100A1B2C3 /* FieldKeyCarPlay.swift */; };
 		F1E1D0C0A0B0C0D0E0F00005 /* FieldKeyAI.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F00006 /* FieldKeyAI.swift */; };
 		F1E1D0C0A0B0C0D0E0F00003 /* FieldKeyTexting.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F00004 /* FieldKeyTexting.swift */; };
 		F1E1D0C0A0B0C0D0E0F00001 /* FieldKeyPlugins.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F00002 /* FieldKeyPlugins.swift */; };
@@ -68,6 +69,7 @@
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		9582C0A22FF0100100A1B2C3 /* FieldKeyCarPlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyCarPlay.swift; sourceTree = "<group>"; };
 		F1E1D0C0A0B0C0D0E0F00006 /* FieldKeyAI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyAI.swift; sourceTree = "<group>"; };
 		F1E1D0C0A0B0C0D0E0F00004 /* FieldKeyTexting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyTexting.swift; sourceTree = "<group>"; };
 		F1E1D0C0A0B0C0D0E0F00002 /* FieldKeyPlugins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyPlugins.swift; sourceTree = "<group>"; };
@@ -116,6 +118,7 @@
 			isa = PBXGroup;
 			children = (
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
+				9582C0A22FF0100100A1B2C3 /* FieldKeyCarPlay.swift */,
 				F1E1D0C0A0B0C0D0E0F00006 /* FieldKeyAI.swift */,
 				F1E1D0C0A0B0C0D0E0F00004 /* FieldKeyTexting.swift */,
 				F1E1D0C0A0B0C0D0E0F00002 /* FieldKeyPlugins.swift */,
@@ -265,6 +268,7 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
+				9582C0A12FF0100100A1B2C3 /* FieldKeyCarPlay.swift in Sources */,
 				F1E1D0C0A0B0C0D0E0F00005 /* FieldKeyAI.swift in Sources */,
 				F1E1D0C0A0B0C0D0E0F00003 /* FieldKeyTexting.swift in Sources */,
 				F1E1D0C0A0B0C0D0E0F00001 /* FieldKeyPlugins.swift in Sources */,
@@ -418,6 +422,7 @@
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = App/FieldKeySimulator.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = MWX68MK23T;
@@ -441,6 +446,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = App/FieldKeySimulator.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = MWX68MK23T;

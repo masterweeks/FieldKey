@@ -11,6 +11,7 @@ class FieldKeyViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(FieldKeyLiveActivityPlugin())   // FieldKeyLiveActivity.swift
         bridge?.registerPluginInstance(FieldKeyIntentsPlugin())   // FieldKeyIntents.swift
         bridge?.registerPluginInstance(FieldKeyAIPlugin())   // FieldKeyAI.swift
+        bridge?.registerPluginInstance(FieldKeyCarPlayPlugin())   // FieldKeyCarPlay.swift
     }
 }
 
