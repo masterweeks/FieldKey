@@ -828,6 +828,7 @@ select.chip.sel{background-color:var(--amber)}
       <div class="dlsub" id="dlSub">Preparing…</div>
       <label class="dlopt hidden" id="dlOpt"><input type="checkbox" id="dlAerial" checked /> Include aerial imagery <span class="dlopthint">(larger)</span></label>
       <label class="dlopt hidden" id="dlOptNaip"><input type="checkbox" id="dlNaip" checked /><span>Sharp close-ups <span class="dlopthint">(zoom 17&ndash;18, USDA NAIP)</span></span></label>
+      <div class="dlopt dlopthint hidden" id="dlNaipHint" style="cursor:default">Aerial is saved to zoom 16 and looks soft closer in. For sharp close-ups, zoom in to street level and save from there, or save a mission (close-ups around each site).</div>
       <label class="dlopt hidden" id="dlOptTopo"><input type="checkbox" id="dlTopo" /> Include USGS Topo map</label>
       <div class="dlbarwrap hidden" id="dlBarWrap"><div class="dlbarfill" id="dlBar"></div></div>
       <div class="dlrow">
@@ -3222,6 +3223,8 @@ select.chip.sel{background-color:var(--amber)}
     if(mission&&!dlPlan.pts.length) return no("No sites in this mission have a map position.");
     if(mission&&dlPlan.tooBig) return no("Too large — pick a smaller area around each site.");
     $("#dlOptNaip").classList.toggle("hidden",!(wantAerial()&&dlPlan.counts.nn));
+    // No close-ups possible for this view (saved from too far out): say so, instead of hiding the option silently.
+    $("#dlNaipHint").classList.toggle("hidden",!(wantAerial()&&!dlPlan.counts.nn&&dlPlan.kind!=="mission"));
     const nv=dlPlan.counts.nv, nd=dlPlan.counts.nd, na=wantAerial()?dlPlan.counts.na:0, nt=wantTopo()?(dlPlan.counts.nt||0):0, nn=wantNaip()?(dlPlan.counts.nn||0):0, total=nv+nd+na+nt+nn;
     if(!total) return no("Nothing to save for this view.");
     if(total>limit) return no("Too large ("+total.toLocaleString()+" tiles) — "+(mission?"pick a smaller area around each site":"zoom in")+(na||nt||nn?" or turn off "+(nn?"close-ups, ":"")+(na&&nt?"aerial or topo":na?"aerial":"topo"):"")+".");
@@ -3248,7 +3251,7 @@ select.chip.sel{background-color:var(--amber)}
     const bb=cmap.getBounds(); dlBounds={w:bb.getWest(),s:bb.getSouth(),e:bb.getEast(),n:bb.getNorth()};
     const zoom=Math.floor(cmap.getZoom());
     $("#dlTitle").textContent=dlMode==="mission"?"Save a mission offline":"Save this area offline"; $("#dlSub").textContent="Preparing…";
-    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlOptTopo").classList.add("hidden"); $("#dlOptNaip").classList.add("hidden"); $("#dlBarWrap").classList.add("hidden"); setDlBar(0,1);
+    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlOptTopo").classList.add("hidden"); $("#dlOptNaip").classList.add("hidden"); $("#dlNaipHint").classList.add("hidden"); $("#dlBarWrap").classList.add("hidden"); setDlBar(0,1);
     $("#dlMode").classList.add("hidden"); $("#dlMission").classList.add("hidden");
     setBtnText($("#dlCancel"),"Cancel"); showDl();
     let style; try{ style=await fetch(MAP_STYLE,{mode:"cors"}).then(r=>r.json()); }catch(e){ hideDl(); toast("Couldn't reach the map server."); return; }
@@ -3281,7 +3284,7 @@ select.chip.sel{background-color:var(--amber)}
     const plan=dlPlan, room=await offlineRoom(plan.mb||1);
     if(room){ dlBusy=false; $("#dlSub").textContent=room; $("#dlGo").classList.add("hidden"); return; }
     dlCancel=false;
-    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlOptTopo").classList.add("hidden"); $("#dlOptNaip").classList.add("hidden"); $("#dlMode").classList.add("hidden"); $("#dlMission").classList.add("hidden");
+    $("#dlGo").classList.add("hidden"); $("#dlOpt").classList.add("hidden"); $("#dlOptTopo").classList.add("hidden"); $("#dlOptNaip").classList.add("hidden"); $("#dlNaipHint").classList.add("hidden"); $("#dlMode").classList.add("hidden"); $("#dlMission").classList.add("hidden");
     $("#dlBarWrap").classList.remove("hidden"); setBtnText($("#dlCancel"),"Stop");
     const items=[];
     plan.chromeUrls.forEach(u=>items.push([u,false]));
