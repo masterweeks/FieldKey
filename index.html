@@ -2445,7 +2445,13 @@ select.chip.sel{background-color:var(--amber)}
 
   /* ---- email + export sheets ---- */
   function openEmail(){ $("#eText").value=""; $("#eStat").textContent=""; $("#eScrim").classList.add("show"); $("#eSheet").classList.add("show");
-    aiAvailable().then(ok=>$("#eAiNote").classList.toggle("hidden",!ok)); }
+    aiAvailable().then(ok=>{
+      const n=$("#eAiNote"), why={off:"Turn on Apple Intelligence (Settings \u2192 Apple Intelligence & Siri) and on-device AI will read emails too.",
+        downloading:"Apple Intelligence is still downloading. Once it's ready, on-device AI will read emails too.",
+        unavailable:"On-device AI isn't available right now, so the usual rules read the email.",
+        ios:"Update to iOS 26 for on-device AI to read emails too."}[aiState&&aiState.reason];
+      n.textContent=ok?"On-device AI reads the email too and fills in what the usual rules miss. Nothing leaves your phone.":(why||"");
+      n.classList.toggle("hidden",!ok&&!why); }); }
   /* On-device AI (iOS app on iOS 26 with Apple Intelligence; FieldKeyAI.swift) reads the email as well as
      parseReturnEmail(). It only fills gaps and adds sites the rules missed, and everything it returns
      must check out against the email: the SAP ID and phone digits appear in it, and names, addresses
@@ -2453,7 +2459,8 @@ select.chip.sel{background-color:var(--amber)}
   let aiState=null;
   async function aiAvailable(){
     if(!IS_NATIVE||!Capacitor.nativePromise) return false;
-    if(!aiState){ try{ aiState=await Capacitor.nativePromise("FieldKeyAI","available",{}); }catch(e){ aiState={value:false}; } }
+    // asked again each time until it says yes: Apple Intelligence can finish downloading or be turned on meanwhile
+    if(!(aiState&&aiState.value)){ try{ aiState=await Capacitor.nativePromise("FieldKeyAI","available",{}); }catch(e){ aiState={value:false,reason:""}; } }
     return !!aiState.value;
   }
   async function aiEmailRecords(text){
