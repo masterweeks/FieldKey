@@ -937,6 +937,7 @@ select.chip.sel{background-color:var(--amber)}
   <div class="grab"></div>
   <h2><svg class="ico" aria-hidden="true"><use href="#i-mail"/></svg>Import return email</h2>
   <p class="hint">Open the reply, copy everything, and paste it here. I'll match each record to your sites by SAP ID, then name, then address.</p>
+  <p class="note hidden" id="eAiNote">On-device AI reads the email too and fills in what the usual rules miss. Nothing leaves your phone.</p>
   <textarea id="eText" placeholder="Paste the full email here…"></textarea>
   <p class="note" id="eStat"></p>
   <button class="btn primary" id="eParse" style="margin-top:12px">Parse &amp; merge</button>
@@ -2407,12 +2408,56 @@ select.chip.sel{background-color:var(--amber)}
   }
 
   /* ---- email + export sheets ---- */
-  function openEmail(){ $("#eText").value=""; $("#eStat").textContent=""; $("#eScrim").classList.add("show"); $("#eSheet").classList.add("show"); }
+  function openEmail(){ $("#eText").value=""; $("#eStat").textContent=""; $("#eScrim").classList.add("show"); $("#eSheet").classList.add("show");
+    aiAvailable().then(ok=>$("#eAiNote").classList.toggle("hidden",!ok)); }
+  /* On-device AI (iOS app on iOS 26 with Apple Intelligence; FieldKeyAI.swift) reads the email as well as
+     parseReturnEmail(). It only fills gaps and adds sites the rules missed, and everything it returns
+     must check out against the email: the SAP ID and phone digits appear in it, and names, addresses
+     and notes appear word for word. Anything else is dropped. */
+  let aiState=null;
+  async function aiAvailable(){
+    if(!IS_NATIVE||!Capacitor.nativePromise) return false;
+    if(!aiState){ try{ aiState=await Capacitor.nativePromise("FieldKeyAI","available",{}); }catch(e){ aiState={value:false}; } }
+    return !!aiState.value;
+  }
+  async function aiEmailRecords(text){
+    if(!(await aiAvailable())) return [];
+    let r; try{ r=await Capacitor.nativePromise("FieldKeyAI","parseEmail",{text}); }catch(e){ return []; }
+    const digits=text.replace(/\D/g,""), squash=t=>String(t||"").toLowerCase().replace(/\s+/g," ").trim(), flat=squash(text);
+    const inText=v=>{ const t=squash(v); return t.length>1&&flat.indexOf(t)>=0; };
+    return ((r&&r.sites)||[]).map(x=>{
+      const sap=String(x.sapId||"").replace(/\D/g,"");
+      if(sap.length<6||!new RegExp("(^|\\D)"+sap+"(\\D|$)").test(text)) return null;
+      const phones=(x.phones||[]).map(p=>({display:String(p).trim(),tel:phoneDigits(p)})).filter(p=>{
+        const d=String(p.tel).replace(/\D/g,"").slice(-10); return d.length===10&&digits.indexOf(d)>=0&&d.indexOf(sap)<0&&!isOwnPhone(p.tel); });
+      const keep=v=>inText(v)?String(v).trim():"";
+      return {sapId:sap,name:keep(x.name),address:keep(x.address),phones,access:keep(x.access),accessNotes:keep(x.notes)};
+    }).filter(Boolean);
+  }
+  function mergeAiRecords(parsed,ai){   // returns how many records the AI added to or completed
+    let helped=0; const bySap=new Map(parsed.map(p=>[String(p.sapId),p]));
+    ai.forEach(a=>{
+      const p=bySap.get(a.sapId);
+      if(!p){ parsed.push(a); bySap.set(a.sapId,a); helped++; return; }
+      let h=false;
+      ["name","address","access","accessNotes"].forEach(k=>{ if(!p[k]&&a[k]){ p[k]=a[k]; h=true; } });
+      if(!(p.phones&&p.phones.length)&&a.phones.length){ p.phones=a.phones; h=true; }
+      if(h) helped++;
+    });
+    return helped;
+  }
   function closeEmail(){ $("#eScrim").classList.remove("show"); $("#eSheet").classList.remove("show"); }
   async function parseAndMerge(){
     const text=$("#eText").value;
     if(!text.trim()){ $("#eStat").textContent="Paste the email text first."; return; }
-    let parsed; try{ parsed=parseReturnEmail(text); }catch(e){ $("#eStat").textContent="Couldn't parse that text."; return; }
+    let parsed; try{ parsed=parseReturnEmail(text); }catch(e){ parsed=null; }
+    let helped=0;
+    if(await aiAvailable()){
+      $("#eStat").textContent="Reading the email with on-device AI\u2026"; $("#eParse").disabled=true;
+      try{ const ai=await aiEmailRecords(text); if(ai.length){ parsed=parsed||[]; helped=mergeAiRecords(parsed,ai); } }
+      finally{ $("#eParse").disabled=false; }
+    }
+    if(!parsed){ $("#eStat").textContent="Couldn't parse that text."; return; }
     if(!parsed.length){ $("#eStat").textContent="No 'SAP Equipment ID' records found in that text."; return; }
     let matched=0, added=0;
     parsed.forEach(p=>{
@@ -2428,7 +2473,7 @@ select.chip.sel{background-color:var(--amber)}
       if(e.textCount==null)e.textCount=0;
     });
     await persist(); renderCustomers(); updateBadge();
-    $("#eStat").textContent="Matched "+matched+" \u00B7 added "+added+" new \u00B7 "+customers.length+" total";
+    $("#eStat").textContent="Matched "+matched+" \u00B7 added "+added+" new \u00B7 "+customers.length+" total"+(helped?" \u00B7 on-device AI filled in "+helped:"");
     toast("Merged "+(matched+added)+" records");
     setTimeout(closeEmail,1000);
   }
