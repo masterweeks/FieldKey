@@ -503,6 +503,8 @@
   .guidebar.show{transform:translateY(0)}
   .guidebar .gtop{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--muted)}
   .guidebar .gtop .gx{margin-left:auto;color:var(--muted);font-size:22px}
+  .guidebar .gtop .gskip{appearance:none;border:0;background:transparent;color:var(--amber);font:600 13px var(--ui);padding:4px 6px;margin-left:auto;cursor:pointer}
+  .guidebar .gtop .gskip:not([hidden])+.gx{margin-left:4px}
   .mapsheet{max-height:94vh}
   .maprow{display:flex;gap:10px;margin-top:10px}
   .maprow .btn{flex:1}
@@ -696,7 +698,7 @@ select.chip.sel{background-color:var(--amber)}
 
 <!-- guided send bar -->
 <div class="guidebar" id="guideBar">
-  <div class="gtop"><span id="guideLabel" class="mono"></span><button class="gx" id="guideClose" type="button" aria-label="Stop guided texting"><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <div class="gtop"><span id="guideLabel" class="mono"></span><button class="gskip" id="guideSkip" type="button">Skip</button><button class="gx" id="guideClose" type="button" aria-label="Stop guided texting"><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg></button></div>
   <button class="btn primary" id="guideOpen">Open text</button>
 </div>
 
@@ -1052,6 +1054,16 @@ select.chip.sel{background-color:var(--amber)}
   <h2 style="margin-top:8px"><svg class="ico" aria-hidden="true"><use href="#i-msg"/></svg>Text message</h2>
   <p class="hint">Sent to customers. Use [Customer name] and [customer address] — they fill in automatically.</p>
   <div class="sgroup"><textarea id="sSms" style="min-height:120px"></textarea></div>
+  <div id="sTextApp" class="hidden">
+    <div class="sgroup">
+      <span class="label">Guided texting: after each text is sent</span>
+      <div class="seg" id="segGuideAuto"><button data-v="1" class="sel">Open the next</button><button data-v="0">Wait for me</button></div>
+    </div>
+    <div class="sgroup">
+      <span class="label">Remind me when there's no reply after</span>
+      <div class="seg" id="segFollow"><button data-v="0">Off</button><button data-v="4">4 h</button><button data-v="24" class="sel">24 h</button><button data-v="48">48 h</button></div>
+    </div>
+  </div>
 
   <button class="btn primary" id="saveSettings">Save</button>
 
@@ -1648,6 +1660,7 @@ select.chip.sel{background-color:var(--amber)}
     setProviderUI(cfg.provider);
     setSeg("segPinShape", store.get("fk_pin_shape","pin"));
     setSeg("segPinSize", store.get("fk_pin_size","medium"));
+    setSeg("segGuideAuto", store.get("fk_guide_auto","1")); setSeg("segFollow", store.get("fk_follow_hours","24"));
     setSeg("segParcelColor", store.get("fk_parcelcolor","auto"));
     drawPinPreview();
     refreshOfflineStat();
@@ -1667,6 +1680,8 @@ select.chip.sel{background-color:var(--amber)}
   { const sh=$("#segPinShape"); if(sh) sh.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; store.set("fk_pin_shape",b.dataset.v); setSeg("segPinShape",b.dataset.v); drawPinPreview(); applyPinStyle(); }); }
   { const pc=$("#segParcelColor"); if(pc) pc.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; setParcelColor(b.dataset.v); }); }
   { const pc=$("#pcLegend"); if(pc) pc.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; setParcelColor(b.dataset.v); }); }
+  { const t=$("#sTextApp"); if(t) t.classList.toggle("hidden",!IS_NATIVE); }   // texting options that only the iOS app can do
+  [["segGuideAuto","fk_guide_auto"],["segFollow","fk_follow_hours"]].forEach(([id,key])=>{ const el=$("#"+id); if(el) el.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; store.set(key,b.dataset.v); setSeg(id,b.dataset.v); }); });
   { const sz=$("#segPinSize"); if(sz) sz.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return; store.set("fk_pin_size",b.dataset.v); setSeg("segPinSize",b.dataset.v); drawPinPreview(); applyPinStyle(); }); }
   $("#saveSettings").addEventListener("click",()=>{
     cfg.name=$("#sName").value.trim(); cfg.lan=$("#sLan").value.trim(); cfg.phone=$("#sPhone").value.trim();
@@ -2127,33 +2142,91 @@ select.chip.sel{background-color:var(--amber)}
   function textCustomer(id){
     const c=findById(id); if(!c||!(c.phones&&c.phones.length)){ toast("No phone number for this customer."); return; }
     if(needsAddr(c) && addrJobs[c.id]!=="failed"){ lookupAddress(c); toast("Finding the address for this site \u2014 tap Text again in a moment."); return; }
-    openSms(c.phones[0].tel,c.name,msgAddress(c)); markTexted(id);
+    sendText(c,c.phones[0].tel);
+  }
+  /* Text one number. In the iOS app, Apple's composer opens over FieldKey (FieldKeyTexting.swift) and
+     iOS says whether the text was sent, so the site is marked texted only then. Elsewhere, or on a
+     device that can't text, the Messages app opens via an sms: link; FieldKey can't tell what happened
+     there, so it counts the text as sent. Returns "sent", "cancelled", "failed" or "opened". */
+  let nativeTextOK=null;
+  async function canNativeText(){
+    if(!IS_NATIVE||!Capacitor.nativePromise) return false;
+    if(nativeTextOK===null){ try{ nativeTextOK=!!(await Capacitor.nativePromise("FieldKeyTexting","canText",{})).value; }catch(e){ nativeTextOK=false; } }
+    return nativeTextOK;
+  }
+  async function sendText(c,tel){
+    if(await canNativeText()){
+      try{
+        const r=await Capacitor.nativePromise("FieldKeyTexting","compose",{to:tel,body:buildMsg(cfg.smsTemplate,c.name,msgAddress(c))});
+        if(r.result==="sent"){ markTexted(c.id); scheduleFollowUp(c); }
+        else if(r.result==="failed") toast("The text didn't send. Try again.");
+        return r.result;
+      }catch(e){ /* fall back to the Messages app */ }
+    }
+    openSms(tel,c.name,msgAddress(c)); markTexted(c.id); scheduleFollowUp(c);
+    return "opened";
   }
 
+  /* ---- follow-up reminders (iOS app): a local notification when a texted site hasn't replied ---- */
+  const LN=IS_NATIVE&&Capacitor.Plugins&&Capacitor.Plugins.LocalNotifications;
+  let markDataReady; const dataReady=new Promise(r=>{ markDataReady=r; });   // resolved once sites have loaded at startup
+  function followUpId(siteId){ let h=0; for(const ch of String(siteId)) h=(h*31+ch.charCodeAt(0))|0; return Math.abs(h)%2000000000+1; }
+  async function scheduleFollowUp(c){
+    const hrs=+store.get("fk_follow_hours","24")||0;
+    if(!LN||!c||!hrs) return;
+    try{
+      let p=await LN.checkPermissions();
+      if(p.display!=="granted"&&p.display!=="denied") p=await LN.requestPermissions();
+      if(p.display!=="granted") return;
+      const id=followUpId(c.id);
+      await LN.cancel({notifications:[{id}]}).catch(()=>{});
+      await LN.schedule({notifications:[{id,title:"No reply from "+displayName(c),body:"Texted "+hrs+" hours ago. Text again?",
+        schedule:{at:new Date(Date.now()+hrs*3600000)},extra:{siteId:c.id}}]});
+    }catch(e){}
+  }
+  function cancelFollowUp(c){ if(LN&&c) LN.cancel({notifications:[{id:followUpId(c.id)}]}).catch(()=>{}); }
+  if(LN) LN.addListener("localNotificationActionPerformed",async a=>{
+    await dataReady;
+    const id=a&&a.notification&&a.notification.extra&&a.notification.extra.siteId, c=id&&findById(id);
+    if(!c){ toast("That site isn't on this phone any more."); return; }
+    if(["replied","scheduled","done"].indexOf(c.status)>=0){ openDetail(c.id); return; }
+    if($("#mSheet").classList.contains("show")) closeMapSheet();   // the map (home screen) would cover the guide bar
+    switchTab("customers");
+    guideList=[c]; guideIdx=0; guideSent=0; guideAutoArmed=false; showGuide();   // that one site, ready to text again
+  });
+
   /* ---- guided bulk send ---- */
-  let guideList=[], guideIdx=0;
+  /* In the iOS app the composer reports sent or cancelled: a sent text moves to the next site and, if
+     Settings says so, opens its text straight away (send, next, send, next). A cancelled one stays put. */
+  let guideList=[], guideIdx=0, guideBusy=false, guideAutoArmed=false, guideSent=0;
   function startGuide(){
     guideList=visibleCustomers().filter(c=>c.phones&&c.phones.length&&!(c.textCount>0));
     if(!guideList.length){ toast("No un-texted customers with a phone here."); return; }
     guideList.forEach(lookupAddress);   // fill in missing addresses while you work down the list
-    guideIdx=0; showGuide();
+    guideIdx=0; guideSent=0; guideAutoArmed=false; showGuide();
   }
   function showGuide(){
-    if(guideIdx>=guideList.length){ closeGuide(); toast("Guided send complete"); return; }
+    if(guideIdx>=guideList.length){ const n=guideSent; closeGuide(); toast(n?"Guided send complete \u00B7 "+n+" sent":"Guided send complete"); return; }
     const c=guideList[guideIdx];
     $("#guideLabel").textContent=(guideIdx+1)+" of "+guideList.length+"  \u00B7  "+displayName(c);
     const wait=addrPending(c);
     setBtnText($("#guideOpen"),wait?"Finding address\u2026":"Open text to "+firstName(c.name));
-    $("#guideOpen").disabled=wait;
+    $("#guideOpen").disabled=wait||guideBusy;
+    $("#guideSkip").hidden=guideList.length<2;
     $("#guideBar").classList.add("show");
+    if(guideAutoArmed&&!wait&&!guideBusy){ guideAutoArmed=false; setTimeout(()=>{ if($("#guideBar").classList.contains("show")&&guideList[guideIdx]===c) guideOpenCurrent(); },600); }
   }
-  function guideOpenCurrent(){
+  async function guideOpenCurrent(){
     const c=guideList[guideIdx]; if(!c){ closeGuide(); return; }
-    if(addrPending(c)) return;
-    openSms(c.phones[0].tel,c.name,msgAddress(c)); markTexted(c.id);
-    guideIdx++; showGuide();
+    if(addrPending(c)||guideBusy) return;
+    guideBusy=true; $("#guideOpen").disabled=true;
+    let r; try{ r=await sendText(c,c.phones[0].tel); } finally { guideBusy=false; }
+    if(guideList[guideIdx]!==c) return;   // the bar was closed or restarted meanwhile
+    if(r==="sent"||r==="opened"){ guideSent++; guideIdx++; guideAutoArmed=r==="sent"&&store.get("fk_guide_auto","1")==="1"; }
+    showGuide();
   }
-  function closeGuide(){ $("#guideBar").classList.remove("show"); }
+  function guideSkip(){ if(guideBusy) return; guideAutoArmed=false; guideIdx++; showGuide(); }
+  function closeGuide(){ guideAutoArmed=false; guideList=[]; guideIdx=0; $("#guideBar").classList.remove("show"); }
 
   /* ---- detail sheet ---- */
   let curId=null;
@@ -2165,7 +2238,10 @@ select.chip.sel{background-color:var(--amber)}
           +'<a href="'+escapeHtml(smsHref(p.tel,buildMsg(cfg.smsTemplate,c.name,msgAddress(c))))+'" data-sms="'+escapeHtml(c.id)+'">'+ICO("msg")+'Text</a>'
           +'<button class="phrm" data-phrm="'+i+'" type="button" aria-label="Remove number">'+ICO("x")+'</button></div>').join("")
       : '<p class="note">No phone number on file.</p>';
-    $("#dPhones").querySelectorAll("[data-sms]").forEach(a=>a.addEventListener("click",()=>markTexted(a.dataset.sms)));
+    $("#dPhones").querySelectorAll("[data-sms]").forEach((a,i)=>a.addEventListener("click",e=>{
+      if(IS_NATIVE){ e.preventDefault(); const s=findById(a.dataset.sms); if(s&&s.phones[i]) sendText(s,s.phones[i].tel); return; }   // composer in the app
+      markTexted(a.dataset.sms);
+    }));
     $("#dPhones").querySelectorAll("[data-phrm]").forEach(b=>b.addEventListener("click",()=>dRemovePhone(+b.dataset.phrm)));
     const hasP=!!(c.phones&&c.phones.length), call=$("#dCallT");
     $("#dTextBtn").classList.toggle("off",!hasP);
@@ -2420,6 +2496,7 @@ select.chip.sel{background-color:var(--amber)}
   $("#textAllBtn").addEventListener("click",startGuide);
   $("#guideOpen").addEventListener("click",guideOpenCurrent);
   $("#guideClose").addEventListener("click",closeGuide);
+  $("#guideSkip").addEventListener("click",guideSkip);
   $("#custSearch").addEventListener("input",e=>{ custQuery=e.target.value; renderCustomers(); });
 
   /* Voice search: the mic in the search box. It uses the browser's own speech recognition (Chrome
@@ -2478,6 +2555,7 @@ select.chip.sel{background-color:var(--amber)}
   $("#dScrim").addEventListener("click",closeDetail);
   $("#dStatus").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
     const c=findById(curId); if(!c)return; c.status=b.dataset.s;
+    if(["replied","scheduled","done"].indexOf(c.status)>=0) cancelFollowUp(c);
     if(c.status==="scheduled" && !c.scheduledAt) c.scheduledAt=defaultSchedule();
     $("#dStatus").querySelectorAll("button").forEach(x=>x.classList.toggle("sel",x===b));
     updateSchedUI(c);
@@ -4997,7 +5075,7 @@ select.chip.sel{background-color:var(--amber)}
     customers.forEach(c=>{ const b=c.name+"|"+c.access+"|"+c.accessNotes+"|"+c.address+"|"+JSON.stringify(c.extra||{}); sanitizeRecord(c);
       if(b!==(c.name+"|"+c.access+"|"+c.accessNotes+"|"+c.address+"|"+JSON.stringify(c.extra||{}))) dirty=true; });
     if(dirty) persist();
-    renderCustomers(); updateBadge();
+    renderCustomers(); updateBadge(); markDataReady();
     if(window.maplibregl) openMapSheet(); else $("#mSheet").classList.remove("show");   // the map is the home screen
     dailySnapshot();
     await loadSyncState(); startSyncEngine(); renderSyncUI();

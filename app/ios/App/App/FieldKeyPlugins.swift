@@ -7,6 +7,7 @@ import EventKitUI
 class FieldKeyViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(FieldKeyCalendarPlugin())
+        bridge?.registerPluginInstance(FieldKeyTextingPlugin())   // FieldKeyTexting.swift
     }
 }
 
