@@ -15,34 +15,67 @@ needs a connection for Google's 3D tiles anyway. Inside the app, `window.Capacit
 - **Files** (exports, backups, calendar events, mission packages) are written to the app's cache
   folder and handed to the share sheet (`window.FieldKeyNative`, using the Filesystem and Share
   plugins), which offers Save to Files, Mail and AirDrop.
-- **Apple Calendar** on a site opens Apple's own New Event screen, filled in. That's FieldKey's
-  own plugin in `app/ios/App/App/FieldKeyPlugins.swift`, registered by `FieldKeyViewController`
-  (which `SceneDelegate.swift` creates) and called with `Capacitor.nativePromise`. A plugin
-  registered this way isn't in `Capacitor.Plugins`.
+- **Native features** are FieldKey's own Capacitor plugins in `app/ios/App/App/`, registered in
+  `FieldKeyViewController` (`FieldKeyPlugins.swift`, created by `SceneDelegate.swift`) and called
+  from `index.html` with `Capacitor.nativePromise("<name>", "<method>", {...})`. Plugins
+  registered this way aren't in `Capacitor.Plugins`.
+
+| Plugin (file) | What it does in the app |
+|---|---|
+| `FieldKeyCalendar` (`FieldKeyPlugins.swift`) | **Apple Calendar** on a site opens Apple's New Event screen, filled in |
+| `FieldKeyTexting` (`FieldKeyTexting.swift`) | Texts open Apple's message composer over FieldKey; iOS reports sent or cancelled |
+| `FieldKeyLiveActivity` (`FieldKeyLiveActivity.swift`, `FieldKeyActivity.swift`) | Live Activities: guided texting progress and today's sites |
+| `FieldKeyIntents` (`FieldKeyIntents.swift`) | Siri and Shortcuts: "Text the next site in FieldKey" |
+| `FieldKeyAI` (`FieldKeyAI.swift`) | Email import with Apple's on-device model |
+
+`app/ios/App/FieldKeyWidgets/` is a widget extension (its own target, iOS 18 or later) that draws
+the Live Activities on the Lock Screen, in the Dynamic Island, and on the CarPlay dashboard.
+Follow-up reminders use the official `@capacitor/local-notifications` plugin.
 
 | Folder | What it is |
 |---|---|
-| `app/package.json` | Capacitor, its Filesystem and Share plugins, and the bundled libraries; `npm run sync` copies the web app in |
+| `app/package.json` | Capacitor, its Filesystem, Share and Local Notifications plugins, and the bundled libraries; `npm run sync` copies the web app in |
 | `app/capacitor.config.json` | App id `io.github.masterweeks.fieldkey`, name, colours |
-| `app/ios/` | The Xcode project (Swift Package Manager, no CocoaPods) |
+| `app/ios/` | The Xcode project (Swift Package Manager, no CocoaPods): targets **App** and **FieldKeyWidgets** |
 | `app/www/`, `app/ios/App/App/public/` | Generated copies of the web app, not in git |
 
 ## Plan
 
 1. **Wrapper** (done): FieldKey runs as an app, online.
-2. **Make everything work in the app** (in progress).
-   - Done, tested in the simulator: offline maps, exports and backups through the share sheet,
-     FieldKey's app icon and launch screen.
-   - Done, to test on a phone: voice search and location use the web view's own speech and
-     location, with the permission texts in `app/ios/App/App/Info.plist` (location, microphone,
-     speech, and saving images to Photos). iOS closes an app that asks without them. If voice
-     search doesn't work on the phone, switch it to a native speech plugin.
-   - Left: the Google key (see below).
-3. **AI email import** with Apple's on-device Foundation Models (iOS 26, iPhone 15 Pro or newer).
-   Other phones keep the rules-based parser.
-4. **CarPlay without Apple approval** (iOS 26): a "Today's sites" widget and a Live Activity
-   ("Next site: SAP …, gate code …") on the CarPlay dashboard.
-5. **A full CarPlay app**: request Apple's "driving task" entitlement.
+2. **Make everything work in the app** (done, except the Google key).
+   - Offline maps, exports and backups through the share sheet, Apple Calendar, app icon and
+     launch screen.
+   - Voice search and location use the web view's own speech and location, with the permission
+     texts in `app/ios/App/App/Info.plist` (location, microphone, speech, calendars, saving
+     images to Photos). iOS closes an app that asks without them. If voice search doesn't work on
+     the phone, switch it to a native speech plugin.
+   - Left: the Google key (see Known gaps).
+3. **Guided texting in the app** (done).
+   - **Texts without leaving FieldKey:** Apple's composer slides up with the number and message
+     filled in. A site is marked texted only when iOS says it was sent; a cancelled text stays on
+     the same site. With **Settings → Guided texting: Open the next**, the next site's text opens
+     by itself after each send. A **Skip** button moves past a site (also on the website).
+   - **Follow-up reminders:** after a text, a notification such as "No reply from SAP 12345 ·
+     Texted 24 hours ago. Text again?" (Settings: off, 4, 24 or 48 hours). Tapping it opens that
+     site in the guided flow. Marking the site replied, scheduled or done cancels it. No server.
+   - **Progress on the Lock Screen:** a Live Activity, "Texting · 7 of 23 sent / Next: SAP 12345",
+     also in the Dynamic Island.
+   - **Siri and Shortcuts:** "Text the next site in FieldKey" opens the list and the next
+     un-texted site's text. Add it to the Action button or the home screen from the Shortcuts app.
+4. **AI email import** (done): on iOS 26 with Apple Intelligence (iPhone 15 Pro or newer), Email
+   return also reads the email with Apple's on-device model. The rules-based parser still runs;
+   the model only fills empty fields and adds sites the rules missed, and what it returns must
+   check out against the email (SAP ID and phone digits present; names, addresses and notes word
+   for word). Nothing leaves the phone. Other phones keep the rules.
+5. **CarPlay without Apple approval** (Live Activity done; widget waiting).
+   - **Today's sites** Live Activity: "Next: SAP 12345 · 10:30 / Gate code 2211 · 412 Oak Ridge
+     Rd", with done-of-total. It shows on the Lock Screen, in the Dynamic Island and, on iOS 26,
+     on the CarPlay dashboard. It updates as sites change and ends when nothing is left today
+     (Settings can turn it off). Sites count when their status is **Scheduled** for today.
+   - **"Today's sites" home-screen and CarPlay widget:** waiting for the Developer Program. A
+     widget runs outside the app, so it needs an **App Group** to read the app's data, and App
+     Groups need a paid team.
+6. **A full CarPlay app** (waiting for Apple): see "CarPlay entitlement" below.
 
 ## First run on your Mac
 
@@ -112,9 +145,29 @@ Online:
   Also try **Restore** with a saved backup and a mission package download.
 - **Apple Calendar** on a scheduled site: Apple's New Event screen opens filled in; tap **Add**.
 
+Texting (needs a SIM or iMessage; the simulator can't text):
+- **Text guide** on the list: Apple's composer opens over FieldKey. Send one: the site is marked
+  texted and the next text opens by itself. Cancel one: the bar stays on that site.
+- After the first sent text, iOS asks to allow notifications. Allow, then set **Settings →
+  Remind me when there's no reply after → 4 h** to test sooner. Tap the reminder.
+- While working a list, lock the phone: the Lock Screen shows "Texting · n of N sent".
+- Say "Text the next site in FieldKey" to Siri.
+
+Today's sites:
+- Set two sites to **Scheduled** for today, lock the phone: the Lock Screen shows the next one.
+  Mark it done: the next one takes its place. In a car with CarPlay on iOS 26, it's on the
+  dashboard.
+
+Email return:
+- On an iPhone 15 Pro or newer with Apple Intelligence on, paste an email that doesn't follow the
+  usual layout. The sheet says "On-device AI reads the email too", and the result line says how
+  many records it filled in.
+
 Offline (turn on Airplane Mode after saving):
 - **Save offline** an area and a mission, turn on Airplane Mode, quit and reopen the app, and
   open the map there. Try Dark, Aerial and Topo, and property lines if you saved them.
+- For sharp aerial past zoom 16, save from street level (zoom 15 or closer) with **Sharp
+  close-ups** ticked, or save a mission (close-ups around each site).
 
 Known gaps:
 - **Google address lookup and 3D view:** they fail if the Google key only allows
@@ -133,4 +186,22 @@ Note anything else that behaves differently from the web app.
 3. In the Organizer, choose **Distribute App → App Store Connect → Upload**.
 4. In App Store Connect → **TestFlight**, add yourself or your team as testers.
 
-Raise **Version** or **Build** under the target's **General** tab for each new upload.
+Raise **Version** or **Build** under the target's **General** tab for each new upload. Change
+them on **both** targets, **App** and **FieldKeyWidgets**: App Store Connect rejects an upload
+whose extension version doesn't match the app's. If you change the app's bundle id, change the
+extension's to match: it must be the app's id followed by `.widgets`.
+
+## CarPlay entitlement (step 6)
+
+A full CarPlay app (a list of today's sites with Call and Directions on the car's screen) needs
+Apple to grant the **CarPlay driving task** entitlement. This needs the Developer Program.
+
+1. Join the Apple Developer Program.
+2. Go to developer.apple.com/contact/carplay and choose **Driving task**.
+3. Describe the app, for example: "FieldKey helps utility inspectors work through a day of site
+   visits. In the car, the driver needs the next site, its access notes (gate codes, dogs) and
+   one-tap Call or Directions. The CarPlay app shows today's scheduled sites as a list with those
+   actions and no other content."
+4. Apple replies by email, which can take weeks. Once granted, the entitlement appears in your
+   App ID's capabilities; then the CarPlay scene can be built (a `CPTemplateApplicationScene` with
+   a list template, fed from the same data as the Today's sites Live Activity).
