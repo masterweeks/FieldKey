@@ -1127,6 +1127,28 @@ select.chip.sel{background-color:var(--amber)}
   const IS_ANDROID = (typeof navigator!=="undefined" && /Android/i.test(navigator.userAgent||"")) || (window.Capacitor && Capacitor.getPlatform && Capacitor.getPlatform()==="android");
   /* true inside the iOS app (Capacitor, app/ in the repo): no service worker there, updates come from TestFlight / the App Store */
   const IS_NATIVE = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+  /* In the iOS app a browser download does nothing, so files are written to the app's cache folder
+     and handed to the share sheet (Save to Files, Mail, AirDrop…). Uses Capacitor's Filesystem and
+     Share plugins (app/package.json). download() and the mission package button call these. */
+  if(IS_NATIVE && Capacitor.Plugins && Capacitor.Plugins.Filesystem && Capacitor.Plugins.Share){
+    const FS=Capacitor.Plugins.Filesystem, SH=Capacitor.Plugins.Share;
+    const safeName=n=>String(n||"file").replace(/[\/\\:*?"<>|]+/g,"_");
+    const shareUri=uri=>SH.share({files:[uri]}).catch(e=>{ if(!/cancel/i.test(String(e&&e.message||e))) throw e; });
+    const fail=e=>toast("Couldn't share the file: "+(e&&e.message||e),3500);
+    window.FieldKeyNative={
+      save(name,text,type){
+        return FS.writeFile({path:"share/"+safeName(name),data:String(text),directory:"CACHE",encoding:"utf8",recursive:true})
+          .then(r=>shareUri(r.uri)).catch(fail);
+      },
+      // A file on the internet (a mission package): download it into the app, then share it.
+      async saveUrl(url,name){
+        const path="share/"+safeName(name);
+        await FS.downloadFile({url,path,directory:"CACHE",recursive:true});
+        const r=await FS.getUri({path,directory:"CACHE"});
+        await shareUri(r.uri);
+      }
+    };
+  }
   /* ---------------- storage (degrades if sandboxed) ---------------- */
   const store = {
     get(k,d){ try{const v=localStorage.getItem(k);return v===null?d:v;}catch(e){return d;} },
@@ -1148,7 +1170,7 @@ select.chip.sel{background-color:var(--amber)}
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v82";
+  const APP_VER="v83";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -1365,7 +1387,7 @@ select.chip.sel{background-color:var(--amber)}
     });
     map.on("locationerror",err=>{
       if(!watching) return; stop();
-      toast(err&&err.code===1 ? "Location is blocked. Allow it for this site in your browser settings." : "Couldn't get your location \u2014 try again outdoors.");
+      toast(err&&err.code===1 ? (IS_NATIVE?"Location is blocked. Allow it in Settings \u2192 FieldKey \u2192 Location.":"Location is blocked. Allow it for this site in your browser settings.") : "Couldn't get your location \u2014 try again outdoors.");
     });
     const Ctrl=L.Control.extend({options:{position:"topleft"},onAdd:function(){
       const wrap=L.DomUtil.create("div","leaflet-bar locatebar");
@@ -2347,7 +2369,7 @@ select.chip.sel{background-color:var(--amber)}
   function backupData(){
     const data={app:"FieldKey", kind:"backup", exportedAt:new Date().toISOString(), count:customers.length, settings:{}, customers:customers, pins:userPins};
     Object.keys(DEF).forEach(k=>data.settings[k]=cfg[k]);
-    download("fieldkey-backup-"+todayStr()+".json", JSON.stringify(data,null,2), "application/json"); toast("Backup downloaded");
+    download("fieldkey-backup-"+todayStr()+".json", JSON.stringify(data,null,2), "application/json"); if(!IS_NATIVE) toast("Backup downloaded");
   }
   function restoreFromFile(file){
     if(!file) return;
@@ -2407,7 +2429,7 @@ select.chip.sel{background-color:var(--amber)}
     if(!SR||!btn||!box) return;
     btn.hidden=false; btn.parentNode.classList.add("hasmic");
     const idle=box.placeholder;
-    const ERR={"not-allowed":"Microphone blocked. Allow it for FieldKey in your browser's site settings.",
+    const ERR={"not-allowed":IS_NATIVE?"Microphone or speech blocked. Allow both in Settings \u2192 FieldKey.":"Microphone blocked. Allow it for FieldKey in your browser's site settings.",
       "service-not-allowed":"Voice search isn't available here. Use the mic on your keyboard instead.",
       "network":"Voice search needs a connection. Type to search offline.",
       "no-speech":"Didn't hear anything. Tap the mic and speak.",
@@ -2688,10 +2710,63 @@ select.chip.sel{background-color:var(--amber)}
     const W=20037508.342789244, t=2*W/Math.pow(2,z), f=v=>v.toFixed(2);
     return NAIP_SVC+"?bbox="+f(-W+x*t)+","+f(W-(y+1)*t)+","+f(-W+(x+1)*t)+","+f(W-y*t)+"&bboxSR=3857&imageSR=3857&size=256,256&format=jpg&f=image";
   }
+  /* Offline maps in the iOS app. On the web, sw.js serves saved map data. The app has no service
+     worker, so there the map's requests to these hosts go through the "fkc" protocol instead (see
+     transformRequest on the map): the saved copy first; otherwise the network, keeping a copy as
+     sw.js does; offline, a soft enlargement of a saved lower-zoom USGS tile. Same cache, same keys,
+     so "Save offline" and the saved-maps list work unchanged. Keep the hosts in step with sw.js. */
+  const MAP_HOSTS=/^(tiles\.openfreemap\.org|([a-z0-9-]+\.)*arcgisonline\.com|([a-z0-9-]+\.)?tile\.openstreetmap\.org|s3\.amazonaws\.com|basemap\.nationalmap\.gov|imagery\.nationalmap\.gov|tiles\.arcgis\.com)$/;
+  function nativeMapUrl(url){
+    if(!IS_NATIVE||typeof url!=="string"||url.slice(0,8)!=="https://") return url;
+    const host=url.slice(8).split(/[\/?#]/)[0];
+    return MAP_HOSTS.test(host)?"fkc://"+url.slice(8):url;
+  }
+  const USGS_RASTER_RE=/^(https:\/\/basemap\.nationalmap\.gov\/arcgis\/rest\/services\/(?:USGSImageryOnly|USGSTopo)\/MapServer\/tile\/)(\d+)\/(\d+)\/(\d+)$/;
+  async function savedParentTile(cache,url){   // same as parentTile() in sw.js
+    const m=USGS_RASTER_RE.exec(url);
+    if(!m||!cache||typeof OffscreenCanvas==="undefined"||typeof createImageBitmap==="undefined") return null;
+    const base=m[1], z=+m[2], y=+m[3], x=+m[4];
+    for(let d=1; d<=8&&z-d>=0; d++){
+      const hit=await cache.match(base+(z-d)+"/"+(y>>d)+"/"+(x>>d));
+      if(!hit||hit.type==="opaque") continue;
+      try{
+        const img=await createImageBitmap(await hit.blob()), part=img.width/(1<<d);
+        const sx=(x-((x>>d)<<d))*part, sy=(y-((y>>d)<<d))*part;
+        const c=new OffscreenCanvas(256,256), g=c.getContext("2d");
+        g.imageSmoothingEnabled=true; g.imageSmoothingQuality="high";
+        g.drawImage(img,sx,sy,part,part,0,0,256,256);
+        return new Response(await c.convertToBlob({type:"image/jpeg",quality:0.85}),{headers:{"Content-Type":"image/jpeg"}});
+      }catch(e){ return null; }
+    }
+    return null;
+  }
+  async function mapGet(url,signal){
+    if(!IS_NATIVE) return fetch(url,{mode:"cors",signal});
+    let cache=null;
+    try{ cache=await caches.open(MAPCACHE); const hit=await cache.match(url); if(hit&&hit.type!=="opaque") return hit; }catch(e){}
+    try{
+      const r=await fetch(url,{mode:"cors",signal});
+      if(r.ok&&cache) cache.put(url,r.clone()).catch(()=>{});
+      return r;
+    }catch(e){
+      if(signal&&signal.aborted) throw e;
+      const p=await savedParentTile(cache,url); if(p) return p;
+      throw e;
+    }
+  }
+  if(IS_NATIVE&&typeof maplibregl!=="undefined"&&maplibregl.addProtocol){
+    try{ maplibregl.addProtocol("fkc", async (params, ac)=>{
+      const url="https://"+params.url.slice(6), r=await mapGet(url,ac&&ac.signal);
+      if(!r.ok) throw new maplibregl.AJAXError(r.status,r.statusText,url,await r.blob().catch(()=>null));
+      if(params.type==="json") return {data:await r.json()};
+      if(params.type==="string") return {data:await r.text()};
+      return {data:await r.arrayBuffer()};
+    }); }catch(e){}
+  }
   if(typeof maplibregl!=="undefined"&&maplibregl.addProtocol){
     try{ maplibregl.addProtocol("naip", async (params, ac)=>{
       const m=/^naip:\/\/(\d+)\/(\d+)\/(\d+)/.exec(params.url);
-      const r=await fetch(naipUrl(+m[1],+m[2],+m[3]),{mode:"cors",signal:ac&&ac.signal});
+      const r=await mapGet(naipUrl(+m[1],+m[2],+m[3]),ac&&ac.signal);
       if(!r.ok) throw new Error("NAIP tile "+r.status);
       return {data:await r.arrayBuffer()};
     }); }catch(e){}
@@ -2830,7 +2905,8 @@ select.chip.sel{background-color:var(--amber)}
   }
 
   function buildMap(){
-    try{ cmap=new maplibregl.Map({container:"custMap",style:MAP_STYLE,center:[-120.5,40.5],zoom:5,attributionControl:false}); }
+    try{ cmap=new maplibregl.Map({container:"custMap",style:MAP_STYLE,center:[-120.5,40.5],zoom:5,attributionControl:false,
+      transformRequest:IS_NATIVE?(url=>{ const u=nativeMapUrl(url); return u!==url?{url:u}:undefined; }):undefined}); }
     catch(e){ const note=$("#mNote"); if(note) note.textContent="Map couldn't start on this device."; return; }
     cmap.addControl(new maplibregl.NavigationControl({visualizePitch:true}),"top-right");
     geoCtrl=new maplibregl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:true,showUserHeading:true});
@@ -3644,7 +3720,7 @@ select.chip.sel{background-color:var(--amber)}
     const m=/^fkparcel:\/\/(far|near)\/([0-9a-fA-F]{6})\/(\d+)\/(\d+)\/(\d+)$/.exec(params.url);
     if(!m) throw new Error("Bad parcel tile address");
     const blank=async()=>({data:parcelBlank||(parcelBlank=await createImageBitmap(new ImageData(1,1)))});
-    const r=await fetch(PARCEL_FREE_BASE+m[3]+"/"+m[4]+"/"+m[5],{signal:ac.signal});
+    const r=await mapGet(PARCEL_FREE_BASE+m[3]+"/"+m[4]+"/"+m[5],ac.signal);
     if(!r.ok) return blank();                                    // no parcels in this tile
     const img=await createImageBitmap(await r.blob()), w=img.width, h=img.height;
     const cv=typeof OffscreenCanvas!=="undefined"?new OffscreenCanvas(w,h):Object.assign(document.createElement("canvas"),{width:w,height:h});
@@ -4889,6 +4965,10 @@ select.chip.sel{background-color:var(--amber)}
       const r=await sbRest("POST","/storage/v1/object/sign/exports/"+path,{expiresIn:600});
       const u=r&&(r.signedURL||r.signedUrl); if(!u) throw new Error("no download link");
       const url=SB_URL+"/storage/v1"+u+(u.indexOf("?")>=0?"&":"?")+"download="+encodeURIComponent(j.file_name||"mission.gpkg");
+      if(window.FieldKeyNative&&FieldKeyNative.saveUrl){
+        try{ toast("Downloading the package…"); await FieldKeyNative.saveUrl(url,j.file_name||"mission.gpkg"); return; }
+        catch(e){ /* fall through: open the link in Safari instead */ }
+      }
       const a=document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener"; document.body.appendChild(a); a.click(); a.remove();
     }catch(e){ toast("Couldn't get the download: "+e.message); }
     finally{ b.disabled=false; }
