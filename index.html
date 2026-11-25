@@ -456,7 +456,14 @@
   .csel.on::after{content:"";position:absolute;left:6px;top:2.5px;width:5px;height:9px;border:solid #1a1300;border-width:0 2px 2px 0;transform:rotate(45deg)}
   .kmlbar{display:flex;align-items:center;gap:8px;margin:-4px 2px 12px;padding:6px 8px 6px 12px;background:var(--bg2);border:1px solid var(--line2);border-radius:10px}
   .kmlbar>.ico{width:16px;height:16px;flex:none;color:var(--amber)}
-  .kmlbar .kn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 13px var(--ui)}
+  .kmlbar .kt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+  .kmlbar .kn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 13px var(--ui)}
+  .kmlbar .ks{font:500 11.5px/1.35 var(--ui);color:var(--muted)}
+  .kmlbar .ks .due{color:var(--amber)} .kmlbar .ks .late{color:#FF9A9A}
+  .kfrow{display:flex;gap:8px;margin:6px 0 4px} .kfrow .btn{flex:1}
+  .kmlist{display:flex;flex-direction:column;gap:8px;margin:4px 0 14px;max-height:38vh;overflow:auto}
+  .kmlist .btn{justify-content:space-between;text-align:left}
+  #impUpd{margin:2px 0 12px} #impUpd .seg{margin-top:8px}
   .selbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:-4px 2px 12px;padding:8px 12px;background:rgba(255,176,0,.08);border:1px solid var(--amber);border-radius:10px}
   .selbar #selCount{margin-right:auto}
   .impbar{height:8px;border-radius:5px;background:var(--bg3);overflow:hidden;margin:4px 0 10px}
@@ -686,7 +693,7 @@ select.chip.sel{background-color:var(--amber)}
       <button class="chip" data-f="replied">Replied</button>
       <button class="chip" data-f="scheduled">Scheduled</button>
     </div>
-    <div class="kmlbar hidden" id="kmlBar"><svg class="ico" aria-hidden="true"><use href="#i-filetext"/></svg><span class="kn" id="kmlBarName"></span><button class="sbtn" id="kmlRenameBtn" type="button"><svg class="ico" aria-hidden="true"><use href="#i-edit"/></svg>Rename</button></div>
+    <div class="kmlbar hidden" id="kmlBar"><svg class="ico" aria-hidden="true"><use href="#i-filetext"/></svg><span class="kt"><span class="kn" id="kmlBarName"></span><span class="ks" id="kmlBarStats"></span></span><button class="sbtn" id="kmlRenameBtn" type="button"><svg class="ico" aria-hidden="true"><use href="#i-edit"/></svg>Rename</button><button class="sbtn" id="kmlFileBtn" type="button"><svg class="ico" aria-hidden="true"><use href="#i-settings"/></svg>File</button></div>
     <div class="htiles c4">
       <button class="tile" id="buildReqBtn" type="button" title="Build request"><svg class="ico" aria-hidden="true"><use href="#i-send"/></svg><span class="tl">Request</span></button>
       <button class="tile" id="mapBtn" type="button" title="Open the map"><svg class="ico" aria-hidden="true"><use href="#i-map"/></svg><span class="tl">Map</span></button>
@@ -694,7 +701,7 @@ select.chip.sel{background-color:var(--amber)}
       <button class="tile" id="textAllBtn" type="button" title="Guided texting"><svg class="ico" aria-hidden="true"><use href="#i-guide"/></svg><span class="tl">Text guide</span></button>
     </div>
     <div class="dbbar"><span id="dbCount" class="mono">0 in database</span></div>
-    <div class="selbar hidden" id="selBar"><span id="selCount" class="mono">0 selected</span><button id="selBuild" class="sbtn" type="button" title="Build request"><svg class="ico" aria-hidden="true"><use href="#i-send"/></svg>Request</button><button id="selFlag" class="sbtn issue" type="button" title="Mark access issue"><svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg><span class="sl">Issue</span></button><button id="selClear" class="sbtn" type="button" title="Clear selection" aria-label="Clear selection"><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+    <div class="selbar hidden" id="selBar"><span id="selCount" class="mono">0 selected</span><button id="selBuild" class="sbtn" type="button" title="Build request"><svg class="ico" aria-hidden="true"><use href="#i-send"/></svg>Request</button><button id="selMove" class="sbtn" type="button" title="Move to another file"><svg class="ico" aria-hidden="true"><use href="#i-merge"/></svg>Move</button><button id="selFlag" class="sbtn issue" type="button" title="Mark access issue"><svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg><span class="sl">Issue</span></button><button id="selClear" class="sbtn" type="button" title="Clear selection" aria-label="Clear selection"><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <div id="custList" class="custlist"></div>
     <div id="custEmpty" class="empty">Nothing here yet.<br>Import a CSV or KML above, or paste an email return.</div>
   </main>
@@ -778,6 +785,10 @@ select.chip.sel{background-color:var(--amber)}
   <div class="grab"></div>
   <h2><svg class="ico" aria-hidden="true"><use href="#i-fileup"/></svg>Import</h2>
   <p class="hint" id="impInfo"></p>
+  <div id="impUpd" class="hidden">
+    <p class="note" id="impUpdText"></p>
+    <div class="seg" id="segImpUpd"><button data-v="update" class="sel">Update that file</button><button data-v="new">Import as a new file</button></div>
+  </div>
   <div id="impCols">
     <div class="field"><label class="label">SAP ID</label><select id="impSap"></select></div>
     <div class="field"><label class="label">Latitude</label><select id="impLat"></select></div>
@@ -922,6 +933,36 @@ select.chip.sel{background-color:var(--amber)}
 </div>
 
 <!-- add contact manually -->
+<div class="scrim" id="kfScrim"></div>
+<div class="sheet" id="kfSheet" role="dialog" aria-label="File">
+  <div class="grab"></div>
+  <h2><svg class="ico" aria-hidden="true"><use href="#i-filetext"/></svg><span id="kfTitle">File</span></h2>
+  <p class="hint" id="kfStats"></p>
+  <div class="sgroup"><label class="label" for="kfDue"><svg class="ico" aria-hidden="true"><use href="#i-cal"/></svg>Due date <span class="lopt">optional</span></label><input type="date" id="kfDue" /></div>
+  <div class="sgroup"><label class="label" for="kfNote"><svg class="ico" aria-hidden="true"><use href="#i-notes"/></svg>Note <span class="lopt">optional</span></label><textarea id="kfNote" placeholder="e.g. PG&amp;E batch, call before 9 am"></textarea></div>
+  <label class="label"><svg class="ico" aria-hidden="true"><use href="#i-filedown"/></svg>Export this file</label>
+  <div class="kfrow"><button class="btn ghost" id="kfKml" type="button">KML</button><button class="btn ghost" id="kfKmz" type="button">KMZ</button><button class="btn ghost" id="kfCsv" type="button">CSV</button></div>
+  <p class="note">With each site's name, phone, access and status.</p>
+  <div class="sgroup"><button class="btn ghost" id="kfArchive" type="button"><svg class="ico" aria-hidden="true"><use href="#i-db"/></svg><span class="bl">Archive</span></button></div>
+  <p class="note" id="kfArchiveNote"></p>
+  <div class="sgroup"><button class="btn ghost danger" id="kfDelete" type="button"><svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg><span class="bl">Delete file…</span></button></div>
+  <div id="kfDelBox" class="hidden">
+    <p class="note" id="kfDelText"></p>
+    <button class="btn danger" id="kfDelUntouched" type="button" style="margin-top:8px"></button>
+    <button class="btn danger" id="kfDelAll" type="button" style="margin-top:8px"></button>
+  </div>
+</div>
+
+<div class="scrim" id="kmScrim"></div>
+<div class="sheet" id="kmSheet" role="dialog" aria-label="Move to file">
+  <div class="grab"></div>
+  <h2><svg class="ico" aria-hidden="true"><use href="#i-merge"/></svg>Move to file</h2>
+  <p class="hint" id="kmHint"></p>
+  <div class="kmlist" id="kmList"></div>
+  <div class="sgroup"><label class="label" for="kmNew"><svg class="ico" aria-hidden="true"><use href="#i-filetext"/></svg>Or a new file</label><input type="text" id="kmNew" autocomplete="off" maxlength="80" placeholder="New file name" /></div>
+  <button class="btn primary" id="kmNewGo" type="button">Move to new file</button>
+</div>
+
 <div class="scrim" id="kmlScrim"></div>
 <div class="sheet" id="kmlSheet" role="dialog" aria-label="Rename file">
   <div class="grab"></div>
@@ -1169,7 +1210,9 @@ select.chip.sel{background-color:var(--amber)}
     const fail=e=>toast("Couldn't share the file: "+(e&&e.message||e),3500);
     window.FieldKeyNative={
       save(name,text,type){
-        return FS.writeFile({path:"share/"+safeName(name),data:String(text),directory:"CACHE",encoding:"utf8",recursive:true})
+        const bin=text instanceof Uint8Array;   // binary (a KMZ) goes over as base64
+        let b64=""; if(bin){ for(let i=0;i<text.length;i+=0x8000) b64+=String.fromCharCode.apply(null,text.subarray(i,i+0x8000)); b64=btoa(b64); }
+        return FS.writeFile(Object.assign({path:"share/"+safeName(name),data:bin?b64:String(text),directory:"CACHE",recursive:true},bin?{}:{encoding:"utf8"}))
           .then(r=>shareUri(r.uri)).catch(fail);
       },
       // A file on the internet (a mission package): download it into the app, then share it.
@@ -1202,7 +1245,7 @@ select.chip.sel{background-color:var(--amber)}
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v86";
+  const APP_VER="v87";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -2012,9 +2055,14 @@ select.chip.sel{background-color:var(--amber)}
   let kmlSig="";
   function kmlFiles(){
     const counts=new Map();
-    customers.forEach(c=>{ const a=(c.assignment||"").trim(); if(a) counts.set(a,(counts.get(a)||0)+1); });
+    customers.forEach(c=>{ const a=(c.assignment||"").trim(); if(!a) return;
+      const f=counts.get(a)||{n:0,texted:0,sched:0,done:0,issue:0}; counts.set(a,f); f.n++;
+      if((c.status&&c.status!=="new")||c.textCount>0) f.texted++;
+      if(c.status==="scheduled") f.sched++; if(c.status==="done") f.done++; if(c.accessIssue) f.issue++; });
     let when={}; try{ when=JSON.parse(store.get("fk_kml_dates","{}")||"{}"); }catch(e){}
-    return [...counts.entries()].map(([name,n])=>({name,n,t:name===cfg.latestKml?Infinity:(when[name]||0)}))
+    const meta=kmlMetaAll();
+    return [...counts.entries()].map(([name,f])=>Object.assign({name,t:name===cfg.latestKml?Infinity:(when[name]||0)},f,
+        {archived:!!(meta[name]&&meta[name].archived),due:(meta[name]&&meta[name].due)||"",note:(meta[name]&&meta[name].note)||""}))
       .sort((a,b)=>(b.t-a.t)||a.name.localeCompare(b.name));
   }
   function noteKmlImport(name){
@@ -2025,13 +2073,16 @@ select.chip.sel{background-color:var(--amber)}
   }
   function renderKmlPicker(){
     const sel=$("#custKml"); if(!sel) return;
-    const files=kmlFiles(), sig=files.map(f=>f.name+"\u0001"+f.n).join("\u0002")+"|"+custKml;
-    if(custFilter==="kml"&&!files.some(f=>f.name===custKml)){ custFilter="all"; custKml=""; setFilterChips(); }
-    { const bar=$("#kmlBar"), f=custFilter==="kml"&&files.find(x=>x.name===custKml);
-      if(bar){ bar.classList.toggle("hidden",!f); if(f) $("#kmlBarName").textContent=f.name+" \u00B7 "+f.n+(f.n===1?" site":" sites"); } }
+    const all=kmlFiles(), arch=all.filter(f=>f.archived), files=all.filter(f=>!f.archived||kmlShowArchived||f.name===custKml);
+    const sig=all.map(f=>[f.name,f.n,f.archived?1:0,f.due].join("\u0001")).join("\u0002")+"|"+custKml+"|"+kmlShowArchived;
+    if(custFilter==="kml"&&!all.some(f=>f.name===custKml)){ custFilter="all"; custKml=""; setFilterChips(); }
+    { const bar=$("#kmlBar"), f=custFilter==="kml"&&all.find(x=>x.name===custKml);
+      if(bar){ bar.classList.toggle("hidden",!f); if(f){ $("#kmlBarName").textContent=f.name+(f.archived?" \u00B7 archived":""); $("#kmlBarStats").innerHTML=kmlStatsHtml(f); } } }
     if(sig===kmlSig) return; kmlSig=sig;
-    sel.innerHTML='<option value="">'+(files.length?"KML file":"No files yet")+'</option>'+files.map(f=>
-      '<option value="'+escapeHtml(f.name)+'">'+escapeHtml(f.name)+' ('+f.n+')'+(f.name===cfg.latestKml?" \u00B7 latest":"")+'</option>').join("");
+    sel.innerHTML='<option value="">'+(all.length?"KML file":"No files yet")+'</option>'+files.map(f=>
+      '<option value="'+escapeHtml(f.name)+'">'+escapeHtml(f.name)+' ('+f.n+')'+(f.name===cfg.latestKml?" \u00B7 latest":"")+
+        (f.due?" \u00B7 due "+escapeHtml(fmtDue(f.due)):"")+(f.archived?" \u00B7 archived":"")+'</option>').join("")+
+      (arch.length?'<option value="__archived__">'+(kmlShowArchived?"Hide archived files":"Show "+arch.length+" archived file"+(arch.length===1?"":"s"))+'</option>':"");
     sel.value=custFilter==="kml"?custKml:"";
   }
   function setFilterChips(){
@@ -2040,13 +2091,146 @@ select.chip.sel{background-color:var(--amber)}
   }
   function showKmlFile(name){ custFilter="kml"; custKml=name; kmlSig=""; setFilterChips(); renderCustomers(); }
 
+  /* ---- per-file note, due date and archived flag (this phone only), fk_kml_meta {name:{note,due,archived}} ---- */
+  let kmlShowArchived=false;
+  function kmlMetaAll(){ try{ const m=JSON.parse(store.get("fk_kml_meta","{}")||"{}"); return m&&typeof m==="object"?m:{}; }catch(e){ return {}; } }
+  function setKmlMeta(name,patch){
+    const all=kmlMetaAll(), m=Object.assign({},all[name]||{},patch);
+    Object.keys(m).forEach(k=>{ if(m[k]===""||m[k]==null||m[k]===false) delete m[k]; });
+    if(Object.keys(m).length) all[name]=m; else delete all[name];
+    store.set("fk_kml_meta",JSON.stringify(all)); kmlSig="";
+  }
+  function fmtDue(d){ const p=String(d).split("-"); if(p.length!==3) return d; return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString([],{month:"short",day:"numeric"}); }
+  function dueLate(d){ const p=String(d).split("-"); if(p.length!==3) return false; const t=new Date(); t.setHours(0,0,0,0); return new Date(+p[0],+p[1]-1,+p[2])<t; }
+  function kmlStatsText(f){
+    return [f.n+(f.n===1?" site":" sites"), f.texted&&(f.texted+" texted"), f.sched&&(f.sched+" scheduled"), f.done&&(f.done+" done"),
+      f.issue&&(f.issue+(f.issue===1?" issue":" issues"))].filter(Boolean).join(" \u00B7 ");
+  }
+  function kmlStatsHtml(f){
+    let h=escapeHtml(kmlStatsText(f));
+    if(f.due){ const late=dueLate(f.due)&&f.done<f.n; h+=' \u00B7 <span class="'+(late?"late":"due")+'">'+(late?"overdue ":"due ")+escapeHtml(fmtDue(f.due))+'</span>'; }
+    return h;
+  }
+  const fileSites=name=>customers.filter(c=>(c.assignment||"").trim()===name);
+  const isWorked=c=>(c.status&&c.status!=="new")||c.textCount>0||!!(c.notes||"").trim()||!!c.accessIssue||!!c.scheduledAt;
+  function uniqueKmlName(base){ const have=new Set(kmlFiles().map(f=>f.name)); if(!have.has(base)) return base; let k=2; while(have.has(base+" "+k)) k++; return base+" "+k; }
+  function noteKmlDate(name){ let when={}; try{ when=JSON.parse(store.get("fk_kml_dates","{}")||"{}"); }catch(e){} if(when[name]==null){ when[name]=Date.now(); store.set("fk_kml_dates",JSON.stringify(when)); } }
+  function forgetKml(name){   // a file with no sites left
+    if(fileSites(name).length) return;
+    setKmlMeta(name,{note:"",due:"",archived:false});
+    let when={}; try{ when=JSON.parse(store.get("fk_kml_dates","{}")||"{}"); }catch(e){}
+    if(when[name]!=null){ delete when[name]; store.set("fk_kml_dates",JSON.stringify(when)); }
+  }
+
+  /* ---- File sheet: progress, due date, note, export, archive, delete ---- */
+  let kfName="";
+  function openFileSheet(){
+    if(custFilter!=="kml"||!custKml) return;
+    kfName=custKml; renderFileSheet();
+    $("#kfDelBox").classList.add("hidden"); setBtnText($("#kfDelete"),"Delete file\u2026");
+    $("#kfScrim").classList.add("show"); $("#kfSheet").classList.add("show");
+  }
+  function renderFileSheet(){
+    const f=kmlFiles().find(x=>x.name===kfName); if(!f){ closeFileSheet(); return; }
+    $("#kfTitle").textContent=f.name;
+    $("#kfStats").innerHTML=kmlStatsHtml(f);
+    $("#kfDue").value=f.due||""; $("#kfNote").value=f.note||"";
+    setBtnText($("#kfArchive"),f.archived?"Unarchive":"Archive");
+    $("#kfArchiveNote").textContent=f.archived?"Archived: hidden from the KML file filter until you choose \u201CShow archived files\u201D there. Its sites stay in the list and on the map."
+      :"Archiving hides a finished file from the KML file filter. Its sites stay in the list and on the map.";
+  }
+  function closeFileSheet(){ $("#kfScrim").classList.remove("show"); $("#kfSheet").classList.remove("show"); }
+  $("#kmlFileBtn").addEventListener("click",openFileSheet);
+  $("#kfScrim").addEventListener("click",closeFileSheet);
+  $("#kfDue").addEventListener("change",()=>{ setKmlMeta(kfName,{due:$("#kfDue").value}); renderFileSheet(); renderCustomers(); });
+  $("#kfNote").addEventListener("input",()=>{ setKmlMeta(kfName,{note:$("#kfNote").value.trim()?$("#kfNote").value:""}); });
+  $("#kfArchive").addEventListener("click",()=>{
+    const f=kmlFiles().find(x=>x.name===kfName); if(!f) return;
+    setKmlMeta(kfName,{archived:!f.archived}); renderFileSheet(); renderCustomers();
+    toast(f.archived?"\u201C"+kfName+"\u201D is back in the KML file filter":"Archived \u201C"+kfName+"\u201D");
+  });
+  const kmlBase=n=>String(n||"sites").replace(/\.(kml|kmz|csv)$/i,"");
+  $("#kfKml").addEventListener("click",()=>{ const l=fileSites(kfName); download(kmlBase(kfName)+".kml",customersToKML(l),"application/vnd.google-earth.kml+xml"); });
+  $("#kfKmz").addEventListener("click",()=>{ const l=fileSites(kfName); download(kmlBase(kfName)+".kmz",makeKmz(customersToKML(l)),"application/vnd.google-earth.kmz"); });
+  $("#kfCsv").addEventListener("click",()=>{ const l=fileSites(kfName); download(kmlBase(kfName)+".csv",custCSV(l),"text/csv"); });
+  $("#kfDelete").addEventListener("click",()=>{
+    const l=fileSites(kfName), worked=l.filter(isWorked).length, plain=l.length-worked, box=$("#kfDelBox");
+    if(!box.classList.contains("hidden")){ box.classList.add("hidden"); return; }
+    $("#kfDelText").textContent=worked
+      ?worked+" of its "+l.length+" sites have texts, a status, notes or an issue. You can remove just the other "+plain+", or everything. Settings \u2192 Data \u2192 Earlier versions has this morning's copy if you change your mind."
+      :"This deletes all "+l.length+" sites in the file. Settings \u2192 Data \u2192 Earlier versions has this morning's copy if you change your mind.";
+    const u=$("#kfDelUntouched"); u.classList.toggle("hidden",!(worked&&plain)); u.textContent="Remove the "+plain+" untouched, keep "+worked;
+    $("#kfDelAll").textContent="Delete the file and all "+l.length+" sites";
+    box.classList.remove("hidden");
+  });
+  async function deleteFileSites(name,onlyUntouched){
+    const gone=fileSites(name).filter(c=>!onlyUntouched||!isWorked(c)), ids=new Set(gone.map(c=>c.id));
+    customers=customers.filter(c=>!ids.has(c.id)); ids.forEach(id=>cSel.delete(id));
+    if(dbOk) for(const id of ids) await dbDel(id);
+    forgetKml(name);
+    kmlSig=""; renderCustomers(); updateBadge(); if(typeof refreshMapSites==="function") refreshMapSites();
+    return gone.length;
+  }
+  $("#kfDelUntouched").addEventListener("click",async()=>{ const n=await deleteFileSites(kfName,true); renderFileSheet(); $("#kfDelBox").classList.add("hidden"); toast("Removed "+n+" untouched sites"); });
+  $("#kfDelAll").addEventListener("click",async()=>{ const name=kfName, n=await deleteFileSites(name,false); closeFileSheet(); toast("Deleted \u201C"+name+"\u201D \u00B7 "+n+" sites"); });
+
+  /* KMZ: a zip holding doc.kml (stored, not compressed) */
+  function crc32(b){
+    const T=crc32.t||(crc32.t=(()=>{ const t=new Int32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c; } return t; })());
+    let crc=-1; for(let i=0;i<b.length;i++) crc=T[(crc^b[i])&255]^(crc>>>8); return (crc^-1)>>>0;
+  }
+  function makeKmz(kmlText){
+    const data=new TextEncoder().encode(kmlText), nm=new TextEncoder().encode("doc.kml"), crc=crc32(data), d=new Date();
+    const tm=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1), dt=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
+    const out=new Uint8Array(30+nm.length+data.length+46+nm.length+22), v=new DataView(out.buffer);
+    v.setUint32(0,0x04034b50,true); v.setUint16(4,20,true); v.setUint16(10,tm,true); v.setUint16(12,dt,true);
+    v.setUint32(14,crc,true); v.setUint32(18,data.length,true); v.setUint32(22,data.length,true); v.setUint16(26,nm.length,true);
+    out.set(nm,30); out.set(data,30+nm.length);
+    const c=30+nm.length+data.length;
+    v.setUint32(c,0x02014b50,true); v.setUint16(c+4,20,true); v.setUint16(c+6,20,true); v.setUint16(c+12,tm,true); v.setUint16(c+14,dt,true);
+    v.setUint32(c+16,crc,true); v.setUint32(c+20,data.length,true); v.setUint32(c+24,data.length,true); v.setUint16(c+28,nm.length,true);
+    out.set(nm,c+46);
+    const e=c+46+nm.length;
+    v.setUint32(e,0x06054b50,true); v.setUint16(e+8,1,true); v.setUint16(e+10,1,true); v.setUint32(e+12,46+nm.length,true); v.setUint32(e+16,c,true);
+    return out;
+  }
+
+  /* ---- Move selected sites to another file ---- */
+  function openMoveSheet(){
+    const sel=customers.filter(c=>cSel.has(c.id)); if(!sel.length){ toast("Select sites first."); return; }
+    const from=new Set(sel.map(c=>(c.assignment||"").trim()||"(no file)"));
+    $("#kmHint").textContent="Move "+sel.length+(sel.length===1?" site":" sites")+" (now in "+[...from].join(", ")+") to:";
+    const files=kmlFiles().filter(f=>(!f.archived||f.name===custKml)&&!(from.size===1&&from.has(f.name)));   // not the file they're all in already
+    $("#kmList").innerHTML=files.length?files.map(f=>'<button class="btn ghost" type="button" data-move="'+escapeHtml(f.name)+'"><span>'+escapeHtml(f.name)+'</span><span class="mono">'+f.n+'</span></button>').join(""):'<p class="note">No files yet. Type a name below.</p>';
+    $("#kmList").querySelectorAll("[data-move]").forEach(b=>b.addEventListener("click",()=>moveSelectedTo(b.dataset.move)));
+    $("#kmNew").value="";
+    $("#kmScrim").classList.add("show"); $("#kmSheet").classList.add("show");
+  }
+  function closeMoveSheet(){ $("#kmScrim").classList.remove("show"); $("#kmSheet").classList.remove("show"); }
+  async function moveSelectedTo(to){
+    to=cleanText(String(to||"")).replace(/\s+/g," ").trim(); if(!to){ toast("Type a name for the new file."); return; }
+    const sel=customers.filter(c=>cSel.has(c.id)), olds=new Set(sel.map(c=>(c.assignment||"").trim()).filter(Boolean));
+    sel.forEach(c=>{ c.assignment=to; }); noteKmlDate(to); olds.forEach(n=>{ if(n!==to) forgetKml(n); });
+    cSel.clear(); closeMoveSheet(); kmlSig="";
+    await persist(); renderCustomers(); if(typeof refreshMarks==="function") refreshMarks();
+    toast("Moved "+sel.length+(sel.length===1?" site":" sites")+" to \u201C"+to+"\u201D");
+  }
+  $("#selMove").addEventListener("click",openMoveSheet);
+  $("#kmScrim").addEventListener("click",closeMoveSheet);
+  $("#kmNewGo").addEventListener("click",()=>moveSelectedTo($("#kmNew").value));
+  $("#kmNew").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); moveSelectedTo($("#kmNew").value); } });
+
   /* ---- rename an imported file ----
      A file's name is on each of its sites (c.assignment), and also keys its import date, "latest",
      its saved offline mission and, when signed in, its synced mission. The synced mission keeps its
      id and only changes its name, so the server, QGIS and other phones see a rename (fkApplyRemote
      renames there too). Renaming to another file's name combines the two. */
   function renameKmlLocal(from,to){
-    const moved=[];
+    const moved=[], toExists=customers.some(c=>(c.assignment||"").trim()===to);
+    { const all=kmlMetaAll(), src=all[from], dst=all[to];
+      if(src||dst){ all[to]=toExists?Object.assign({},src&&{note:src.note,due:src.due},dst||{}):(src||{}); delete all[from];
+        Object.keys(all[to]).forEach(k=>{ if(all[to][k]==null||all[to][k]==="") delete all[to][k]; }); if(!Object.keys(all[to]).length) delete all[to];
+        store.set("fk_kml_meta",JSON.stringify(all)); } }
     customers.forEach(c=>{ if((c.assignment||"").trim()===from){ c.assignment=to; moved.push(c); } });
     let when={}; try{ when=JSON.parse(store.get("fk_kml_dates","{}")||"{}"); }catch(e){}
     if(when[from]!=null){ when[to]=Math.max(when[to]||0,when[from]); delete when[from]; store.set("fk_kml_dates",JSON.stringify(when)); }
@@ -2763,6 +2947,7 @@ select.chip.sel{background-color:var(--amber)}
     custFilter=ch.dataset.f; custKml=""; setFilterChips(); renderCustomers();
   }));
   $("#custKml").addEventListener("change",e=>{
+    if(e.target.value==="__archived__"){ kmlShowArchived=!kmlShowArchived; kmlSig=""; renderKmlPicker(); e.target.value=custFilter==="kml"?custKml:""; return; }
     if(e.target.value) showKmlFile(e.target.value);
     else { custFilter="all"; custKml=""; setFilterChips(); renderCustomers(); }
   });
@@ -2867,7 +3052,7 @@ select.chip.sel{background-color:var(--amber)}
     return idx;
   }
   function mergeIntoDB(records,batchId){
-    let matched=0, added=0;
+    let matched=0, added=0; const ids=new Set();
     records.forEach(rec=>{
       let e=findExisting(rec);
       if(e){ matched++;
@@ -2879,12 +3064,13 @@ select.chip.sel{background-color:var(--amber)}
         if(rec.access){ const have=((e.access||"")+" "+(e.accessNotes||"")).toLowerCase();
           if(!e.access)e.access=rec.access; else if(have.indexOf(rec.access.toLowerCase())<0)e.accessNotes=[e.accessNotes,rec.access].filter(Boolean).join(" | "); }
         Object.keys(rec.extra||{}).forEach(k=>{ e.extra=e.extra||{}; if(e.extra[k]==null)e.extra[k]=rec.extra[k]; });
-        e.assignment=batchId;
+        e.assignment=batchId; ids.add(e.id);
       } else { added++;
         customers.push({id:newId(rec.sapId),sapId:rec.sapId,name:rec.name,address:rec.address||"",lat:rec.lat,lng:rec.lng,phones:rec.phones,access:rec.access,accessNotes:"",extra:rec.extra||{},status:"new",textCount:0,lastTexted:"",notes:"",assignment:batchId});
       }
     });
-    return {matched,added};
+    if(added) customers.slice(-added).forEach(c=>ids.add(c.id));
+    return {matched,added,ids};
   }
   function customersToKML(list){
     const pm=list.filter(c=>{const a=parseFloat(c.lat),o=parseFloat(c.lng);return !isNaN(a)&&!isNaN(o);}).map(c=>{
@@ -3873,6 +4059,11 @@ select.chip.sel{background-color:var(--amber)}
       fillKmlSelect($("#impPhone"),headers, kf.phone);
       fillKmlSelect($("#impAccess"),headers, kf.access);
       $("#impCols").classList.toggle("hidden", isKml);
+      { const bn=batchLabel(), ex=kmlFiles().find(f=>f.name===bn); impAsNew=false; setSeg("segImpUpd","update");
+        $("#impUpd").classList.toggle("hidden",!ex);
+        impUpdNote=ex?"You already have a file named \u201C"+bn+"\u201D ("+ex.n+(ex.n===1?" site":" sites")+"). ":"";
+        if(ex) $("#impUpdText").textContent=impUpdNote+"Updating it keeps every site's texts, status and notes, and adds the sites that are new.";
+      }
       const n=rows.length;
       $("#impInfo").innerHTML=escapeHtml(fileName||"File")+" \u00B7 <b>"+n+"</b> asset"+(n===1?"":"s")+" found"+(isKml?". Coordinates read straight from the KML." : ". Confirm the columns below, then import.");
       setBtnText($("#impGo"),"Import "+n+(n===1?" asset":" assets")); $("#impGo").disabled=false; $("#impGo").classList.remove("hidden");
@@ -3881,6 +4072,10 @@ select.chip.sel{background-color:var(--amber)}
       $("#impScrim").classList.add("show"); $("#impSheet").classList.add("show");
     }
   }
+  let impAsNew=false, impUpdNote="";
+  $("#segImpUpd").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; impAsNew=b.dataset.v==="new"; setSeg("segImpUpd",b.dataset.v);
+    $("#impUpdText").textContent=impUpdNote+(impAsNew?"A new file \u201C"+uniqueKmlName(batchLabel())+"\u201D gets these sites; any that are already in FieldKey move to it with their history."
+      :"Updating it keeps every site's texts, status and notes, and adds the sites that are new."); });
   async function doImport(){
     if(impBusy) return;
     const sapI=+$("#impSap").value, latI=+$("#impLat").value, lngI=+$("#impLng").value;
@@ -3897,12 +4092,13 @@ select.chip.sel{background-color:var(--amber)}
       headers.forEach((h,i)=>{ if(skip.indexOf(i)>=0)return; const v=get(r,i); if(v)rec.extra[h]=v; });
       return rec;
     });
-    const batch=batchLabel(), res=mergeIntoDB(recs,batch);
+    const batch=impAsNew?uniqueKmlName(batchLabel()):batchLabel(), before=new Set(fileSites(batch).map(c=>c.id));
+    const res=mergeIntoDB(recs,batch), gone=[...before].filter(id=>!res.ids.has(id)).length;
     noteKmlImport(batch); cfg.latestKml=batch; store.set("fk_latestKml",batch);
     await persist(); updateBadge();
     hideImport();
     showKmlFile(batch);
-    toast(res.matched+" matched \u00B7 "+res.added+" new \u2014 imported");
+    toast(res.matched+" matched \u00B7 "+res.added+" new \u2014 imported"+(gone?" \u00B7 "+gone+" earlier "+(gone===1?"site wasn't":"sites weren't")+" in this file (kept)":""),gone?4500:undefined);
   }
   $("#impFile").addEventListener("change",e=>{ if(e.target.files[0]) openImport(e.target.files[0]); e.target.value=""; });
   $("#impGo").addEventListener("click",doImport);
@@ -3910,7 +4106,7 @@ select.chip.sel{background-color:var(--amber)}
   $("#impCancel").addEventListener("click",reqCloseImport);
 
   (function addSheetCloseButtons(){
-    const closers={ kmlSheet:closeKmlRename, dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, addSheet:closeAdd, pinSheet:closePinSheet, mpSheet:closePkg, hSheet:closeHosp };
+    const closers={ kfSheet:closeFileSheet, kmSheet:closeMoveSheet, kmlSheet:closeKmlRename, dSheet:closeDetail, kSheet:closeKml, riSheet:closeReasonPicker, rqSheet:closeReqSheet, eSheet:closeEmail, xSheet:closeExport, sheet:closeSheet, verSheet:closeVersions, impSheet:reqCloseImport, addSheet:closeAdd, pinSheet:closePinSheet, mpSheet:closePkg, hSheet:closeHosp };
     Object.keys(closers).forEach(id=>{
       const sh=document.getElementById(id); if(!sh)return;
       const bar=document.createElement("div"); bar.className="sheettop";

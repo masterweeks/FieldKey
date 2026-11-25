@@ -41,9 +41,19 @@ you immediately see just what you loaded — which is also the set you'll usuall
 requests for. (If you pick the wrong file, close the sheet before tapping Import,
 and the daily snapshot is your undo otherwise.)
 
-While the filter shows one file, a bar under the filters has **Rename**: the new name follows
-the file everywhere (its sites, saved offline maps, and your synced missions when signed in), and
-typing another file's name combines the two.
+**Managing files.** While the filter shows one file, a bar under the filters shows its progress
+(sites, texted, scheduled, done, issues, and the due date) with two buttons:
+- **Rename**: the new name follows the file everywhere (its sites, saved offline maps, and your
+  synced missions when signed in). Typing another file's name combines the two.
+- **File**: a due date and a note (shown in the filter; overdue turns red), **export** just this
+  file as KML, KMZ or CSV, **archive** it (hidden from the filter until you pick "Show archived
+  files"; its sites stay in the list and on the map), or **delete** it: remove only the untouched
+  sites and keep the ones you've worked, or delete everything.
+
+To move sites to another file, select them (list or map) and tap **Move** in the selection bar.
+Importing a file whose name you already have asks whether to **update that file** (keeps every
+site's history and adds the new sites; it also tells you if some earlier sites weren't in the new
+copy) or import it as a new file. Due dates, notes and archiving stay on the phone; they don't sync.
 
 This is how a fresh daily KML merges with everything you've built up. **Addresses
 are resolved on demand:** when you tap **Build request** (list or map), FieldKey

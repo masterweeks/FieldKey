@@ -29,7 +29,17 @@ public class FieldKeyFilesPlugin: CAPPlugin, CAPBridgedPlugin {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let data = try? Data(contentsOf: url) else { return false }
-        pending = (url.lastPathComponent, data)
+        let name = url.lastPathComponent
+        // iOS copies an opened file into the app's Inbox and adds "-1", "-2"… when that name is already
+        // there. Emptying the Inbox once the file is read keeps the next copy of the same file under
+        // its own name, so FieldKey can offer to update that file.
+        if url.path.contains("/Inbox/") {
+            let inbox = url.deletingLastPathComponent()
+            for f in (try? FileManager.default.contentsOfDirectory(at: inbox, includingPropertiesForKeys: nil)) ?? [] {
+                try? FileManager.default.removeItem(at: f)
+            }
+        }
+        pending = (name, data)
         DispatchQueue.main.async {
             current?.bridge?.triggerWindowJSEvent(eventName: "fieldkeyfile")
         }

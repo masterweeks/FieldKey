@@ -34,6 +34,8 @@ Written for v82. When a version adds, moves or removes a control, this file and 
 | **EMAIL** | Import return email | **LIST-02** |
 | **ADD** | Add contact | **LIST-03** |
 | **KREN** | Rename file | **LIST-16a** |
+| **KFILE** | File | **LIST-16b** |
+| **KMOVE** | Move to file | **LIST-13e** |
 | **REQ** | Access requests | **LIST-08**, **LIST-13b** or **MAP-35** |
 | **EXP** | Export | **LIST-10** |
 | **PKG** | Mission package | **EXP-07** or **SET-08** |
@@ -200,7 +202,7 @@ The top bar (**HDR**) is tagged here too.
 | LIST-07a |  | All | | `data-f="all"` |
 | LIST-07b |  | Selected | | `data-f="selected"` |
 | LIST-07c |  | Access issue | Red chip | `data-f="accessissue"` |
-| LIST-07d |  | KML file | Dropdown. Shows one imported file. Says "No files yet" until you import one. | `custKml` |
+| LIST-07d |  | KML file | Dropdown. Shows one imported file, with its site count and due date. Says "No files yet" until you import one. Archived files are hidden; the last entry, "Show N archived files", brings them back. | `custKml` |
 | LIST-07e |  | Has contact | | `data-f="has"` |
 | LIST-07f |  | Not texted | | `data-f="nottexted"` |
 | LIST-07g |  | Texted | | `data-f="texted"` |
@@ -216,10 +218,12 @@ The top bar (**HDR**) is tagged here too.
 | LIST-13b | <img src="ui-map/icons/send.svg" width="18" alt=""> | Request | Request for the selected sites | `selBuild` |
 | LIST-13c | <img src="ui-map/icons/alert.svg" width="18" alt=""> | Issue | Flags the selected sites. Opens **ISSUE**. | `selFlag` |
 | LIST-13d | <img src="ui-map/icons/x.svg" width="18" alt=""> | Clear | × clears the selection | `selClear` |
+| LIST-13e | <img src="ui-map/icons/merge.svg" width="18" alt=""> | Move | Moves the selected sites to another file. Opens **KMOVE**. | `selMove` |
 | LIST-14 |  | Site list | The cards; each one is a **ROW** | `custList` |
 | LIST-15 |  | Empty message | "Nothing here yet…" when the list is empty | `custEmpty` |
-| LIST-16 |  | File bar | Shows while **LIST-07d** shows one file: its name and site count | `kmlBar` |
+| LIST-16 |  | File bar | Shows while **LIST-07d** shows one file: its name, then its progress (sites, texted, scheduled, done, issues) and due date | `kmlBar` |
 | LIST-16a | <img src="ui-map/icons/edit.svg" width="18" alt=""> | Rename | Opens **KREN** | `kmlRenameBtn` |
+| LIST-16b | <img src="ui-map/icons/settings.svg" width="18" alt=""> | File | Opens **KFILE** | `kmlFileBtn` |
 
 ## ROW: One site in the list
 
@@ -326,6 +330,7 @@ Sheet that slides up from the bottom. Right: the access issue box on a flagged s
 | Label | Icon | Name | What it is | Code |
 |---|:-:|---|---|---|
 | IMP-01 |  | File info | File name and row count | `impInfo` |
+| IMP-05 |  | Update or new file | Shows when you already have a file with this name: **Update that file** (default) or **Import as a new file** | `impUpd`, `segImpUpd` |
 | IMP-02 |  | Column pickers | Which column holds what | `impCols` |
 | IMP-02a |  | SAP ID | | `impSap` |
 | IMP-02b |  | Latitude | | `impLat` |
@@ -371,6 +376,30 @@ Renames the file shown in **LIST-07d**. Typing another file's name combines the 
 | KREN-01 |  | New name | | `kmlNewName` |
 | KREN-02 |  | Message | "Type a name", or that the name is taken and a second tap combines | `kmlStat` |
 | KREN-03 |  | Rename / Combine | | `kmlSave` |
+
+## KFILE: File
+
+For the file shown in **LIST-07d**. The due date, note and archived flag stay on this phone; they don't sync.
+
+| Label | Icon | Name | What it is | Code |
+|---|:-:|---|---|---|
+| KFILE-00 | <img src="ui-map/icons/x.svg" width="14" alt=""> | Close | | `sheetclose` |
+| KFILE-01 |  | Progress | Sites, texted, scheduled, done, issues, due date | `kfStats` |
+| KFILE-02 |  | Due date | Shows in **LIST-07d** and **LIST-16**; red when past and not all done | `kfDue` |
+| KFILE-03 |  | Note | | `kfNote` |
+| KFILE-04 |  | Export KML / KMZ / CSV | This file's sites, named after the file | `kfKml`, `kfKmz`, `kfCsv` |
+| KFILE-05 | <img src="ui-map/icons/db.svg" width="18" alt=""> | Archive / Unarchive | Hides the file from **LIST-07d**. Its sites stay in the list and on the map. | `kfArchive` |
+| KFILE-06 | <img src="ui-map/icons/trash.svg" width="18" alt=""> | Delete file… | Shows **KFILE-07** | `kfDelete` |
+| KFILE-07 |  | Delete choices | **Remove the untouched, keep the worked** (sites with texts, a status, notes or an issue stay in the file) and **Delete the file and all sites** | `kfDelBox` |
+
+## KMOVE: Move to file
+
+| Label | Icon | Name | What it is | Code |
+|---|:-:|---|---|---|
+| KMOVE-00 | <img src="ui-map/icons/x.svg" width="14" alt=""> | Close | | `sheetclose` |
+| KMOVE-01 |  | Files | One button per file (not the one the sites are all in already) | `kmList` |
+| KMOVE-02 |  | New file name | | `kmNew` |
+| KMOVE-03 |  | Move to new file | | `kmNewGo` |
 
 ## REQ: Access requests
 
