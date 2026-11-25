@@ -16,6 +16,8 @@
 	<string>FieldKey listens when you tap the mic to search by voice.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>FieldKey saves map and drone-weather snapshots to your photos when you choose Save Image.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>FieldKey turns what you say into a search for a site, address or phone number.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

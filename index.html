@@ -2214,6 +2214,7 @@ select.chip.sel{background-color:var(--amber)}
     $("#guideOpen").disabled=wait||guideBusy;
     $("#guideSkip").hidden=guideList.length<2;
     $("#guideBar").classList.add("show");
+    guideLive();
     if(guideAutoArmed&&!wait&&!guideBusy){ guideAutoArmed=false; setTimeout(()=>{ if($("#guideBar").classList.contains("show")&&guideList[guideIdx]===c) guideOpenCurrent(); },600); }
   }
   async function guideOpenCurrent(){
@@ -2226,7 +2227,42 @@ select.chip.sel{background-color:var(--amber)}
     showGuide();
   }
   function guideSkip(){ if(guideBusy) return; guideAutoArmed=false; guideIdx++; showGuide(); }
-  function closeGuide(){ guideAutoArmed=false; guideList=[]; guideIdx=0; $("#guideBar").classList.remove("show"); }
+  function closeGuide(){ guideAutoArmed=false; guideList=[]; guideIdx=0; $("#guideBar").classList.remove("show"); guideLive(true); }
+  /* Lock Screen / Dynamic Island / CarPlay progress while working a list (iOS app; FieldKeyLiveActivity.swift):
+     "Texting · 7 of 23 sent" / "Next: SAP 12345". Not for a single site (a reminder). */
+  let guideLiveOn=false;
+  function guideLive(end){
+    if(!IS_NATIVE||!Capacitor.nativePromise) return;
+    if(end){ if(guideLiveOn){ guideLiveOn=false; Capacitor.nativePromise("FieldKeyLiveActivity","end",{}).catch(()=>{}); } return; }
+    if(guideList.length<2) return;
+    const c=guideList[guideIdx];
+    const st={kind:"texting",headline:"Texting \u00B7 "+guideSent+" of "+guideList.length+" sent",detail:c?"Next: "+displayName(c):"",done:guideSent,total:guideList.length};
+    Capacitor.nativePromise("FieldKeyLiveActivity",guideLiveOn?"update":"start",st).catch(()=>{});
+    guideLiveOn=true;
+  }
+  /* Siri / Shortcuts "Text the next site" (FieldKeyIntents.swift): the list, the guided bar, and the
+     next un-texted site's text opening by itself. Continues a guided run that's already going. */
+  function textNextSite(){
+    if($("#mSheet").classList.contains("show")) closeMapSheet();
+    switchTab("customers");
+    if(!($("#guideBar").classList.contains("show")&&guideList[guideIdx])){
+      guideList=visibleCustomers().filter(c=>c.phones&&c.phones.length&&!(c.textCount>0));
+      if(!guideList.length){ toast("No un-texted sites with a phone here."); return; }
+      guideList.forEach(lookupAddress); guideIdx=0; guideSent=0;
+    }
+    guideAutoArmed=true; showGuide();
+  }
+  async function takeNativeAction(){
+    if(!IS_NATIVE||!Capacitor.nativePromise) return;
+    await dataReady;
+    let a=""; try{ a=(await Capacitor.nativePromise("FieldKeyIntents","takePending",{})).action; }catch(e){}
+    if(a==="textNext") textNextSite();
+  }
+  if(IS_NATIVE){
+    window.addEventListener("fieldkeyaction",takeNativeAction);
+    document.addEventListener("visibilitychange",()=>{ if(!document.hidden) takeNativeAction(); });
+    takeNativeAction();
+  }
 
   /* ---- detail sheet ---- */
   let curId=null;

@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F1E1D0C0A0B0C0D0E0F10002 /* FieldKeyActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10001 /* FieldKeyActivity.swift */; };
+		F1E1D0C0A0B0C0D0E0F10003 /* FieldKeyActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10001 /* FieldKeyActivity.swift */; };
+		F1E1D0C0A0B0C0D0E0F10005 /* FieldKeyLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10004 /* FieldKeyLiveActivity.swift */; };
+		F1E1D0C0A0B0C0D0E0F10007 /* FieldKeyIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10006 /* FieldKeyIntents.swift */; };
+		F1E1D0C0A0B0C0D0E0F10009 /* FieldKeyWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10008 /* FieldKeyWidgets.swift */; };
+		F1E1D0C0A0B0C0D0E0F10013 /* FieldKeyWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10012 /* FieldKeyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
@@ -20,7 +26,37 @@
 		F1E1D0C0A0B0C0D0E0F00001 /* FieldKeyPlugins.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F00002 /* FieldKeyPlugins.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		F1E1D0C0A0B0C0D0E0F10022 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F1E1D0C0A0B0C0D0E0F10014;
+			remoteInfo = FieldKeyWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		F1E1D0C0A0B0C0D0E0F10021 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F1E1D0C0A0B0C0D0E0F10013 /* FieldKeyWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		F1E1D0C0A0B0C0D0E0F10001 /* FieldKeyActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyActivity.swift; sourceTree = "<group>"; };
+		F1E1D0C0A0B0C0D0E0F10004 /* FieldKeyLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyLiveActivity.swift; sourceTree = "<group>"; };
+		F1E1D0C0A0B0C0D0E0F10006 /* FieldKeyIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyIntents.swift; sourceTree = "<group>"; };
+		F1E1D0C0A0B0C0D0E0F10008 /* FieldKeyWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyWidgets.swift; sourceTree = "<group>"; };
+		F1E1D0C0A0B0C0D0E0F10010 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F1E1D0C0A0B0C0D0E0F10012 /* FieldKeyWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FieldKeyWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -37,6 +73,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		F1E1D0C0A0B0C0D0E0F10016 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3011FED79650016851F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -53,6 +96,7 @@
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
+				F1E1D0C0A0B0C0D0E0F10011 /* FieldKeyWidgets */,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -61,6 +105,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				F1E1D0C0A0B0C0D0E0F10012 /* FieldKeyWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -71,6 +116,9 @@
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
 				F1E1D0C0A0B0C0D0E0F00004 /* FieldKeyTexting.swift */,
 				F1E1D0C0A0B0C0D0E0F00002 /* FieldKeyPlugins.swift */,
+				F1E1D0C0A0B0C0D0E0F10001 /* FieldKeyActivity.swift */,
+				F1E1D0C0A0B0C0D0E0F10004 /* FieldKeyLiveActivity.swift */,
+				F1E1D0C0A0B0C0D0E0F10006 /* FieldKeyIntents.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
@@ -83,6 +131,15 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		F1E1D0C0A0B0C0D0E0F10011 /* FieldKeyWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				F1E1D0C0A0B0C0D0E0F10008 /* FieldKeyWidgets.swift */,
+				F1E1D0C0A0B0C0D0E0F10010 /* Info.plist */,
+			);
+			path = FieldKeyWidgets;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -93,10 +150,12 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				F1E1D0C0A0B0C0D0E0F10021 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				F1E1D0C0A0B0C0D0E0F10023 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -105,6 +164,23 @@
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
+		};
+		F1E1D0C0A0B0C0D0E0F10014 /* FieldKeyWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F1E1D0C0A0B0C0D0E0F10018 /* Build configuration list for PBXNativeTarget "FieldKeyWidgets" */;
+			buildPhases = (
+				F1E1D0C0A0B0C0D0E0F10015 /* Sources */,
+				F1E1D0C0A0B0C0D0E0F10016 /* Frameworks */,
+				F1E1D0C0A0B0C0D0E0F10017 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FieldKeyWidgets;
+			productName = FieldKeyWidgets;
+			productReference = F1E1D0C0A0B0C0D0E0F10012 /* FieldKeyWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -119,6 +195,9 @@
 						CreatedOnToolsVersion = 9.2;
 						LastSwiftMigration = 1100;
 						ProvisioningStyle = Automatic;
+					};
+					F1E1D0C0A0B0C0D0E0F10014 = {
+						CreatedOnToolsVersion = 26.0;
 					};
 				};
 			};
@@ -139,11 +218,19 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				F1E1D0C0A0B0C0D0E0F10014 /* FieldKeyWidgets */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		F1E1D0C0A0B0C0D0E0F10017 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3021FED79650016851F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -160,6 +247,15 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		F1E1D0C0A0B0C0D0E0F10015 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F1E1D0C0A0B0C0D0E0F10009 /* FieldKeyWidgets.swift in Sources */,
+				F1E1D0C0A0B0C0D0E0F10003 /* FieldKeyActivity.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3001FED79650016851F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -168,10 +264,21 @@
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
 				F1E1D0C0A0B0C0D0E0F00003 /* FieldKeyTexting.swift in Sources */,
 				F1E1D0C0A0B0C0D0E0F00001 /* FieldKeyPlugins.swift in Sources */,
+				F1E1D0C0A0B0C0D0E0F10002 /* FieldKeyActivity.swift in Sources */,
+				F1E1D0C0A0B0C0D0E0F10005 /* FieldKeyLiveActivity.swift in Sources */,
+				F1E1D0C0A0B0C0D0E0F10007 /* FieldKeyIntents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F1E1D0C0A0B0C0D0E0F10023 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F1E1D0C0A0B0C0D0E0F10014 /* FieldKeyWidgets */;
+			targetProxy = F1E1D0C0A0B0C0D0E0F10022 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		504EC30B1FED79650016851F /* Main.storyboard */ = {
@@ -348,6 +455,56 @@
 			};
 			name = Release;
 		};
+		F1E1D0C0A0B0C0D0E0F10019 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MWX68MK23T;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FieldKeyWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FieldKey;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.masterweeks.fieldkey.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F1E1D0C0A0B0C0D0E0F10020 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = MWX68MK23T;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FieldKeyWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FieldKey;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.masterweeks.fieldkey.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -365,6 +522,15 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F1E1D0C0A0B0C0D0E0F10018 /* Build configuration list for PBXNativeTarget "FieldKeyWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F1E1D0C0A0B0C0D0E0F10019 /* Debug */,
+				F1E1D0C0A0B0C0D0E0F10020 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
