@@ -1,5 +1,7 @@
 # FieldKey — Access Request Builder
 
+**[Features at a glance, with screenshots](docs/features.md)**
+
 A phone app (PWA) that turns a CSV **or KML** of inspection sites into an on-device
 customer database and copy-ready access requests. Import a file → it finds your SAP
 ID / latitude / longitude columns → reverse-geocodes each point to an address →
