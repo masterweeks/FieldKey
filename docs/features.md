@@ -73,7 +73,8 @@ lists every saved area with its size and a Delete button.
 
 <img src="features/list.jpg" width="250" alt="Site list with status badges, scheduled times and access notes"> <img src="features/site.jpg" width="250" alt="Site details with Text, Call, Directions and Flag issue">
 
-- **Import a CSV or KML.** It finds the SAP ID, latitude and longitude columns and merges by SAP
+- **Import a CSV, KML or KMZ**, or in the iPhone app open one with FieldKey from Files, Mail or
+  Safari. It finds the SAP ID, latitude and longitude columns and merges by SAP
   ID, then name, then address, keeping the phones, access notes and history you already have.
   Each file is tagged, so you can filter to one day's file.
 - **Search** by name, address, SAP ID or phone number (any format, or just the last digits). The
@@ -153,6 +154,6 @@ and goes by the worse of the two.
   installed.
 - **iPhone app:** built from `app/` with Xcode. Adds texting inside the app, reminders, Lock
   Screen progress, Siri, on-device AI email reading, the share sheet for exports, Apple Calendar's
-  own event screen and CarPlay. See [the iOS app doc](ios-app.md).
+  own event screen, opening KML, KMZ and CSV files with FieldKey, and CarPlay. See [the iOS app doc](ios-app.md).
 
 More detail on every control: [README](../README.md) and the [UI map](ui-map.md).

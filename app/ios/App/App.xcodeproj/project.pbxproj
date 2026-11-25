@@ -7,12 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		F1E1D0C0A0B0C0D0E0F10002 /* FieldKeyActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10001 /* FieldKeyActivity.swift */; };
-		F1E1D0C0A0B0C0D0E0F10003 /* FieldKeyActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10001 /* FieldKeyActivity.swift */; };
-		F1E1D0C0A0B0C0D0E0F10005 /* FieldKeyLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10004 /* FieldKeyLiveActivity.swift */; };
-		F1E1D0C0A0B0C0D0E0F10007 /* FieldKeyIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10006 /* FieldKeyIntents.swift */; };
-		F1E1D0C0A0B0C0D0E0F10009 /* FieldKeyWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10008 /* FieldKeyWidgets.swift */; };
-		F1E1D0C0A0B0C0D0E0F10013 /* FieldKeyWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10012 /* FieldKeyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
@@ -22,10 +16,17 @@
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
+		9582C0A32FF0100100A1B2C3 /* FieldKeyFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582C0A42FF0100100A1B2C3 /* FieldKeyFiles.swift */; };
 		9582C0A12FF0100100A1B2C3 /* FieldKeyCarPlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582C0A22FF0100100A1B2C3 /* FieldKeyCarPlay.swift */; };
-		F1E1D0C0A0B0C0D0E0F00005 /* FieldKeyAI.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F00006 /* FieldKeyAI.swift */; };
-		F1E1D0C0A0B0C0D0E0F00003 /* FieldKeyTexting.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F00004 /* FieldKeyTexting.swift */; };
 		F1E1D0C0A0B0C0D0E0F00001 /* FieldKeyPlugins.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F00002 /* FieldKeyPlugins.swift */; };
+		F1E1D0C0A0B0C0D0E0F00003 /* FieldKeyTexting.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F00004 /* FieldKeyTexting.swift */; };
+		F1E1D0C0A0B0C0D0E0F00005 /* FieldKeyAI.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F00006 /* FieldKeyAI.swift */; };
+		F1E1D0C0A0B0C0D0E0F10002 /* FieldKeyActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10001 /* FieldKeyActivity.swift */; };
+		F1E1D0C0A0B0C0D0E0F10003 /* FieldKeyActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10001 /* FieldKeyActivity.swift */; };
+		F1E1D0C0A0B0C0D0E0F10005 /* FieldKeyLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10004 /* FieldKeyLiveActivity.swift */; };
+		F1E1D0C0A0B0C0D0E0F10007 /* FieldKeyIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10006 /* FieldKeyIntents.swift */; };
+		F1E1D0C0A0B0C0D0E0F10009 /* FieldKeyWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10008 /* FieldKeyWidgets.swift */; };
+		F1E1D0C0A0B0C0D0E0F10013 /* FieldKeyWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F1E1D0C0A0B0C0D0E0F10012 /* FieldKeyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,12 +54,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		F1E1D0C0A0B0C0D0E0F10001 /* FieldKeyActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyActivity.swift; sourceTree = "<group>"; };
-		F1E1D0C0A0B0C0D0E0F10004 /* FieldKeyLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyLiveActivity.swift; sourceTree = "<group>"; };
-		F1E1D0C0A0B0C0D0E0F10006 /* FieldKeyIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyIntents.swift; sourceTree = "<group>"; };
-		F1E1D0C0A0B0C0D0E0F10008 /* FieldKeyWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyWidgets.swift; sourceTree = "<group>"; };
-		F1E1D0C0A0B0C0D0E0F10010 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		F1E1D0C0A0B0C0D0E0F10012 /* FieldKeyWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FieldKeyWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -69,26 +64,33 @@
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		9582C0A42FF0100100A1B2C3 /* FieldKeyFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyFiles.swift; sourceTree = "<group>"; };
 		9582C0A22FF0100100A1B2C3 /* FieldKeyCarPlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyCarPlay.swift; sourceTree = "<group>"; };
-		F1E1D0C0A0B0C0D0E0F00006 /* FieldKeyAI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyAI.swift; sourceTree = "<group>"; };
-		F1E1D0C0A0B0C0D0E0F00004 /* FieldKeyTexting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyTexting.swift; sourceTree = "<group>"; };
-		F1E1D0C0A0B0C0D0E0F00002 /* FieldKeyPlugins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyPlugins.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		F1E1D0C0A0B0C0D0E0F00002 /* FieldKeyPlugins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyPlugins.swift; sourceTree = "<group>"; };
+		F1E1D0C0A0B0C0D0E0F00004 /* FieldKeyTexting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyTexting.swift; sourceTree = "<group>"; };
+		F1E1D0C0A0B0C0D0E0F00006 /* FieldKeyAI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyAI.swift; sourceTree = "<group>"; };
+		F1E1D0C0A0B0C0D0E0F10001 /* FieldKeyActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyActivity.swift; sourceTree = "<group>"; };
+		F1E1D0C0A0B0C0D0E0F10004 /* FieldKeyLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyLiveActivity.swift; sourceTree = "<group>"; };
+		F1E1D0C0A0B0C0D0E0F10006 /* FieldKeyIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyIntents.swift; sourceTree = "<group>"; };
+		F1E1D0C0A0B0C0D0E0F10008 /* FieldKeyWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldKeyWidgets.swift; sourceTree = "<group>"; };
+		F1E1D0C0A0B0C0D0E0F10010 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F1E1D0C0A0B0C0D0E0F10012 /* FieldKeyWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FieldKeyWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		F1E1D0C0A0B0C0D0E0F10016 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		504EC3011FED79650016851F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F1E1D0C0A0B0C0D0E0F10016 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -118,6 +120,7 @@
 			isa = PBXGroup;
 			children = (
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
+				9582C0A42FF0100100A1B2C3 /* FieldKeyFiles.swift */,
 				9582C0A22FF0100100A1B2C3 /* FieldKeyCarPlay.swift */,
 				F1E1D0C0A0B0C0D0E0F00006 /* FieldKeyAI.swift */,
 				F1E1D0C0A0B0C0D0E0F00004 /* FieldKeyTexting.swift */,
@@ -230,13 +233,6 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		F1E1D0C0A0B0C0D0E0F10017 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		504EC3021FED79650016851F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -250,24 +246,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-/* End PBXResourcesBuildPhase section */
-
-/* Begin PBXSourcesBuildPhase section */
-		F1E1D0C0A0B0C0D0E0F10015 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
+		F1E1D0C0A0B0C0D0E0F10017 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F1E1D0C0A0B0C0D0E0F10009 /* FieldKeyWidgets.swift in Sources */,
-				F1E1D0C0A0B0C0D0E0F10003 /* FieldKeyActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
 		504EC3001FED79650016851F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
+				9582C0A32FF0100100A1B2C3 /* FieldKeyFiles.swift in Sources */,
 				9582C0A12FF0100100A1B2C3 /* FieldKeyCarPlay.swift in Sources */,
 				F1E1D0C0A0B0C0D0E0F00005 /* FieldKeyAI.swift in Sources */,
 				F1E1D0C0A0B0C0D0E0F00003 /* FieldKeyTexting.swift in Sources */,
@@ -275,6 +270,15 @@
 				F1E1D0C0A0B0C0D0E0F10002 /* FieldKeyActivity.swift in Sources */,
 				F1E1D0C0A0B0C0D0E0F10005 /* FieldKeyLiveActivity.swift in Sources */,
 				F1E1D0C0A0B0C0D0E0F10007 /* FieldKeyIntents.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F1E1D0C0A0B0C0D0E0F10015 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F1E1D0C0A0B0C0D0E0F10009 /* FieldKeyWidgets.swift in Sources */,
+				F1E1D0C0A0B0C0D0E0F10003 /* FieldKeyActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

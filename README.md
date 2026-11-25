@@ -23,7 +23,9 @@ back. (Opening one panel from another, like build-request from the map, returns 
 to where you were.) You can also tap the dimmed area behind a panel to dismiss it.
 
 ### Bringing data in
-**Import KML / CSV** takes your daily site file. It auto-detects the SAP ID,
+**Import KML / CSV** takes your daily site file (a KMZ, the zipped form Google Earth and My Maps
+often download, works too; in the iPhone app you can also **open** a KML, KMZ or CSV with FieldKey
+from Files, Mail or Safari). It auto-detects the SAP ID,
 latitude, and longitude — for a CSV it shows those columns so you can confirm or fix
 them; a KML's coordinates are unambiguous, so it skips straight through — then shows
 **"N assets found."** Tap **Import** and the batch saves into the database

@@ -27,6 +27,7 @@ needs a connection for Google's 3D tiles anyway. Inside the app, `window.Capacit
 | `FieldKeyLiveActivity` (`FieldKeyLiveActivity.swift`, `FieldKeyActivity.swift`) | Live Activities: guided texting progress and today's sites |
 | `FieldKeyIntents` (`FieldKeyIntents.swift`) | Siri and Shortcuts: "Text the next site in FieldKey" |
 | `FieldKeyCarPlay` (`FieldKeyCarPlay.swift`) | The CarPlay app's list of today's sites (built; waits for Apple, step 6) |
+| `FieldKeyFiles` (`FieldKeyFiles.swift`) | "Open in FieldKey" for KML, KMZ and CSV files from Files, Mail, Safari or the share sheet |
 | `FieldKeyAI` (`FieldKeyAI.swift`) | Email import with Apple's on-device model |
 
 `app/ios/App/FieldKeyWidgets/` is a widget extension (its own target, iOS 18 or later) that draws
@@ -163,6 +164,10 @@ Today's sites:
   Mark it done: the next one takes its place. In a car with CarPlay on iOS 26, it's on the
   dashboard.
 
+Opening files:
+- In Files, Mail or Safari, tap a KML or KMZ, then the share button: FieldKey is in the list of
+  apps. Choosing it opens FieldKey's import sheet with the sites found.
+
 Email return:
 - On an iPhone 15 Pro or newer with Apple Intelligence on, paste an email that doesn't follow the
   usual layout. The sheet says "On-device AI reads the email too", and the result line says how
@@ -201,8 +206,17 @@ extension's to match: it must be the app's id followed by `.widgets`.
 A full CarPlay app (a list of today's sites with Call and Directions on the car's screen) needs
 Apple to grant the **CarPlay driving task** entitlement. This needs the Developer Program.
 
+**A map with the site pins in CarPlay** is a different category. Apple only lets **navigation**
+apps draw a map in CarPlay, and a navigation app must give turn-by-turn directions with upcoming
+maneuvers. Driving-task apps can't show a map; they show lists and cards and hand directions to
+Apple Maps or Google Maps. An app gets one category, so asking for navigation means FieldKey would
+first need its own turn-by-turn guidance (routes from Apple's MapKit, maneuver banners and spoken
+instructions), and Apple may still decide a field-work app isn't a navigation app. The list built
+here is what the driving-task category allows.
+
 1. Join the Apple Developer Program.
-2. Go to developer.apple.com/contact/carplay and choose **Driving task**.
+2. Go to developer.apple.com/contact/carplay, sign in with the Developer Program account, accept
+   the CarPlay Entitlement Addendum, and choose **Driving task**.
 3. Describe the app, for example: "FieldKey helps utility inspectors work through a day of site
    visits. In the car, the driver needs the next site, its access notes (gate codes, dogs) and
    one-tap Call or Directions. The CarPlay app shows today's scheduled sites as a list with those
