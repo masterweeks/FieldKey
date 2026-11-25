@@ -1188,7 +1188,7 @@ select.chip.sel{background-color:var(--amber)}
 
   /* ---------------- el helpers ---------------- */
   const $=s=>document.querySelector(s);
-  const APP_VER="v83";
+  const APP_VER="v84";
   const els={
     file:$("#file"), drop:$("#drop"), stepLoad:$("#stepLoad"),
     stepMap:$("#stepMap"), stepBuild:$("#stepBuild"), stepResults:$("#stepResults"),
@@ -2887,7 +2887,7 @@ select.chip.sel{background-color:var(--amber)}
   window.addEventListener("offline",()=>{ const bm=store.get("fk_basemap","Dark"); if(cmap&&cMapReady&&(bm==="Aerial"||bm==="Hybrid")) applyBasemap(bm); });
   let terrainOn=store.get("fk_terrain","1")!=="0";
   function applyTerrain(){
-    if(cmap&&cMapReady){ try{ cmap.setTerrain(terrainOn?{source:"dem-src",exaggeration:1.5}:null); }catch(e){} }
+    if(cmap&&cMapReady){ try{ cmap.setTerrain(terrainOn?{source:"dem-terrain",exaggeration:1.5}:null); }catch(e){} }
     const t=$("#mTerr"); if(t) t.classList.toggle("on",terrainOn);
   }
   function fitToSites(){
@@ -3121,12 +3121,18 @@ select.chip.sel{background-color:var(--amber)}
         const fold=()=>{ if(!asked&&at.classList.contains("maplibregl-compact-show")){ at.classList.remove("maplibregl-compact-show"); at.removeAttribute("open"); } };
         new MutationObserver(fold).observe(at,{attributes:true,attributeFilter:["class","open"]}); fold(); } }
     cmap.on("error",()=>{});   // swallow tile/glyph fetch noise
+    // OpenFreeMap's dark style asks for "circle-11" (town dots) and "wood-pattern", which its sprite
+    // doesn't have, and MapLibre warns about each. Blank stand-ins keep the look it has always had.
+    cmap.on("styleimagemissing",e=>{ if((e.id==="circle-11"||e.id==="wood-pattern")&&!cmap.hasImage(e.id))
+      cmap.addImage(e.id,{width:1,height:1,data:new Uint8Array(4)}); });
     cmap.on("load",()=>{
       try{
         // terrain relief: hillshade from a Terrarium DEM, placed under the labels so it
         // shades the dark basemap without dimming text. Imagery/Streets rasters are added
         // afterward (on top), so hillshade only shows through on the Dark basemap.
         cmap.addSource("dem-src",{type:"raster-dem",tiles:[DEM_TILE],encoding:"terrarium",tileSize:256,maxzoom:13,attribution:"Elevation: Terrain Tiles (AWS)"});
+        // 3D terrain gets its own copy of the same tiles: MapLibre renders hillshade better that way
+        cmap.addSource("dem-terrain",{type:"raster-dem",tiles:[DEM_TILE],encoding:"terrarium",tileSize:256,maxzoom:13});
         const _ls=(cmap.getStyle().layers||[]), _sym=_ls.find(l=>l.type==="symbol");
         cmap.addLayer({id:"hillshade",type:"hillshade",source:"dem-src",paint:{
           "hillshade-exaggeration":0.85,
