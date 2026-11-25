@@ -15,6 +15,10 @@ needs a connection for Google's 3D tiles anyway. Inside the app, `window.Capacit
 - **Files** (exports, backups, calendar events, mission packages) are written to the app's cache
   folder and handed to the share sheet (`window.FieldKeyNative`, using the Filesystem and Share
   plugins), which offers Save to Files, Mail and AirDrop.
+- **Apple Calendar** on a site opens Apple's own New Event screen, filled in. That's FieldKey's
+  own plugin in `app/ios/App/App/FieldKeyPlugins.swift`, registered by `FieldKeyViewController`
+  (which `SceneDelegate.swift` creates) and called with `Capacitor.nativePromise`. A plugin
+  registered this way isn't in `Capacitor.Plugins`.
 
 | Folder | What it is |
 |---|---|
@@ -105,7 +109,8 @@ Online:
 - **Location:** the locate button on the map, and Flyability's "use my location". iOS may ask
   twice (once for the app, once for the page).
 - **Exports and backups:** each one opens the share sheet; **Save to Files** should keep the file.
-  Also try **Restore** with a saved backup, a mission package download, and **Add to calendar**.
+  Also try **Restore** with a saved backup and a mission package download.
+- **Apple Calendar** on a scheduled site: Apple's New Event screen opens filled in; tap **Add**.
 
 Offline (turn on Airplane Mode after saving):
 - **Save offline** an area and a mission, turn on Airplane Mode, quit and reopen the app, and
@@ -118,8 +123,6 @@ Known gaps:
   refuses that address or the lookups still fail, make a second key for the app with
   restrictions by API only, and enter it in the app's Settings.
 - **Check for update** says updates come through TestFlight.
-- **Add to calendar** shares an `.ics` file; whether Calendar offers to add it from the share
-  sheet needs checking on a phone.
 
 Note anything else that behaves differently from the web app.
 

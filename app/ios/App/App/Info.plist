@@ -6,6 +6,10 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>FieldKey adds scheduled inspections to your calendar when you tap Apple Calendar.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>FieldKey adds scheduled inspections to your calendar when you tap Apple Calendar.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>FieldKey shows where you are on the map and finds the hospitals and weather nearest to you.</string>
 	<key>NSMicrophoneUsageDescription</key>

@@ -2483,7 +2483,15 @@ select.chip.sel{background-color:var(--amber)}
     persist(); renderCustomers(); updateBadge();
   }));
   $("#dSched").addEventListener("change",e=>{ const c=findById(curId); if(!c)return; c.scheduledAt=e.target.value; refreshCalLinks(c); persist(); renderCustomers(); });
-  $("#dCalIcs").addEventListener("click",e=>{ e.preventDefault(); const c=findById(curId); if(!c||!c.scheduledAt)return; download("inspection-"+(c.sapId||"site")+".ics", icsText(calEvent(c)), "text/calendar"); toast("Calendar event ready \u2014 tap it to add."); });
+  $("#dCalIcs").addEventListener("click",async e=>{ e.preventDefault(); const c=findById(curId); if(!c||!c.scheduledAt)return;
+    // In the iOS app: Apple's own New Event screen, filled in (FieldKeyPlugins.swift). A shared .ics file can't be added from the share sheet.
+    if(IS_NATIVE&&Capacitor.nativePromise){
+      const ev=calEvent(c);
+      try{ const r=await Capacitor.nativePromise("FieldKeyCalendar","addEvent",{title:ev.title,location:ev.loc,notes:ev.desc,start:ev.start.getTime(),end:ev.end.getTime()});
+        if(r&&r.added) toast("Added to your calendar"); return; }
+      catch(err){ toast(String(err&&err.message||err),3500); return; }
+    }
+    download("inspection-"+(c.sapId||"site")+".ics", icsText(calEvent(c)), "text/calendar"); toast("Calendar event ready \u2014 tap it to add."); });
   $("#dPlus").addEventListener("click",()=>{ const c=findById(curId); if(!c)return; c.textCount=(c.textCount||0)+1; $("#dCount").textContent=c.textCount; persist(); renderCustomers(); updateBadge(); });
   $("#dMinus").addEventListener("click",()=>{ const c=findById(curId); if(!c)return; c.textCount=Math.max(0,(c.textCount||0)-1); $("#dCount").textContent=c.textCount; persist(); renderCustomers(); updateBadge(); });
   $("#dNotes").addEventListener("input",e=>{ const c=findById(curId); if(c){ c.notes=e.target.value; persist(); } });
